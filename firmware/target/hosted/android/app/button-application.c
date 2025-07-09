@@ -34,10 +34,10 @@ int key_to_button(int keyboard_key)
     switch (keyboard_key)
     {
         case KEYCODE_BACK:
-            return ignore_back_button ? BUTTON_NONE : BUTTON_BACK;
+            return BUTTON_DPAD_LEFT;
         case KEYCODE_MENU:
             return BUTTON_MENU;
-        case KEYCODE_DPAD_CENTER:
+        case KEYCODE_ENTER:
             return BUTTON_DPAD_CENTER;
         case KEYCODE_VOLUME_UP:
             return BUTTON_VOL_UP;
@@ -78,13 +78,13 @@ unsigned dpad_to_button(int keyboard_key)
          * a release (because android sends press/unpress to us too quickly
          */
         case KEYCODE_DPAD_UP:
-            return BUTTON_DPAD_UP|BUTTON_REL;
-        case KEYCODE_DPAD_DOWN:
-            return BUTTON_DPAD_DOWN|BUTTON_REL;
-        case KEYCODE_DPAD_LEFT:
             return BUTTON_DPAD_LEFT|BUTTON_REL;
-        case KEYCODE_DPAD_RIGHT:
+        case KEYCODE_DPAD_DOWN:
             return BUTTON_DPAD_RIGHT|BUTTON_REL;
+        case KEYCODE_DPAD_LEFT:
+            return BUTTON_DPAD_UP|BUTTON_REL;
+        case KEYCODE_DPAD_RIGHT:
+            return BUTTON_DPAD_DOWN|BUTTON_REL;
         default:
             return BUTTON_NONE;
     }

@@ -54,14 +54,20 @@ static const struct button_mapping button_context_standard[]  = {
 }; /* button_context_standard */
 
 static const struct button_mapping button_context_wps[]  = {
-    { ACTION_WPS_BROWSE,        BUTTON_BACK,                 BUTTON_NONE },
-    { ACTION_WPS_MENU,          BUTTON_MENU|BUTTON_REL,      BUTTON_MENU },
-    { ACTION_WPS_CONTEXT,       BUTTON_MENU|BUTTON_REPEAT,   BUTTON_MENU },
-    { ACTION_WPS_VOLUP,         BUTTON_VOL_UP,                  BUTTON_NONE },
-    { ACTION_WPS_VOLUP,         BUTTON_VOL_UP|BUTTON_REPEAT,    BUTTON_NONE },
-    { ACTION_WPS_VOLDOWN,       BUTTON_VOL_DOWN,                BUTTON_NONE },
-    { ACTION_WPS_VOLDOWN,       BUTTON_VOL_DOWN|BUTTON_REPEAT,  BUTTON_NONE },
-    
+    { ACTION_WPS_BROWSE,        BUTTON_DPAD_LEFT,                   BUTTON_NONE },
+    { ACTION_WPS_MENU,          BUTTON_DPAD_CENTER|BUTTON_REL,      BUTTON_NONE },
+    { ACTION_WPS_CONTEXT,       BUTTON_DPAD_CENTER|BUTTON_REPEAT,   BUTTON_NONE },
+    { ACTION_WPS_VOLUP,         BUTTON_VOL_UP,                      BUTTON_NONE },
+    { ACTION_WPS_VOLUP,         BUTTON_VOL_UP|BUTTON_REPEAT,        BUTTON_NONE },
+    { ACTION_WPS_VOLDOWN,       BUTTON_VOL_DOWN,                    BUTTON_NONE },
+    { ACTION_WPS_VOLDOWN,       BUTTON_VOL_DOWN|BUTTON_REPEAT,      BUTTON_NONE },
+    { ACTION_WPS_VOLDOWN,       BUTTON_DPAD_UP|BUTTON_REL,          BUTTON_NONE },
+    { ACTION_WPS_VOLUP,         BUTTON_DPAD_DOWN|BUTTON_REL,        BUTTON_NONE },
+    { ACTION_WPS_VOLDOWN,       BUTTON_DPAD_UP|BUTTON_REPEAT,       BUTTON_NONE },
+    { ACTION_WPS_VOLUP,         BUTTON_DPAD_DOWN|BUTTON_REPEAT,     BUTTON_NONE },
+    { ACTION_WPS_VOLDOWN,       BUTTON_DPAD_UP,                     BUTTON_NONE },
+    { ACTION_WPS_VOLUP,         BUTTON_DPAD_DOWN,                   BUTTON_NONE },
+
     LAST_ITEM_IN_LIST
 }; /* button_context_wps */
 
