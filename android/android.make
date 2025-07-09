@@ -85,7 +85,7 @@ RES		:= $(wildcard $(ANDROID_DIR)/res/*/*)
 
 CLEANOBJS += bin gen libs data
 
-JAVAC_OPTS += -source 1.7 -target 1.7 -implicit:none -classpath $(ANDROID_PLATFORM)/android.jar:$(CLASSPATH)
+JAVAC_OPTS += -source 1.7 -target 1.7 -bootclasspath $(ANDROID_PLATFORM)/android.jar -implicit:none -classpath $(ANDROID_PLATFORM)/android.jar:$(CLASSPATH)
 
 .PHONY:
 $(MANIFEST): $(MANIFEST_SRC) $(DIRS)
@@ -144,7 +144,7 @@ $(KEYSTORE):
 	$(call PRINTS,KEYTOOL debug.keystore)keytool -genkey \
 		-alias androiddebugkey -keystore $@ \
 		-storepass android -keypass android -validity 365 \
-		-sigalg MD5withRSA -keyalg RSA -keysize 1024 \
+		-sigalg SHA1withRSA -keyalg RSA -keysize 2048 \
 		-dname "CN=Android Debug,O=Android,C=US"
 
 ifneq ($(NODEPS),,)
@@ -156,7 +156,7 @@ endif
 	$(call PRINTS,SIGN $(subst $(BUILDDIR)/,,$@))jarsigner \
 		-keystore "$(KEYSTORE)" -storepass "android" -keypass "android" \
 		-signedjar $(TEMP_APK2) $(TEMP_APK) "androiddebugkey" \
-		-sigalg MD5withRSA -digestalg SHA1
+		-sigalg SHA1withRSA -digestalg SHA1
 	$(SILENT)$(ZIPALIGN) -v 4 $(TEMP_APK2) $@ > /dev/null
 
 $(DIRS):
@@ -165,6 +165,9 @@ $(DIRS):
 dirs: $(DIRS)
 
 apk: $(APK)
+
+unsigned-apk: $(TEMP_APK)
+	$(call PRINTS,CP unsigned APK)cp $(TEMP_APK) $(BUILDDIR)/rockbox_unsigned.apk
 
 install: apk
 	$(SILENT)$(ADB) install -r $(APK)

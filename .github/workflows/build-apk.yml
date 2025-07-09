@@ -1,0 +1,60 @@
+name: Build latest APK
+
+on:
+  push:
+    branches: [ "y1" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_SDK_PATH: /usr/local/lib/android/sdk
+      ANDROID_NDK_PATH: /home/runner/android-ndk-r10e
+      ANDROID_NDK_ROOT: /home/runner/android-ndk-r10e
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: prepare build environment
+      run: |
+        sudo apt install lib32z1
+        sudo apt install openjdk-17-jdk
+        java --version
+        cd android
+        yes | ./installToolchain.sh
+    - name: create build directory
+      run: |
+        mkdir android/build
+    - name: configure
+      run: |
+        cd android/build
+        ../../tools/configure --target=201 --lcdwidth=480 --lcdheight=360 --type=n
+    - name: make
+      run: |
+        cd android/build
+        make
+    - name: make zip
+      run: |
+        cd android/build
+        make zip
+    - name: build unsigned apk
+      run: |
+        cd android/build
+        make unsigned-apk
+    - name: sign apk
+      run: |
+        cd android/build
+        ../sign_apk_ci.sh
+    - name: create release
+      id: create_release
+      uses: shogo82148/actions-create-release@v1
+      with:
+        release_name: ${{ github.sha }}
+        tag_name: ${{ github.run_id }}
+        prerelease: true
+    - name: upload apk
+      uses: shogo82148/actions-upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./android/build/rockbox.apk
+        asset_name: rockbox-${{ github.sha }}.apk
+        asset_content_type: application/vnd.android.package-archive        
