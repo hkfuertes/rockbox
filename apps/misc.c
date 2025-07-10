@@ -793,13 +793,13 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
                 }
             return event;
         }
-        case BUTTON_MULTIMEDIA_NEXT:
-            audio_next();
-            return event;
-        case BUTTON_MULTIMEDIA_PREV:
+	case ACTION_STD_AUDIO_PREV:
             audio_prev();
             return event;
-        case BUTTON_MULTIMEDIA_STOP:
+        case ACTION_STD_AUDIO_NEXT:
+            audio_next();
+            return event;
+	case BUTTON_MULTIMEDIA_STOP:
             list_stop_handler();
             return event;
         case BUTTON_MULTIMEDIA_REW:

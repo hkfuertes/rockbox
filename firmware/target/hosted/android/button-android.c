@@ -30,12 +30,20 @@
 #include "touchscreen.h"
 #include "powermgmt.h"
 
+/* Android keycode definitions */
+#define KEYCODE_MEDIA_NEXT     87
+#define KEYCODE_MEDIA_PREVIOUS 88
+
+extern volatile long current_tick;
+
 extern JNIEnv *env_ptr;
 extern jclass  RockboxService_class;
 extern jobject RockboxService_instance;
 
 static int last_y, last_x;
 static int last_btns;
+static int held_buttons = 0;
+static long last_button_time = 0;
 
 static enum {
     STATE_UNKNOWN,
@@ -103,14 +111,60 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
     if (state)
     {
         last_btns |= button;
+        held_buttons |= button;
+        last_button_time = current_tick;
     }
     else
     {
         last_btns &= (~button);
+        held_buttons &= (~button);
         return false;
     }
 
     return true;
+}
+
+/*
+ * this handles repeat events from Android's key repeat system
+ */
+JNIEXPORT bool JNICALL
+Java_org_rockbox_RockboxFramebuffer_buttonHandlerRepeat(JNIEnv*env, jclass class,
+                                                        jint keycode)
+{
+    (void)env;
+    (void)class;
+
+    unsigned button = 0;
+
+    /* Convert multimedia keys to custom buttons for repeat events */
+    if (keycode == KEYCODE_MEDIA_NEXT)
+    {
+        button = BUTTON_MEDIA_NEXT;
+    }
+    else if (keycode == KEYCODE_MEDIA_PREVIOUS)
+    {
+        button = BUTTON_MEDIA_PREV;
+    }
+    else
+    {
+        /* For other keys, use the normal conversion */
+        button = multimedia_to_button((int)keycode);
+        if (!button)
+            button = dpad_to_button((int)keycode);
+        if (!button)
+            button = key_to_button(keycode);
+    }
+
+    if (button && button != BUTTON_NONE)
+    {
+        /* Post the repeat event */
+        wait_rockbox_ready();
+        reset_poweroff_timer();
+        button_queue_post(button | BUTTON_REPEAT, 0);
+        return true;
+    }
+
+    return false;
 }
 
 void button_init_device(void)
@@ -137,6 +191,7 @@ void touchscreen_enable_device(bool en)
 int button_read_device(int *data)
 {
     int btn = last_btns;
+    
     /* Get grid button/coordinates based on the current touchscreen mode
      *
      * Caveat: the caller seemingly depends on *data always being filled with

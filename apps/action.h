@@ -158,6 +158,8 @@ enum {
     ACTION_STD_KEYLOCK,
     ACTION_STD_REC,
     ACTION_STD_HOTKEY,
+    ACTION_STD_AUDIO_PREV,
+    ACTION_STD_AUDIO_NEXT,
 
     /* code context actions */
 

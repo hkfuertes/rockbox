@@ -125,8 +125,18 @@ public class RockboxService extends Service
         if (intent.getAction().equals(Intent.ACTION_MEDIA_BUTTON))
         {
             KeyEvent kev = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-            RockboxFramebuffer.buttonHandler(kev.getKeyCode(), 
-                                kev.getAction() == KeyEvent.ACTION_DOWN);
+            /* Handle repeat events by checking repeat count */
+            if (kev.getRepeatCount() > 0)
+            {
+                /* This is a repeat event - send it as a repeat to the C layer */
+                RockboxFramebuffer.buttonHandlerRepeat(kev.getKeyCode());
+            }
+            else
+            {
+                /* Normal press/release event */
+                RockboxFramebuffer.buttonHandler(kev.getKeyCode(),
+                                    kev.getAction() == KeyEvent.ACTION_DOWN);
+            }
         }
 
         /* (Re-)attach the media button receiver, in case it has been lost */

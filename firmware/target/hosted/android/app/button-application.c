@@ -34,7 +34,7 @@ int key_to_button(int keyboard_key)
     switch (keyboard_key)
     {
         case KEYCODE_BACK:
-            return BUTTON_DPAD_LEFT;
+            return BUTTON_BACK;
         case KEYCODE_MENU:
             return BUTTON_MENU;
         case KEYCODE_ENTER:
@@ -57,9 +57,9 @@ unsigned multimedia_to_button(int keyboard_key)
         case KEYCODE_MEDIA_STOP:
             return BUTTON_MULTIMEDIA_STOP;
         case KEYCODE_MEDIA_NEXT:
-            return BUTTON_MULTIMEDIA_NEXT;
+            return BUTTON_MEDIA_NEXT;
         case KEYCODE_MEDIA_PREVIOUS:
-            return BUTTON_MULTIMEDIA_PREV;
+            return BUTTON_MEDIA_PREV;
         case KEYCODE_MEDIA_REWIND:
             return BUTTON_MULTIMEDIA_REW;
         case KEYCODE_MEDIA_FAST_FORWARD:

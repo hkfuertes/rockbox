@@ -94,6 +94,15 @@ public class MediaButtonReceiver
                     else if (RockboxFramebuffer.buttonHandler(key.getKeyCode(), false))
                         abortBroadcast();
                 }
+                else if (key.getAction() == KeyEvent.ACTION_DOWN && key.getRepeatCount() > 0)
+                {   /* handle repeat events */
+                    RockboxService s = RockboxService.getInstance();
+                    if (s != null && s.isRockboxRunning())
+                    {
+                        if (RockboxFramebuffer.buttonHandlerRepeat(key.getKeyCode()))
+                            abortBroadcast();
+                    }
+                }
             }
         }
     }
