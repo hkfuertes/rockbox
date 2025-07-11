@@ -66,6 +66,7 @@
 #ifdef APPLICATION
 #include <unistd.h> /* readlink() */
 #include <limits.h> /* PATH_MAX */
+#include <libgen.h>
 #endif
 #include "config.h"
 #include "ata_idle_notify.h"
@@ -87,6 +88,59 @@
 #include "debug.h"
 #include "dircache.h"
 #include "errno.h"
+
+static int copy_playlist_with_absolute_paths(const char *src, const char *dst)
+{
+    FILE *src_fp = fopen(src, "r");
+    if (!src_fp)
+        return -1;
+    FILE *dst_fp = fopen(dst, "w");
+    if (!dst_fp)
+    {
+        fclose(src_fp);
+        return -1;
+    }
+
+    char line[4096];
+    char src_dir[MAX_PATH];
+    strncpy(src_dir, src, sizeof(src_dir));
+    src_dir[sizeof(src_dir)-1] = 0;
+    char *dir = dirname(src_dir);
+
+    while (fgets(line, sizeof(line), src_fp))
+    {
+        // Remove trailing newline
+        size_t len = strlen(line);
+        if (len && (line[len-1] == '\n' || line[len-1] == '\r'))
+            line[--len] = 0;
+        if (len && (line[len-1] == '\r'))
+            line[--len] = 0;
+
+        // Skip comments and blank lines
+        if (line[0] == '#' || line[0] == 0)
+        {
+            fprintf(dst_fp, "%s\n", line);
+            continue;
+        }
+
+        // If path is absolute, write as-is
+        if (line[0] == '/')
+        {
+            fprintf(dst_fp, "%s\n", line);
+        }
+        else
+        {
+            // Make absolute path
+            char abs_path[MAX_PATH*2];
+            snprintf(abs_path, sizeof(abs_path), "%s/%s", dir, line);
+            fprintf(dst_fp, "%s\n", abs_path);
+        }
+    }
+
+    fclose(src_fp);
+    fclose(dst_fp);
+    return 0;
+}
 
 #ifndef __PCTOOL__
 #include "lang.h"
@@ -4901,6 +4955,13 @@ static bool check_dir(const char *dirname, int add_files)
     if (ignore != unignore)
         add_files = unignore;
 
+    char playlist_dir[MAX_PATH];
+    const char *pl_dir = PLAYLIST_CATALOG_DEFAULT_DIR;
+    if (global_settings.playlist_catalog_dir[0] != '\0')
+        pl_dir = (const char*)global_settings.playlist_catalog_dir;
+    handle_special_dirs(pl_dir, 0, playlist_dir, sizeof(playlist_dir));
+    pl_dir = playlist_dir;
+
     /* Recursively scan the dir. */
     while (!check_event_queue())
     {
@@ -4931,18 +4992,45 @@ static bool check_dir(const char *dirname, int add_files)
 #endif /* SIMULATOR */
                 check_dir(curpath, add_files);
         }
-        else if (add_files)
+        else
         {
-            tc_stat.curentry = curpath;
+            /* Only check for playlists if the setting is enabled */
+            if (global_settings.playlist_copy_on_scan && strcmp(dirname, playlist_dir) != 0)
+            {
+                /* Check for .m3u or .m3u8 extension */
+                const char *dot = strrchr(entry->d_name, '.');
+                if (dot && (strcasecmp(dot, ".m3u") == 0 || strcasecmp(dot, ".m3u8") == 0))
+                {
+                    char src_path[MAX_PATH];
+                    char dst_path[MAX_PATH];
+                    /* Build full source path */
+                    strlcpy(src_path, curpath, sizeof(src_path));
+                    /* Build destination path: playlist_dir + '/' + filename */
+                    strlcpy(dst_path, playlist_dir, sizeof(dst_path));
+                    size_t dst_len = strlen(dst_path);
+                    if (dst_len > 0 && dst_path[dst_len-1] != '/')
+                        strlcat(dst_path, "/", sizeof(dst_path));
+                    strlcat(dst_path, entry->d_name, sizeof(dst_path));
+                    /* Only copy playlist if not already present */
+                    if (!file_exists(dst_path))
+                    {
+                        copy_playlist_with_absolute_paths(src_path, dst_path);
+                    }
+                }
+            }
+            if (add_files)
+            {
+                tc_stat.curentry = curpath;
 
-            /* Add a new entry to the temporary db file. */
-            add_tagcache(curpath, info.mtime);
+                /* Add a new entry to the temporary db file. */
+                add_tagcache(curpath, info.mtime);
 
-            /* Wait until current path for debug screen is read and unset. */
-            while (tc_stat.syncscreen && tc_stat.curentry != NULL)
-                yield();
+                /* Wait until current path for debug screen is read and unset. */
+                while (tc_stat.syncscreen && tc_stat.curentry != NULL)
+                    yield();
 
-            tc_stat.curentry = NULL;
+                tc_stat.curentry = NULL;
+            }
         }
 
         str_setlen(curpath, len);

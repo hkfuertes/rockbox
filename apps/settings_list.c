@@ -1003,6 +1003,8 @@ const struct settings_list settings[] = {
     /* playback */
     OFFON_SETTING(F_CB_ON_SELECT_ONLY|F_CB_ONLY_IF_CHANGED, playlist_shuffle,
                   LANG_SHUFFLE, false, "shuffle", shuffle_playlist_callback),
+    OFFON_SETTING(0, playlist_copy_on_scan, LANG_PLAYLIST_COPY_ON_SCAN,
+                  false, "playlist copy on scan", NULL),
 
     CHOICE_SETTING(F_CB_ON_SELECT_ONLY|F_CB_ONLY_IF_CHANGED, repeat_mode,
                    LANG_REPEAT, REPEAT_OFF, "repeat", "off,all,one,shuffle"

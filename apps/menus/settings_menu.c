@@ -166,13 +166,14 @@ MENUITEM_FUNCTION(tc_import, 0, ID2P(LANG_TAGCACHE_IMPORT),
                   NULL, Icon_NOICON);
 MENUITEM_FUNCTION(tc_paths, 0, ID2P(LANG_SELECT_DATABASE_DIRS),
                   dirs_to_scan, NULL, Icon_NOICON);
+MENUITEM_SETTING(playlist_copy_on_scan, &global_settings.playlist_copy_on_scan, NULL);
 
 MAKE_MENU(tagcache_menu, ID2P(LANG_TAGCACHE), 0, Icon_NOICON,
 #ifdef HAVE_TC_RAMCACHE
                 &tagcache_ram,
 #endif
                 &tagcache_autoupdate, &tc_init, &tc_update, &runtimedb,
-                &tc_export, &tc_import, &tc_paths
+                &tc_export, &tc_import, &tc_paths, &playlist_copy_on_scan
                 );
 #endif /* HAVE_TAGCACHE */
 /*    TAGCACHE MENU                */

@@ -658,6 +658,7 @@ struct user_settings
     bool keep_current_track_on_replace_playlist;
     bool show_shuffled_adding_options; /* whether to display options for adding shuffled tracks to dynamic playlist */
     int show_queue_options; /* how and whether to display options to queue tracks */
+    bool playlist_copy_on_scan; /* copy playlist files during database scan */
 #ifdef HAVE_ALBUMART
     int album_art; /* switch off album art display or choose preferred source */
 #endif

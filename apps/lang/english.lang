@@ -2209,13 +2209,13 @@
   desc: in tag cache settings
   user: core
   <source>
-    *: "Updating in background"
+    *: "Updating database..."
   </source>
   <dest>
-    *: "Updating in background"
+    *: "Updating database..."
   </dest>
   <voice>
-    *: "Updating in background"
+    *: "Updating database..."
   </voice>
 </phrase>
 <phrase>
@@ -5755,6 +5755,20 @@
   </dest>
   <voice>
     *: "Playlist Viewer Settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_PLAYLIST_COPY_ON_SCAN
+  desc: Setting to enable copying playlist files during database scan
+  user: core
+  <source>
+    *: "Copy Playlists on Scan (takes longer)"
+  </source>
+  <dest>
+    *: "Copy Playlists on Scan (takes longer)"
+  </dest>
+  <voice>
+    *: "Copy Playlists on Scan (takes longer)"
   </voice>
 </phrase>
 <phrase>
