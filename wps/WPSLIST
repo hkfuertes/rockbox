@@ -84,3 +84,68 @@ ui viewport: -
 </remote>
 
 </theme>
+
+<theme>
+Name: MacClassic-Dark
+# Original Description:
+# Theme Name: MacClassic-Dark
+# Notes: Based on the Apple Mac
+# By: Billy Blair
+# Platform: iPod Nano (176x132x16) - Standard build
+# Version: 5.1
+# Licensed CC-BY-SA 3.0
+# Last updated: 3/2010
+#
+# This 320x240 conversion by P Poorten Sep 2020
+# ...just changed sizing of things. Also changed codec icons to be drawn rather than bitmaps.
+#
+# This 480x360 + inverted conversion for y1 by rockbox-y1
+# ...scaled all elements by 1.5x for 480x360 resolution, inverted colors
+WPS: yes
+FMS: yes
+RWPS: yes
+SBS: no
+RSBS: no
+
+<main>
+
+# override implicit .wps filename
+wps.480x360x(16|24|32):  MacClassic-Dark.wps
+
+# Preferred font (including .fnt extension - leave blank for player):
+Font.480x360x(16|24|32): 24-Terminus-Bold.fnt
+
+#misc settings that should be ignored on grayscale targets
+foreground color: ffffff
+background color: 000000
+line selector start color: 000000
+line selector end color: 000000
+line selector text color: FFFFFF
+filetype colours: -
+
+#backdrop - remember this is the source file name in your SVN folder, not dest name!
+backdrop.480x360x(16|24|32): backdrops/MacClassic480-Dark.bmp
+
+#selection bar settings for color targets
+selector type..+x(16|24|32): bar (inverse)
+
+#icons
+iconset: -
+viewers iconset: -
+
+show icons: off
+statusbar: off
+ui viewport: 6,3,468,354,1,FFFFFF,000000
+# Touchscreen: whether to show line separators or not. Default to yes only on touchscreen targets.
+list separator height: 0
+list separator height..+&touchscreen: auto
+list separator color: 808080
+
+</main>
+
+<remote>
+statusbar: top
+ui viewport: -
+</remote>
+
+</theme>
