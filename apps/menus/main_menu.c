@@ -49,6 +49,10 @@
 #include "wps.h"
 #include "skin_buffer.h"
 #include "disk.h"
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+#include "../firmware/target/hosted/android/brightness-android.h"
+#include "../gui/brightness_picker.h"
+#endif
 
 static const struct browse_folder_info config = {ROCKBOX_DIR, SHOW_CFG};
 static int show_info(void);
@@ -501,14 +505,31 @@ static int main_menu_config(void)
     return 0;
 }
 
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+static int android_brightness_slider_func(void)
+{
+    int brightness = 100; /* Default value */
+    set_brightness(NULL, "Brightness", &brightness);
+    return 0;
+}
+#endif
+
 MENUITEM_FUNCTION(main_menu_config_item, 0, ID2P(LANG_MAIN_MENU),
                   main_menu_config, NULL, Icon_Rockbox);
+
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+MENUITEM_FUNCTION(android_brightness_slider_item, 0, "Brightness",
+                  android_brightness_slider_func, NULL, Icon_NOICON);
+#endif
 
 /***********************************/
 /*    MAIN MENU                    */
 
 MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
         Icon_Submenu_Entered,
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+        &android_brightness_slider_item,
+#endif
         &sound_settings,
         &playback_settings,
         &settings_menu_item, &theme_menu,

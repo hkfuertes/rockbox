@@ -106,6 +106,10 @@ static long lasttime = 0;
 #include "usb-ibasso.h"
 #endif
 
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+#include "../firmware/target/hosted/android/brightness-android.h"
+#endif
+
 #ifdef ROCKBOX_NO_TEMP_SETTINGS_FILE /* Overwrites same file each time */
 #define CONFIGFILE_TEMP CONFIGFILE
 #define RESUMEFILE_TEMP RESUMEFILE
@@ -872,6 +876,25 @@ void settings_apply(bool read_disk)
 #endif /* HAVE_REMOTE_LCD */
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
     backlight_set_brightness(global_settings.brightness);
+#endif
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    /* Apply Android brightness setting on startup */
+    /* Load saved brightness setting from file */
+    int brightness = 100; /* Default value */
+    int fd = open(ROCKBOX_DIR "/brightness.cfg", O_RDONLY);
+    if (fd >= 0) {
+        char buf[8];
+        int bytes_read = read(fd, buf, sizeof(buf) - 1);
+        close(fd);
+        if (bytes_read > 0) {
+            buf[bytes_read] = '\0';
+            int saved_brightness = atoi(buf);
+            if (saved_brightness >= 0 && saved_brightness <= 100) {
+                brightness = saved_brightness;
+            }
+        }
+    }
+    android_brightness_set_percent(brightness);
 #endif
 #ifdef HAVE_BACKLIGHT
     backlight_set_timeout(global_settings.backlight_timeout);

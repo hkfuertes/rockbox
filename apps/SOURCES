@@ -140,6 +140,9 @@ recorder/albumart.c
 #ifdef HAVE_LCD_COLOR
 gui/color_picker.c
 #endif
+#if (CONFIG_PLATFORM&PLATFORM_ANDROID)
+gui/brightness_picker.c
+#endif
 
 #ifdef HAVE_RECORDING
 recorder/recording.c

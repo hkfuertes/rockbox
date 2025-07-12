@@ -7,12 +7,12 @@
 - dark theme variant of MacClassic
 - playlist creation without keyboard
 - option to copy playlists found on the device to the playlist menu
+- display brightness settings
 
 ## Planned
 Ordered by priority
 
 ### Settings Menus
-- display brightness
 - screen timeout
 - bluetooth connection
 

@@ -32,6 +32,7 @@ import java.util.zip.ZipFile;
 import org.rockbox.Helper.Logger;
 import org.rockbox.Helper.MediaButtonReceiver;
 import org.rockbox.Helper.RunForegroundManager;
+import org.rockbox.Helper.BrightnessController;
 import android.app.Activity;
 import android.app.Service;
 import android.content.Intent;
@@ -369,5 +370,35 @@ public class RockboxService extends Service
          * The library must be reloaded to zero the bss and reset data
          * segment */
         System.exit(0);
+    }
+
+    /* Android brightness control methods for JNI interface */
+    private BrightnessController brightnessController = null;
+
+    /**
+     * Set Android brightness to a specific percentage
+     * Called from native code via JNI
+     * @param percent Brightness percentage (0-100)
+     * @return 0 on success, -1 on error
+     */
+    public int setAndroidBrightnessPercent(int percent)
+    {
+        if (brightnessController == null) {
+            brightnessController = new BrightnessController();
+        }
+        return brightnessController.setBrightnessPercent(percent);
+    }
+
+    /**
+     * Get current Android brightness as percentage
+     * Called from native code via JNI
+     * @return Current brightness percentage (0-100)
+     */
+    public int getAndroidBrightnessPercent()
+    {
+        if (brightnessController == null) {
+            brightnessController = new BrightnessController();
+        }
+        return brightnessController.getBrightnessPercent();
     }
 }
