@@ -8,6 +8,7 @@
 - playlist creation without keyboard
 - option to copy playlists found on the device to the playlist menu
 - display brightness settings
+- disable broken menu items
 
 ## Planned
 Ordered by priority
@@ -15,9 +16,6 @@ Ordered by priority
 ### Settings Menus
 - screen timeout
 - bluetooth connection
-
-### Cleanup
-- Remove broken menu items that are not necessary anyway
 
 ### Themes
 - adding themes via SD card

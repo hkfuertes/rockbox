@@ -499,11 +499,13 @@ MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
 /*      INFO MENU                  */
 /***********************************/
 
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 static int main_menu_config(void)
 {
     plugin_load(PLUGIN_APPS_DIR "/main_menu_config.rock", NULL);
     return 0;
 }
+#endif
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 static int android_brightness_slider_func(void)
@@ -514,12 +516,14 @@ static int android_brightness_slider_func(void)
 }
 #endif
 
-MENUITEM_FUNCTION(main_menu_config_item, 0, ID2P(LANG_MAIN_MENU),
-                  main_menu_config, NULL, Icon_Rockbox);
-
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 MENUITEM_FUNCTION(android_brightness_slider_item, 0, "Brightness",
                   android_brightness_slider_func, NULL, Icon_NOICON);
+#endif
+
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
+MENUITEM_FUNCTION(main_menu_config_item, 0, ID2P(LANG_MAIN_MENU),
+                  main_menu_config, NULL, Icon_Rockbox);
 #endif
 
 /***********************************/
@@ -539,7 +543,9 @@ MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
 #if CONFIG_RTC
         &timedate_item,
 #endif
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         &main_menu_config_item,
+#endif
         &manage_settings,
         );
 /*    MAIN MENU                    */

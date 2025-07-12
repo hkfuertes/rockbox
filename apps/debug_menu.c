@@ -142,6 +142,7 @@
 
 #define SCREEN_MAX_CHARS (LCD_WIDTH / SYSFONT_WIDTH)
 
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 static const char* threads_getname(int selected_item, void *data,
                                    char *buffer, size_t buffer_len)
 {
@@ -230,7 +231,9 @@ static int dbg_threads_action_callback(int action, struct gui_synclist *lists)
 #endif
     return action;
 }
+#endif
 /* Test code!!! */
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 static bool dbg_os(void)
 {
     struct simplelist_info info;
@@ -355,6 +358,7 @@ static bool dbg_cpuinfo(void)
     return simplelist_show_list(&info);
 }
 
+#endif
 #endif
 
 static unsigned int ticks, freq_sum;
@@ -911,6 +915,7 @@ static bool tsc2100_debug(void)
 #define BAT_YSPACE    (LCD_HEIGHT - BAT_TSPACE)
 
 
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 static bool view_battery(void)
 {
     extern struct battery_tables_t device_battery_tables; /* powermgmt.c */
@@ -1243,6 +1248,7 @@ static bool view_battery(void)
 }
 
 #endif /* (CONFIG_BATTERY_MEASURE != 0)  */
+#endif
 
 #if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 #if (CONFIG_STORAGE & STORAGE_MMC) || (CONFIG_STORAGE & STORAGE_SD)
@@ -2782,11 +2788,16 @@ static const struct {
 #if defined(CPU_COLDFIRE)
         { "Catch mem accesses", dbg_set_memory_guard },
 #endif
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
+        { "View Android stacks", dbg_os },
+#endif
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         { "View OS stacks", dbg_os },
-#ifdef __linux__
+#endif
+#if defined(__linux__) && !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         { "View CPU stats", dbg_cpuinfo },
 #endif
-#if (CONFIG_BATTERY_MEASURE != 0) && !defined(SIMULATOR)
+#if (CONFIG_BATTERY_MEASURE != 0) && !defined(SIMULATOR) && !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         { "View battery", view_battery },
 #endif
 #ifndef APPLICATION
