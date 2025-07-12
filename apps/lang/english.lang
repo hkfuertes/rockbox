@@ -2701,6 +2701,20 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_COLOR_ACCEPT_CHANGES
+  desc: ask user if they want to accept color changes when canceling
+  user: core
+  <source>
+    *: "Accept color changes?"
+  </source>
+  <dest>
+    *: "Accept color changes?"
+  </dest>
+  <voice>
+    *: "Accept color changes?"
+  </voice>
+</phrase>
+<phrase>
   id: LANG_LCD_REMOTE_MENU
   desc: in the display sub menu
   user: core

@@ -36,6 +36,7 @@
 #include "icon.h"
 #include "color_picker.h"
 #include "viewport.h"
+#include "yesno.h"
 
 /* structure for color info */
 struct rgb_pick
@@ -138,7 +139,7 @@ static int label_get_max_width(struct screen *display)
 }
 
 static void draw_screen(struct screen *display, char *title,
-                        struct rgb_pick *rgb, int row)
+                        struct rgb_pick *rgb, int row, bool adjustment_mode)
 {
     unsigned  text_color       = LCD_BLACK;
     unsigned  background_color = LCD_WHITE;
@@ -224,6 +225,15 @@ static void draw_screen(struct screen *display, char *title,
                 screen_put_iconxy(display,
                                   vp.width - SELECTOR_WIDTH,
                                   top, Icon_Cursor);
+            }
+
+            /* Show adjustment mode indicator */
+            if (adjustment_mode)
+            {
+                /* Draw adjustment mode indicator - highlight the selected slider */
+                display->set_drawinfo(DRMODE_SOLID, LCD_RGBPACK(255, 0, 0), background_color);
+                display->drawrect(0, text_top - SELECTOR_TB_MARGIN - 1,
+                                 vp.width, char_height + SELECTOR_TB_MARGIN*2 + 2);
             }
 
             if (display->depth >= 16)
@@ -404,6 +414,7 @@ bool set_color(struct screen *display, char *title,
                unsigned *color, unsigned banned_color)
 {
     int exit = 0, slider = 0;
+    bool adjustment_mode = false;
     struct rgb_pick rgb;
 
     rgb.color = *color;
@@ -416,12 +427,12 @@ bool set_color(struct screen *display, char *title,
 
         if (display != NULL)
         {
-            draw_screen(display, title, &rgb, slider);
+            draw_screen(display, title, &rgb, slider, adjustment_mode);
         }
         else
         {
             FOR_NB_SCREENS(i)
-                draw_screen(&screens[i], title, &rgb, slider);
+                draw_screen(&screens[i], title, &rgb, slider, adjustment_mode);
         }
 
         button = get_action(CONTEXT_SETTINGS_COLOURCHOOSER, TIMEOUT_BLOCK);
@@ -435,12 +446,28 @@ bool set_color(struct screen *display, char *title,
         {
             case ACTION_STD_PREV:
             case ACTION_STD_PREVREPEAT:
-                slider = (slider + 2) % 3;
+                if (adjustment_mode) {
+                    /* In adjustment mode: decrease current slider value */
+                    if (rgb.rgb_val[slider] > 0)
+                        rgb.rgb_val[slider]--;
+                    pack_rgb(&rgb);
+                } else {
+                    /* In navigation mode: switch to previous slider */
+                    slider = (slider + 2) % 3;
+                }
                 break;
 
             case ACTION_STD_NEXT:
             case ACTION_STD_NEXTREPEAT:
-                slider = (slider + 1) % 3;
+                if (adjustment_mode) {
+                    /* In adjustment mode: increase current slider value */
+                    if (rgb.rgb_val[slider] < rgb_max[slider])
+                        rgb.rgb_val[slider]++;
+                    pack_rgb(&rgb);
+                } else {
+                    /* In navigation mode: switch to next slider */
+                    slider = (slider + 1) % 3;
+                }
                 break;
 
             case ACTION_SETTINGS_INC:
@@ -457,6 +484,11 @@ bool set_color(struct screen *display, char *title,
                 pack_rgb(&rgb);
                 break;
 
+            case ACTION_SETTINGS_SET:
+                /* Toggle adjustment mode */
+                adjustment_mode = !adjustment_mode;
+                break;
+
             case ACTION_STD_OK:
                 if (banned_color != (unsigned)-1 &&
                     banned_color == rgb.color)
@@ -469,6 +501,24 @@ bool set_color(struct screen *display, char *title,
                 break;
 
             case ACTION_STD_CANCEL:
+                /* Check if color has changed */
+                if (rgb.color != *color) {
+                    /* Ask user if they want to accept changes */
+                    const char* message_lines[] = { ID2P(LANG_COLOR_ACCEPT_CHANGES) };
+                    struct text_message message = { message_lines, 1 };
+                    enum yesno_res result = gui_syncyesno_run(&message, NULL, NULL);
+                    if (result == YESNO_YES) {
+                        /* User wants to accept changes */
+                        if (banned_color != (unsigned)-1 &&
+                            banned_color == rgb.color)
+                        {
+                            splash(HZ*2, ID2P(LANG_COLOR_UNACCEPTABLE));
+                            break;
+                        }
+                        *color = rgb.color;
+                    }
+                    /* If result is YESNO_NO, discard changes (keep original color) */
+                }
                 exit = 1;
                 break;
 
