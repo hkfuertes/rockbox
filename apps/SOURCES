@@ -31,6 +31,7 @@ rbcodec_helpers.c
 menus/main_menu.c
 menus/playback_menu.c
 menus/playlist_menu.c
+menus/external_apps_menu.c
 #ifdef HAVE_RECORDING
 menus/recording_menu.c
 #endif

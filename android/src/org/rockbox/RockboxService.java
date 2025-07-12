@@ -33,6 +33,7 @@ import org.rockbox.Helper.Logger;
 import org.rockbox.Helper.MediaButtonReceiver;
 import org.rockbox.Helper.RunForegroundManager;
 import org.rockbox.Helper.BrightnessController;
+import org.rockbox.Helper.ExternalAppsManager;
 import android.app.Activity;
 import android.app.Service;
 import android.content.Intent;
@@ -378,8 +379,6 @@ public class RockboxService extends Service
     /**
      * Set Android brightness to a specific percentage
      * Called from native code via JNI
-     * @param percent Brightness percentage (0-100)
-     * @return 0 on success, -1 on error
      */
     public int setAndroidBrightnessPercent(int percent)
     {
@@ -400,5 +399,79 @@ public class RockboxService extends Service
             brightnessController = new BrightnessController();
         }
         return brightnessController.getBrightnessPercent();
+    }
+
+    /* Android external apps methods for JNI interface */
+    private ExternalAppsManager externalAppsManager = null;
+
+    /**
+     * Get the number of installed applications
+     */
+    public int getExternalAppsCount()
+    {
+        if (externalAppsManager == null) {
+            externalAppsManager = new ExternalAppsManager(this);
+        }
+        return externalAppsManager.getAppCount();
+    }
+
+    /**
+     * Get app name by index
+     */
+    public String getExternalAppName(int index)
+    {
+        if (externalAppsManager == null) {
+            externalAppsManager = new ExternalAppsManager(this);
+        }
+
+        try {
+            java.util.List<ExternalAppsManager.AppInfo> apps = externalAppsManager.getInstalledApps();
+            if (index >= 0 && index < apps.size()) {
+                return apps.get(index).appName;
+            }
+        } catch (Exception e) {
+            Logger.d("Error getting app name at index: " + index, e);
+        }
+        return null;
+    }
+
+    /**
+     * Get app package name by index
+     */
+    public String getExternalAppPackageName(int index)
+    {
+        if (externalAppsManager == null) {
+            externalAppsManager = new ExternalAppsManager(this);
+        }
+
+        try {
+            java.util.List<ExternalAppsManager.AppInfo> apps = externalAppsManager.getInstalledApps();
+            if (index >= 0 && index < apps.size()) {
+                return apps.get(index).packageName;
+            }
+        } catch (Exception e) {
+            Logger.d("Error getting app package name at index: " + index, e);
+        }
+        return null;
+    }
+
+    /**
+     * Launch an application by index
+     */
+    public boolean launchExternalApp(int index)
+    {
+        if (externalAppsManager == null) {
+            externalAppsManager = new ExternalAppsManager(this);
+        }
+
+        try {
+            java.util.List<ExternalAppsManager.AppInfo> apps = externalAppsManager.getInstalledApps();
+            if (index >= 0 && index < apps.size()) {
+                return externalAppsManager.launchApp(apps.get(index).packageName);
+            }
+        } catch (Exception e) {
+            Logger.d("Error launching app at index: " + index, e);
+        }
+        return false;
     }
 }

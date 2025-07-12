@@ -464,6 +464,9 @@ extern struct menu_item_ex
         playlist_options,
         info_menu,
         system_menu;
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+extern struct menu_item_ex external_apps_item;
+#endif
 static const struct root_items items[] = {
     [GO_TO_FILEBROWSER] =   { browser, (void*)GO_TO_FILEBROWSER, &file_menu},
 #ifdef HAVE_TAGCACHE
@@ -488,6 +491,9 @@ static const struct root_items items[] = {
     [GO_TO_PLAYLIST_VIEWER] = { playlist_view, NULL, &playlist_options },
     [GO_TO_SYSTEM_SCREEN] = { miscscrn, &info_menu, &system_menu },
     [GO_TO_SHORTCUTMENU] = { do_shortcut_menu, NULL, NULL },
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    [GO_TO_EXTERNAL_APPS] = { miscscrn, &external_apps_item, NULL },
+#endif
 
 };
 //static const int nb_items = sizeof(items)/sizeof(*items);
@@ -556,6 +562,9 @@ static struct menu_table menu_table[] = {
     { "radio", &fm },
 #endif
     { "playlists", &playlists },
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    { "external_apps", &external_apps_item },
+#endif
     { "plugins", &rocks_browser },
     { "system_menu", &system_menu_ },
     { "shortcuts", &shortcut_menu },

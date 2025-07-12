@@ -17026,3 +17026,17 @@
     *: "sort playlists"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_EXTERNAL_APPS
+  desc: Main menu item for external Android apps
+  user: core
+  <source>
+    *: "External Apps"
+  </source>
+  <dest>
+    *: "External Apps"
+  </dest>
+  <voice>
+    *: "External Apps"
+  </voice>
+</phrase>

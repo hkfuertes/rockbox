@@ -521,6 +521,8 @@ MENUITEM_FUNCTION(android_brightness_slider_item, 0, "Brightness",
                   android_brightness_slider_func, NULL, Icon_NOICON);
 #endif
 
+
+
 #if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 MENUITEM_FUNCTION(main_menu_config_item, 0, ID2P(LANG_MAIN_MENU),
                   main_menu_config, NULL, Icon_Rockbox);
