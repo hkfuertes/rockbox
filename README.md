@@ -9,18 +9,30 @@
 - option to copy playlists found on the device to the playlist menu
 - display brightness settings
 - disable broken menu items
+- external app launcher
 
 ## Planned
 Ordered by priority
 
-### Settings Menus
-- screen timeout
-- bluetooth connection
+### Soon/Mid-term
+#### UI/UX
+- configurable scroll wheel vibration
 
-### Themes
+#### Themes
 - adding themes via SD card
 - fix more ipod classic themes to work on this port
 
-### Connectivity
-If wifi becomes available on the Y1:
+### Unknown/Long-term
+As a hosted app rockbox lacks permissions to do these things. The following features are likely not doable in the near future.
+
+#### UI/UX
+- hold center button to turn screen off
+- device shutdown/restart feature
+
+#### Settings Menus
+- screen timeout
+- bluetooth
+- wifi
+
+#### Connectivity
 - fetch podcasts via rss
