@@ -22,6 +22,7 @@
 
 #include <jni.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "button.h"
 #include "buttonmap.h"
 #include "config.h"
@@ -29,8 +30,10 @@
 #include "system.h"
 #include "touchscreen.h"
 #include "powermgmt.h"
+#include "android_keyevents.h"
+#include "settings.h"
 
-/* Android keycode definitions */
+/* Android keycode definitions for media keys */
 #define KEYCODE_MEDIA_NEXT     87
 #define KEYCODE_MEDIA_PREVIOUS 88
 
@@ -40,10 +43,14 @@ extern JNIEnv *env_ptr;
 extern jclass  RockboxService_class;
 extern jobject RockboxService_instance;
 
+/* Forward declaration for vibration function */
+JNIEXPORT void JNICALL Java_org_rockbox_RockboxFramebuffer_triggerVibrationNative(JNIEnv* env, jclass class, jint baseDuration, jint boostDuration);
+
 static int last_y, last_x;
 static int last_btns;
 static int held_buttons = 0;
-static long last_button_time = 0;
+static long last_dpad_press_time = 0;
+static int dpad_press_count = 0;
 
 static enum {
     STATE_UNKNOWN,
@@ -82,6 +89,54 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
 
     unsigned button = 0;
 
+        /* Trigger vibration for DPAD buttons with adaptive intensity */
+    if ((keycode == KEYCODE_DPAD_LEFT || keycode == KEYCODE_DPAD_RIGHT) && global_settings.wheel_vibration_intensity > 0)
+    {
+        long current_time = current_tick;
+        long time_since_last_press = current_time - last_dpad_press_time;
+        
+        /* Track button press frequency */
+        if (time_since_last_press < HZ/6.5) /* Within 1/4 second of last press */
+        {
+            dpad_press_count++;
+        } else {
+            dpad_press_count = 1; /* Reset counter if more than 1/4 second has passed */
+        }
+        last_dpad_press_time = current_time;
+        
+        /* Calculate adaptive boost based on press frequency to simulate haptic feedback*/
+        int boost_duration = 0;
+        
+        if (dpad_press_count < 3) {
+            boost_duration = 20;
+        } else if (dpad_press_count >= 3 && dpad_press_count < 7) {
+            boost_duration = 8;
+        } else if (dpad_press_count >= 7 && dpad_press_count < 15) {
+            boost_duration = 2;
+        } else if (dpad_press_count >= 15 && dpad_press_count < 20) {
+            boost_duration = 0;
+        }
+        else if (dpad_press_count >= 20) {
+            boost_duration = 0;
+        }
+        /* Log the current press count and boost */
+        // if (env_ptr) {
+        //         jclass log_class = (*env_ptr)->FindClass(env_ptr, "android/util/Log");
+        //         if (log_class) {
+        //             jmethodID log_method = (*env_ptr)->GetStaticMethodID(env_ptr, log_class, "d", "(Ljava/lang/String;Ljava/lang/String;)I");
+        //             if (log_method) {
+        //                 jstring tag = (*env_ptr)->NewStringUTF(env_ptr, "RockboxButton");
+        //                 char msg[100];
+        //                 snprintf(msg, sizeof(msg), "Press count: %d, Boost: %dms", dpad_press_count, boost_duration);
+        //                 jstring jmsg = (*env_ptr)->NewStringUTF(env_ptr, msg);
+        //                 (*env_ptr)->CallStaticIntMethod(env_ptr, log_class, log_method, tag, jmsg);
+        //             }
+        //         }
+        //     }        
+        Java_org_rockbox_RockboxFramebuffer_triggerVibrationNative(env, class, global_settings.wheel_vibration_intensity, boost_duration);
+
+    }
+
     if (!state)
     {
         button = multimedia_to_button((int)keycode);
@@ -112,7 +167,6 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
     {
         last_btns |= button;
         held_buttons |= button;
-        last_button_time = current_tick;
     }
     else
     {
@@ -122,6 +176,32 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
     }
 
     return true;
+}
+
+/*
+ * Trigger vibration for button feedback
+ */
+JNIEXPORT void JNICALL
+Java_org_rockbox_RockboxFramebuffer_triggerVibrationNative(JNIEnv* env, jclass class, jint baseDuration, jint boostDuration)
+{
+    (void)env;
+    (void)class;
+    
+    /* Call the Java method to trigger vibration with base duration and boost */
+    if (env_ptr && RockboxService_instance) {
+        jclass framebuffer_class = (*env_ptr)->FindClass(env_ptr, "org/rockbox/RockboxFramebuffer");
+        if (framebuffer_class) {
+            jmethodID trigger_vibration_method = (*env_ptr)->GetStaticMethodID(env_ptr, framebuffer_class, 
+                "triggerVibration", "(Landroid/content/Context;II)V");
+            if (trigger_vibration_method) {
+                (*env_ptr)->CallStaticVoidMethod(env_ptr, framebuffer_class, trigger_vibration_method, RockboxService_instance, baseDuration, boostDuration);
+                /* Clear any JNI exceptions that might have occurred */
+                if ((*env_ptr)->ExceptionCheck(env_ptr)) {
+                    (*env_ptr)->ExceptionClear(env_ptr);
+                }
+            }
+        }
+    }
 }
 
 /*

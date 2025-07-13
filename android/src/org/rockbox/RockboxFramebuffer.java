@@ -33,6 +33,7 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewConfiguration;
+import android.os.Vibrator;
 
 public class RockboxFramebuffer extends SurfaceView 
                                  implements SurfaceHolder.Callback
@@ -40,6 +41,10 @@ public class RockboxFramebuffer extends SurfaceView
     private final DisplayMetrics metrics;
     private final ViewConfiguration view_config;
     private Bitmap btm;
+
+    private static final int[] duration_mapping = {
+        0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50
+    };
 
     /* first stage init; needs to run from a thread that has a Looper 
      * setup stuff that needs a Context */
@@ -133,9 +138,27 @@ public class RockboxFramebuffer extends SurfaceView
     private native void touchHandler(boolean down, int x, int y);
     public native static boolean buttonHandler(int keycode, boolean state);
     public native static boolean buttonHandlerRepeat(int keycode);
-
+    public native static void triggerVibrationNative(int baseDuration, int boostDuration);
+    
     public native void surfaceCreated(SurfaceHolder holder);
     public native void surfaceDestroyed(SurfaceHolder holder);
+    
+    /* Trigger vibration for button feedback */
+    public static void triggerVibration(Context context, int baseDuration, int boostDuration) {
+        try {
+            Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+            if (vibrator != null) {
+                int base_ms = duration_mapping[baseDuration];
+                int boost_ms = boostDuration;
+                int total_ms = base_ms + boost_ms;
+                vibrator.vibrate(total_ms);
+            } else {
+                android.util.Log.e("RockboxFramebuffer", "Vibrator is null");
+            }
+        } catch (Exception e) {
+            android.util.Log.e("RockboxFramebuffer", "Vibration error: " + e.getMessage());
+        }
+    }
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
     {
         btm = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);

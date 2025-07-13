@@ -519,6 +519,7 @@ static int android_brightness_slider_func(void)
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 MENUITEM_FUNCTION(android_brightness_slider_item, 0, "Brightness",
                   android_brightness_slider_func, NULL, Icon_NOICON);
+MENUITEM_SETTING(wheel_vibrations, &global_settings.wheel_vibration_intensity, NULL);
 #endif
 
 
@@ -535,6 +536,7 @@ MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
         Icon_Submenu_Entered,
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
         &android_brightness_slider_item,
+        &wheel_vibrations,
 #endif
         &sound_settings,
         &playback_settings,

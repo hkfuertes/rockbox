@@ -17040,3 +17040,17 @@
     *: "External Apps"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_WHEEL_VIBRATIONS
+  desc: wheel vibration settings 
+  user: core
+  <source>
+    *: "Wheel Vibration Intensity"
+  </source>
+  <dest>
+    *: "Wheel Vibration Intensity"
+  </dest>
+  <voice>
+    *: "Wheel vibration intensity"
+  </voice>
+</phrase>

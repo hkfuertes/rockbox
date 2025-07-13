@@ -2337,6 +2337,11 @@ const struct settings_list settings[] = {
     ID2P(LANG_AUTO), ID2P(LANG_HEADPHONE), ID2P(LANG_LINEOUT)),
 #endif
     OFFON_SETTING(0, playback_log, LANG_LOGGING, false, "play log", NULL),
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    CHOICE_SETTING(0, wheel_vibration_intensity, LANG_WHEEL_VIBRATIONS, 25,
+                   "wheel vibration intensity", "0,5,10,15,20,25,30,35,40,45,50", NULL, 11,
+                   "0ms", "5ms", "10ms", "15ms", "20ms", "25ms", "30ms", "35ms", "40ms", "45ms", "50ms"),
+#endif
 };
 
 const int nb_settings = sizeof(settings)/sizeof(*settings);

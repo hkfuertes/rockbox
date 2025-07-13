@@ -6,17 +6,16 @@
 - change default theme to an adjusted version of MacClassic https://themes.rockbox.org/index.php?themeid=3104
 - dark theme variant of MacClassic
 - playlist creation without keyboard
-- option to copy playlists found on the device to the playlist menu
-- display brightness settings
+- option to copy playlists found on the device to the playlist menu (Settings > Database > Copy Playlists on Scan)
+- display brightness settings (Settings > Brightness)
 - disable broken menu items
 - external app launcher
+- haptic scroll wheel vibration (Settings > Wheel Vibration Intensity)
 
 ## Planned
 Ordered by priority
 
 ### Soon/Mid-term
-#### UI/UX
-- configurable scroll wheel vibration
 
 #### Themes
 - adding themes via SD card
