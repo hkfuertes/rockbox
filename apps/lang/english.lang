@@ -17054,3 +17054,17 @@
     *: "Wheel vibration intensity"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_RESTART_ROCKBOX
+  desc: Main menu item to restart Rockbox on Android
+  user: core
+  <source>
+    *: "Restart Rockbox"
+  </source>
+  <dest>
+    *: "Restart Rockbox"
+  </dest>
+  <voice>
+    *: "Restart Rockbox"
+  </voice>
+</phrase>

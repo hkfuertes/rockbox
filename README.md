@@ -28,6 +28,7 @@ If you still want to try you need to do the following:
 - disable broken menu items
 - external app launcher
 - haptic scroll wheel vibration (Settings > Wheel Vibration Intensity)
+- Menu item to restart the Rockbox app (for easier DB updates)
 
 ## Known issues
 - after initializing or updating the DB you need to restart Rockbox using adb:
@@ -45,9 +46,6 @@ adb shell monkey -p org.rockbox -c android.intent.category.LAUNCHER 1
 Ordered by priority
 
 ### Soon/Mid-term
-
-#### UI/UX
-- Menu item to restart the Rockbox app (for easier DB updates)
 
 #### Themes
 - fix more ipod classic themes to work on this port

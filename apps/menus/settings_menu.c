@@ -405,6 +405,7 @@ MENUITEM_SETTING(governor, &global_settings.governor, NULL);
 #endif
 
 
+
 MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
           0, Icon_System_menu,
 #if (BATTERY_CAPACITY_INC > 0) || defined(HAVE_USB_CHARGING_ENABLE)

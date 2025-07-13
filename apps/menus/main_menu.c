@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <limits.h>
+#include <stdlib.h>
 #include "config.h"
 #include "string.h"
 #include "lang.h"
@@ -56,6 +57,8 @@
 
 static const struct browse_folder_info config = {ROCKBOX_DIR, SHOW_CFG};
 static int show_info(void);
+
+
 /***********************************/
 /*    MANAGE SETTINGS MENU        */
 
@@ -493,9 +496,25 @@ MENUITEM_FUNCTION(debug_menu_item, 0, ID2P(LANG_DEBUG),
 MENUITEM_FUNCTION(show_legal_item, 0, ID2P(LANG_LEGAL_NOTICES),
                   show_legal, NULL, Icon_NOICON);
 
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+static int android_restart_func(void)
+{
+    system("am force-stop org.rockbox");
+    system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
+    return 0;
+}
+
+MENUITEM_FUNCTION(android_restart_item, 0, ID2P(LANG_RESTART_ROCKBOX),
+                  android_restart_func, NULL, Icon_NOICON);
+MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
+            &show_info_item, &show_credits_item,
+            &show_runtime_item, &show_legal_item, &android_restart_item, &debug_menu_item,);
+#else
 MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
           &show_info_item, &show_credits_item,
           &show_runtime_item, &show_legal_item, &debug_menu_item);
+#endif
+
 /*      INFO MENU                  */
 /***********************************/
 
@@ -514,6 +533,7 @@ static int android_brightness_slider_func(void)
     set_brightness(NULL, "Brightness", &brightness);
     return 0;
 }
+
 #endif
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
