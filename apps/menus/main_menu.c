@@ -497,18 +497,33 @@ MENUITEM_FUNCTION(show_legal_item, 0, ID2P(LANG_LEGAL_NOTICES),
                   show_legal, NULL, Icon_NOICON);
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+
 static int android_restart_func(void)
 {
     system("am force-stop org.rockbox");
     system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
+
     return 0;
 }
 
+static int android_debug_func(void)
+{
+    // use this for debugging system calls
+    system("sleep 1");
+
+    return 0;
+}
+
+
 MENUITEM_FUNCTION(android_restart_item, 0, ID2P(LANG_RESTART_ROCKBOX),
                   android_restart_func, NULL, Icon_NOICON);
+MENUITEM_FUNCTION(android_debug_item, 0, ID2P(LANG_DEBUG_SYSCALL),
+                  android_debug_func, NULL, Icon_NOICON);
+
 MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
             &show_info_item, &show_credits_item,
-            &show_runtime_item, &show_legal_item, &android_restart_item, &debug_menu_item,);
+            &show_runtime_item, &show_legal_item,
+            &android_debug_item, &debug_menu_item, &android_restart_item);
 #else
 MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
           &show_info_item, &show_credits_item,

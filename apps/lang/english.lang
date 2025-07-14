@@ -17068,3 +17068,17 @@
     *: "Restart Rockbox"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_DEBUG_SYSCALL
+  desc: Debug menu item for system calls
+  user: core
+  <source>
+    *: "Debug SysCall"
+  </source>
+  <dest>
+    *: "Debug SysCall"
+  </dest>
+  <voice>
+    *: "Debug SysCall"
+  </voice>
+</phrase>
