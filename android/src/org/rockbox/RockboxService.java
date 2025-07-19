@@ -170,9 +170,9 @@ public class RockboxService extends Service
             public void run()
             {
                 final int BUFFER = 8*1024;
-                String rockboxDirPath = "/data/data/org.rockbox/app_rockbox/rockbox";
-                String rockboxCreditsPath = "/data/data/org.rockbox/app_rockbox/rockbox/rocks/viewers";
-                String rockboxSdDirPath = "/sdcard/rockbox";
+                String rockboxDirPath = "/sdcard/.rockbox";
+                String rockboxCreditsPath = "/sdcard/.rockbox/rocks/viewers";
+                String rockboxSdDirPath = "/sdcard/.rockbox";
 
                 /* the following block unzips libmisc.so, which contains the files 
                  * we ship, such as themes. It's needed to put it into a .so file
@@ -268,7 +268,7 @@ public class RockboxService extends Service
                 }
 
                 /* Generate default config if none exists yet */
-                File rockboxConfig = new File(Environment.getExternalStorageDirectory(), "rockbox/config.cfg");
+                File rockboxConfig = new File(Environment.getExternalStorageDirectory(), ".rockbox/config.cfg");
                 if (!rockboxConfig.exists()) {
                     File rbDir = new File(rockboxConfig.getParent());
                     if (!rbDir.exists())

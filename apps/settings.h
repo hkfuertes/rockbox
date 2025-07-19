@@ -930,9 +930,9 @@ struct user_settings
     int hp_lo_select; /* indicates automatic, headphone-only, or lineout-only operation */
 #endif
     bool playback_log; /* ROCKBOX_DIR/playback.log for tracks played */
-    
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     int wheel_vibration_intensity; /* Vibration intensity for wheel/DPAD buttons (0-50ms) */
+
 #endif
 };
 

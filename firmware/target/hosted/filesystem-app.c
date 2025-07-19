@@ -125,9 +125,9 @@ void paths_init(void)
 #ifdef HAVE_SPECIAL_DIRS
     /* make sure $HOME/.config/rockbox.org exists, it's needed for config.cfg */
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-    os_mkdir("/sdcard/rockbox" __MKDIR_MODE_ARG);
-    os_mkdir("/sdcard/rockbox/rocks.data" __MKDIR_MODE_ARG);
-    os_mkdir("/sdcard/rockbox/eqs" __MKDIR_MODE_ARG);
+    os_mkdir("/sdcard/.rockbox" __MKDIR_MODE_ARG);
+    os_mkdir("/sdcard/.rockbox/rocks.data" __MKDIR_MODE_ARG);
+    os_mkdir("/sdcard/.rockbox/eqs" __MKDIR_MODE_ARG);
 #else
     char config_dir[MAX_PATH];
 
@@ -171,7 +171,7 @@ static const char* _get_user_file_path(const char *path,
     while (*pos == PATH_SEPCH) pos++;
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-    if (path_append(buf, "/sdcard/rockbox", pos, bufsize) >= bufsize)
+    if (path_append(buf, "/sdcard/.rockbox", pos, bufsize) >= bufsize)
         return NULL;
 #else
     if (path_append(buf, rbhome, ".config/rockbox.org", bufsize) >= bufsize ||
