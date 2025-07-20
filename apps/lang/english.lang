@@ -17082,3 +17082,31 @@
     *: "Debug SysCall"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_SYSTEM_SETTINGS
+  desc: Menu item to launch system settings
+  user: core
+  <source>
+    *: "System Settings"
+  </source>
+  <dest>
+    *: "System Settings"
+  </dest>
+  <voice>
+    *: "System Settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BLUETOOTH_SETTINGS
+  desc: Menu item to launch bluetooth settings
+  user: core
+  <source>
+    *: "Bluetooth"
+  </source>
+  <dest>
+    *: "Bluetooth"
+  </dest>
+  <voice>
+    *: "Bluetooth"
+  </voice>
+</phrase>

@@ -509,16 +509,32 @@ static int android_restart_func(void)
 static int android_debug_func(void)
 {
     // use this for debugging system calls
+    system("sleep 1");
+
+    return 0;
+}
+
+static int system_menu_func(void)
+{
     system("am start -a android.settings.SETTINGS");
 
     return 0;
 }
 
+static int bluetooth_settings_func(void)
+{
+    system("am start -a android.settings.BLUETOOTH_SETTINGS");
+    return 0;
+}
 
 MENUITEM_FUNCTION(android_restart_item, 0, ID2P(LANG_RESTART_ROCKBOX),
                   android_restart_func, NULL, Icon_NOICON);
 MENUITEM_FUNCTION(android_debug_item, 0, ID2P(LANG_DEBUG_SYSCALL),
                   android_debug_func, NULL, Icon_NOICON);
+MENUITEM_FUNCTION(system_menu_item, 0, ID2P(LANG_SYSTEM_SETTINGS),
+                  system_menu_func, NULL, Icon_NOICON);
+MENUITEM_FUNCTION(bluetooth_settings_item_item, 0, ID2P(LANG_BLUETOOTH_SETTINGS),
+                  bluetooth_settings_func, NULL, Icon_NOICON);
 
 MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
             &show_info_item, &show_credits_item,
@@ -572,6 +588,8 @@ MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
         &android_brightness_slider_item,
         &wheel_vibrations,
+        &bluetooth_settings_item_item,
+        &system_menu_item,
 #endif
         &sound_settings,
         &playback_settings,
