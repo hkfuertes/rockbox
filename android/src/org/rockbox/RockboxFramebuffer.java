@@ -116,7 +116,15 @@ public class RockboxFramebuffer extends SurfaceView
 
     public boolean onKeyDown(int keyCode, KeyEvent event)
     {
-        return buttonHandler(keyCode, true);
+        /* Handle repeat events */
+        if (event.getRepeatCount() > 0)
+        {
+            return buttonHandlerRepeat(keyCode);
+        }
+        else
+        {
+            return buttonHandler(keyCode, true);
+        }
     }
 
     public boolean onKeyUp(int keyCode, KeyEvent event)

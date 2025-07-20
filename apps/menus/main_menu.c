@@ -509,7 +509,7 @@ static int android_restart_func(void)
 static int android_debug_func(void)
 {
     // use this for debugging system calls
-    system("sleep 1");
+    system("am start -a android.settings.SETTINGS");
 
     return 0;
 }

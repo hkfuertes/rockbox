@@ -34,8 +34,8 @@
 #include "settings.h"
 
 /* Android keycode definitions for media keys */
-#define KEYCODE_MEDIA_NEXT     87
-#define KEYCODE_MEDIA_PREVIOUS 88
+#define KEYCODE_MEDIA_NEXT     22
+#define KEYCODE_MEDIA_PREVIOUS 21
 
 extern volatile long current_tick;
 
@@ -90,7 +90,7 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
     unsigned button = 0;
 
         /* Trigger vibration for DPAD buttons with adaptive intensity */
-    if ((keycode == KEYCODE_DPAD_LEFT || keycode == KEYCODE_DPAD_RIGHT) && global_settings.wheel_vibration_intensity > 0)
+    if ((keycode == KEYCODE_DPAD_UP || keycode == KEYCODE_DPAD_DOWN) && global_settings.wheel_vibration_intensity > 0)
     {
         long current_time = current_tick;
         long time_since_last_press = current_time - last_dpad_press_time;
