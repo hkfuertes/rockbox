@@ -31,6 +31,8 @@ import android.os.ResultReceiver;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
+import android.os.Environment;
+import java.io.File;
 
 public class RockboxActivity extends Activity 
 {
@@ -42,6 +44,31 @@ public class RockboxActivity extends Activity
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                              WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        checkRockboxFolderAndInit(0);
+    }
+
+    private void checkRockboxFolderAndInit(final int attempt) {
+        final int MAX_ATTEMPTS = 10; // Wait up to 10 seconds
+        final String ROCKBOX_DIR = "/sdcard/.rockbox";
+        File rockboxDir = new File(ROCKBOX_DIR);
+        if (rockboxDir.exists() && rockboxDir.isDirectory() && rockboxDir.canRead()) {
+            startRockboxService();
+        } else if (attempt < MAX_ATTEMPTS - 1) {
+            // Retry after 1 second
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    checkRockboxFolderAndInit(attempt + 1);
+                }
+            }, 1000);
+        } else {
+            // After 10 seconds show an error but start the service anyway
+            Toast.makeText(this, "Rockbox data folder not found or not accessible!", Toast.LENGTH_LONG).show();
+            startRockboxService();
+        }
+    }
+
+    private void startRockboxService() {
         Intent intent = new Intent(this, RockboxService.class);
         intent.setAction(Intent.ACTION_MAIN);
         intent.putExtra("callback", new ResultReceiver(new Handler(getMainLooper())) {
