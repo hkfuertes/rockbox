@@ -35,13 +35,16 @@ import org.rockbox.Helper.RunForegroundManager;
 import org.rockbox.Helper.BrightnessController;
 import org.rockbox.Helper.ExternalAppsManager;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Service;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.ResultReceiver;
 import android.view.KeyEvent;
+import eu.chainfire.libsuperuser.Shell;
 
 /* This class is used as the main glue between java and c.
  * All access should be done through RockboxService.get_instance() for safety.
@@ -470,5 +473,30 @@ public class RockboxService extends Service
             Logger.d("Error launching app at index: " + index, e);
         }
         return false;
+    }
+
+    public void shutdownDevice() {
+        final Activity activity = getActivity();
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new AlertDialog.Builder(activity)
+                    .setTitle("Shutdown Device")
+                    .setMessage("Are you sure you want to shut down the device?")
+                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Run shutdown in background thread
+                            new Thread(new Runnable() {
+                                public void run() {
+                                    Shell.SU.run("reboot -p");
+                                }
+                            }).start();
+                        }
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
+            }
+        });
     }
 }

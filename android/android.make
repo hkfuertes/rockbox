@@ -58,6 +58,7 @@ JAVA_SRC	:= $(wildcard $(ANDROID_DIR)/src/$(PACKAGE_PATH)/*.java)
 JAVA_SRC	+= $(wildcard $(ANDROID_DIR)/src/$(PACKAGE_PATH)/Helper/*.java)
 JAVA_SRC	+= $(wildcard $(ANDROID_DIR)/src/$(PACKAGE_PATH)/widgets/*.java)
 JAVA_SRC	+= $(wildcard $(ANDROID_DIR)/src/$(PACKAGE_PATH)/monitors/*.java)
+JAVA_SRC	+= $(wildcard $(ANDROID_DIR)/src/eu/chainfire/libsuperuser/*.java)
 
 java2class = $(addsuffix .class,$(basename $(subst $(ANDROID_DIR)/src,$(CLASSPATH),$(1))))
 
@@ -80,6 +81,7 @@ DIRS		+= $(subst ___,data,$(_DIRS))
 DIRS		+= $(BUILDDIR)/libs/$(ANDROID_ARCH)
 DIRS		+= $(CPUFEAT_BUILD)
 DIRS		+= $(CLASSPATH)
+DIRS		+= $(CLASSPATH)/eu/chainfire/libsuperuser
 
 RES		:= $(wildcard $(ANDROID_DIR)/res/*/*)
 
@@ -104,10 +106,14 @@ $(CLASSPATH)/$(PACKAGE_PATH)/%.class: $(ANDROID_DIR)/src/$(PACKAGE_PATH)/%.java 
 	$(call PRINTS,JAVAC $(subst $(ROOTDIR)/,,$<))javac -d $(CLASSPATH) \
 		$(JAVAC_OPTS) -sourcepath $(ANDROID_DIR)/src $<
 
+$(CLASSPATH)/eu/chainfire/libsuperuser/%.class: $(ANDROID_DIR)/src/eu/chainfire/libsuperuser/%.java
+	$(call PRINTS,JAVAC $(subst $(ROOTDIR)/,,$<))javac -d $(CLASSPATH) \
+		$(JAVAC_OPTS) -sourcepath $(ANDROID_DIR)/src $<
+
 $(JAR): $(JAVA_SRC) $(R_JAVA)
 	$(call PRINTS,JAVAC $(subst $(ROOTDIR)/,,$?))javac -d $(CLASSPATH) \
-		$(JAVAC_OPTS) -sourcepath $(ANDROID_DIR)/src:$(ANDROID_DIR)/gen $?
-	$(call PRINTS,JAR $(subst $(BUILDDIR)/,,$@))jar cf $(JAR) -C $(CLASSPATH) org
+		$(JAVAC_OPTS) -sourcepath $(ANDROID_DIR)/src:$(ANDROID_DIR)/gen $(JAVA_SRC)
+	$(call PRINTS,JAR $(subst $(BUILDDIR)/,,$@))jar cf $(JAR) -C $(CLASSPATH) org -C $(CLASSPATH) eu
 
 jar: $(JAR)
 

@@ -17124,3 +17124,17 @@
     *: "FM Radio"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_SHUTDOWN
+  desc: Shutdown menu item
+  user: core
+  <source>
+    *: "Shutdown Device"
+  </source>
+  <dest>
+    *: "Shutdown Device"
+  </dest>
+  <voice>
+    *: "Shutdown Device"
+  </voice>
+</phrase>

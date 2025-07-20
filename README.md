@@ -1,5 +1,7 @@
 # Rockbox Android Fork for Innioasis Y1
 
+Thank you to [Chainfire/libsuperuser](https://github.com/Chainfire/libsuperuser) for providing a library that enables execution of root commands.
+
 ## General Information
 This is an experimental build of Rockbox. 
 
@@ -12,6 +14,7 @@ Do NOT run this if you don't know what you are doing. You might brick your devic
 If you still want to try you need to do the following:
 
 - have an Innioasis Y1 with ADB enabled
+- root the device (if you want to be able to shut it down)
 - download the latest release APK
 - `adb install rockbox-[release].apk`
 - either use one of the preinstalled themes or supply your own in the rockbox folder on the SD card
