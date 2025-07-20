@@ -17087,13 +17087,13 @@
   desc: Menu item to launch system settings
   user: core
   <source>
-    *: "System Settings"
+    *: "Android System Settings"
   </source>
   <dest>
-    *: "System Settings"
+    *: "Android System Settings"
   </dest>
   <voice>
-    *: "System Settings"
+    *: "Android System Settings"
   </voice>
 </phrase>
 <phrase>
@@ -17108,5 +17108,19 @@
   </dest>
   <voice>
     *: "Bluetooth"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FM_RADIO_APP
+  desc: FM Radio app menu item
+  user: core
+  <source>
+    *: "FM Radio"
+  </source>
+  <dest>
+    *: "FM Radio"
+  </dest>
+  <voice>
+    *: "FM Radio"
   </voice>
 </phrase>

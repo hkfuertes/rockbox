@@ -465,6 +465,7 @@ extern struct menu_item_ex
         info_menu,
         system_menu;
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+extern struct menu_item_ex fm_radio_app_item;
 extern struct menu_item_ex external_apps_item;
 #endif
 static const struct root_items items[] = {
@@ -492,6 +493,7 @@ static const struct root_items items[] = {
     [GO_TO_SYSTEM_SCREEN] = { miscscrn, &info_menu, &system_menu },
     [GO_TO_SHORTCUTMENU] = { do_shortcut_menu, NULL, NULL },
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    [GO_TO_FM_RADIO_APP] = { miscscrn, &fm_radio_app_item, NULL },
     [GO_TO_EXTERNAL_APPS] = { miscscrn, &external_apps_item, NULL },
 #endif
 
@@ -563,6 +565,7 @@ static struct menu_table menu_table[] = {
 #endif
     { "playlists", &playlists },
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    { "fm_radio_app", &fm_radio_app_item },
     { "external_apps", &external_apps_item },
 #endif
     { "plugins", &rocks_browser },
