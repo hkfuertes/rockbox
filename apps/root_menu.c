@@ -568,7 +568,9 @@ static struct menu_table menu_table[] = {
     { "fm_radio_app", &fm_radio_app_item },
     { "external_apps", &external_apps_item },
 #endif
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
     { "plugins", &rocks_browser },
+#endif
     { "system_menu", &system_menu_ },
     { "shortcuts", &shortcut_menu },
 };
