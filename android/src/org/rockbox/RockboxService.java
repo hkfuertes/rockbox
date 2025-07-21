@@ -47,6 +47,7 @@ import android.os.IBinder;
 import android.os.ResultReceiver;
 import android.view.KeyEvent;
 import eu.chainfire.libsuperuser.Shell;
+import android.util.Log;
 
 /* This class is used as the main glue between java and c.
  * All access should be done through RockboxService.get_instance() for safety.
@@ -511,6 +512,20 @@ public class RockboxService extends Service
                     .show();
             }
         });
+    }
+
+    public static void setSystemTimeAsRoot(final String dateString) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Shell.SU.run("date -s " + dateString +" &");
+                    Log.d("RockboxTime", "Date set as root: " + dateString);
+                } catch (Exception e) {
+                    Log.e("RockboxTime", "Failed to set date as root: " + e.getMessage());
+                }
+            }
+        }).start();
     }
 
     private void copyViewersFolder(String sourceDir, String destDir) {
