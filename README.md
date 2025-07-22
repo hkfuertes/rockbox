@@ -1,8 +1,9 @@
 # Rockbox Android Fork for Innioasis Y1
 
-Thank you to [Chainfire/libsuperuser](https://github.com/Chainfire/libsuperuser) for providing a library that enables execution of root commands.
+Thank you to [Chainfire/libsuperuser](https://github.com/Chainfire/libsuperuser) for providing a library that enables easy execution of root commands.
 
 ## General Information
+
 This is an experimental build of Rockbox. 
 
 Most of the work was already done by the original Rockbox team - all credits to them. 
@@ -14,56 +15,107 @@ Do NOT run this if you don't know what you are doing. You might brick your devic
 If you still want to try you need to do the following:
 
 - have an Innioasis Y1 with ADB enabled
-- root the device (if you want to be able to shut it down)
-- download the latest release APK
-- `adb install rockbox-[release].apk`
-- either use one of the preinstalled themes or supply your own in the rockbox folder on the SD card
-- restart the device, choose Rockbox as launcher when asked
+- root the device (see https://xdaforums.com/t/root-framaroot-a-one-click-apk-to-root-some-devices.2130276/):
+```
+adb install Framaroot-1.9.3.apk
+adb shell monkey -p com.alephzain.framaroot -c android.intent.category.LAUNCHER 1
+# wait for it to start
+adb shell input DPAD_DOWN
+adb shell input DPAD_CENTER
+# wait for the success message
+```
+- Reboot device
+```
+adb reboot
+```
+- Update keymap file to be able to navigate systems menus
+```
+adb shell mount -o rw,remount /system
+adb pull /system/usr/keylayout/Generic.kl Generic.kl
+cp Generic.kl Generic.kl_backup
+sed -i '/key 103   DPAD_UP/c\key 105   DPAD_UP' Generic.kl
+sed -i '/key 108   DPAD_DOWN/c\key 106   DPAD_DOWN' Generic.kl
+sed -i '/key 105   DPAD_LEFT/c\key 103   MEDIA_PREVIOUS' Generic.kl
+sed -i '/key 106   DPAD_RIGHT/c\key 108   MEDIA_NEXT' Generic.kl
+sed -i '/key 163   MEDIA_NEXT/c\key 163   DPAD_RIGHT' Generic.kl
+sed -i '/key 165   MEDIA_NEXT/c\key 165   DPAD_LEFT' Generic.kl
+adb push Generic.kl /system/usr/keylayout/Generic.kl
+adb shell chmod 644 /system/usr/keylayout/Generic.kl
+adb reboot
+```
+- Download the latest rockbox release APK from the sidebar
+```
+adb install rockbox-[release].apk
+```
+- Either use one of the preinstalled themes or supply your own in the rockbox folder on the SD card
+- Uninstall any apps you do not want
+```
+# list packages
+adb shell pm list packages
+# uninstall package
+adb uninstall <package>
+# or if that fails
+adb shell pm disable-user <package>
+```
+- Restart the device, choose Rockbox as launcher when asked
+```
+adb reboot
+```
 
-## Changes
-- remapped controls
-- enable seek forward/backward by holding next/previous media keys
-- change default theme to an adjusted version of MacClassic https://themes.rockbox.org/index.php?themeid=3104
-- dark theme variant of MacClassic
-- playlist creation without keyboard
-- option to copy playlists found on the device to the playlist menu (Settings > Database > Copy Playlists on Scan)
-- display brightness settings (Settings > Brightness)
-- disable broken menu items
-- external app launcher
-- haptic scroll wheel vibration (Settings > Wheel Vibration Intensity)
+## Controls
+
+- Scroll Wheel (Most Screens): Up / Down
+- Scroll Wheel (Now Playing screen): Volume
+- Center (Short): Accept / Enter
+- Center (Long): Turn Off Screen
+- Menu/Back: Cancel / Back
+- Media Buttons: Media Actions
+
+## How to restart the app
+
+When you initialize the database Rockbox will ask you to restart. You can do this via `Main Menu > System > Restart Rockbox (last option in list)`.
+
+## Changes vs. upstream Rockbox
+
+- Remapped controls
+- Enable seek forward/backward by holding next/previous media keys
+- Change default theme to an adjusted version of MacClassic https://themes.rockbox.org/index.php?themeid=3104
+- Dark theme variant of MacClassic
+- Playlist creation without keyboard
+- Option to copy playlists found on the device to the playlist menu (Settings > Database > Copy Playlists on Scan)
+- Display brightness settings (Settings > Brightness)
+- Disable broken menu items
+- External app launcher
+- Haptic scroll wheel vibration (Settings > Wheel Vibration Intensity)
 - Menu item to restart the Rockbox app (for easier DB updates)
+- Menu item to launch android bluetooth and systems menu
+- Menu item to launch FM radio
+- Hold center button to turn screen off
+- Menu item to shutdown device
 
 ## Known issues
-- after initializing or updating the DB you need to restart Rockbox using adb:
-```
-adb shell am force-stop org.rockbox
-adb shell monkey -p org.rockbox -c android.intent.category.LAUNCHER 1
-```
-- themes from other devices are often broken and too small
-- Rockbox might randomly crash (especially after USB file transfers) - restart your device or Rockbox via:
+
+- Themes from other devices are often broken and too small
+- Rockbox might randomly crash (usually recovers on its own now) - restart your device or Rockbox via:
 ```
 adb shell monkey -p org.rockbox -c android.intent.category.LAUNCHER 1
 ```
 
 ## Planned
+
 Ordered by priority
 
 ### Soon/Mid-term
-
 #### Themes
-- fix more ipod classic themes to work on this port
+
+- Fix more ipod classic themes to work on this port
 
 ### Unknown/Long-term
-As a hosted app rockbox lacks permissions to do these things. The following features are likely not doable in the near future.
-
-#### UI/UX
-- hold center button to turn screen off
-- device shutdown/restart feature
-
 #### Settings Menus
-- screen timeout
-- bluetooth
-- wifi
+
+- Screen timeout
+- Wifi (not enabled in current ROMs)
 
 #### Connectivity
-- fetch podcasts via rss
+
+- Fetch podcasts via rss (dependent on wifi)
