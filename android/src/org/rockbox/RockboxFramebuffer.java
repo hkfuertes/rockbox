@@ -53,23 +53,13 @@ public class RockboxFramebuffer extends SurfaceView
     private static final int CENTER_KEYCODE = KeyEvent.KEYCODE_ENTER; // 66
     private static final long LONG_PRESS_DURATION_MS = 1000;
     private Handler longPressHandler = new Handler(Looper.getMainLooper());
-    private boolean centerLongPressTriggered = false;
+    private boolean centerLongPressDetected = false;
+    private boolean screenWasOff = false;
     private Runnable centerLongPressRunnable = new Runnable() {
         @Override
         public void run() {
-            centerLongPressTriggered = true;
-            Log.d("RockboxButton", "Center long-press detected, sending POWER keyevent as root");
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Shell.SU.run("input keyevent POWER");
-                        Log.d("RockboxButton", "POWER keyevent sent as root");
-                    } catch (Exception e) {
-                        Log.e("RockboxButton", "Failed to send POWER keyevent as root: " + e.getMessage());
-                    }
-                }
-            }).start();
+            centerLongPressDetected = true;
+            Log.d("RockboxButton", "Turning off screen...");
         }
     };
 
@@ -143,27 +133,65 @@ public class RockboxFramebuffer extends SurfaceView
 
     public boolean onKeyDown(int keyCode, KeyEvent event)
     {
-        // Center button long-press detection
         if ((keyCode == CENTER_KEYCODE) && event.getRepeatCount() == 0) {
-            centerLongPressTriggered = false;
+            centerLongPressDetected = false;
             longPressHandler.postDelayed(centerLongPressRunnable, LONG_PRESS_DURATION_MS);
+            return true;
         }
         /* Handle repeat events */
-        if (event.getRepeatCount() > 0)
-        {
-            return buttonHandlerRepeat(keyCode);
-        }
-        else
-        {
-            return buttonHandler(keyCode, true);
+        else {
+            if (event.getRepeatCount() > 0)
+            {
+                return buttonHandlerRepeat(keyCode);
+            }
+            else
+            {
+                return buttonHandler(keyCode, true);
+            }
         }
     }
 
     public boolean onKeyUp(int keyCode, KeyEvent event)
     {
-        // Cancel long-press if released before trigger
         if (keyCode == CENTER_KEYCODE) {
+            // Cancel pending timer
             longPressHandler.removeCallbacks(centerLongPressRunnable);
+
+            // Only send POWER keyevent if long-press was detected
+            if (centerLongPressDetected) {
+                centerLongPressDetected = false;
+                Log.d("RockboxButton", "Sending POWER keyevent as root");
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Shell.SU.run("input keyevent POWER");
+                            screenWasOff = true;
+                            Log.d("RockboxButton", "POWER keyevent sent");
+                        } catch (Exception e) {
+                            Log.e("RockboxButton", "Failed to send POWER keyevent: " + e.getMessage());
+                        }
+                    }
+                }).start();
+                return true;
+            } 
+            else {
+                if (!screenWasOff){
+                    // center button was pressed but not long enough, handle like a normal press
+                    buttonHandler(keyCode, true);
+                    try {
+                        // pause to make Rockbox catch up
+                        Thread.sleep(10);
+                        return buttonHandler(keyCode, false);
+                    }
+                    catch (InterruptedException e){
+                        Log.e("RockboxButton", "Failed sending center key-up");
+                    }
+                } else {
+                    screenWasOff = false;
+                    Log.d("RockboxButton", "Screen was just off, do not process this center key press");
+                }
+            }
         }
         return buttonHandler(keyCode, false);
     }
@@ -172,7 +200,6 @@ public class RockboxFramebuffer extends SurfaceView
     {
         return metrics.densityDpi;
     }
-    
 
     private int getScrollThreshold()
     {
