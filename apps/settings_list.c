@@ -1114,11 +1114,16 @@ const struct settings_list settings[] = {
     INT_SETTING(F_THEMESETTING, scrollbar_width, LANG_SCROLLBAR_WIDTH, 6,
                 "scrollbar width",UNIT_INT, 3, MAX(LCD_WIDTH/10,25), 1,
                 NULL, NULL, NULL),
-#ifdef HAVE_TOUCHSCREEN
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     TABLE_SETTING(F_ALLOW_ARBITRARY_VALS, list_line_padding, LANG_LIST_LINE_PADDING,
-                  -1, "list padding", "auto,off", UNIT_PIXEL, list_pad_formatter,
-                  list_pad_getlang, NULL, 16,
-                  -1,0,2,4,6,8,10,12,16,20,24,28,32,38,44,50),
+                    0, "list padding", "auto,off", UNIT_PIXEL, list_pad_formatter,
+                    list_pad_getlang, NULL, 16,
+                    -1,0,2,4,6,8,10,12,16,20,24,28,32,38,44,50),
+#else
+    TABLE_SETTING(F_ALLOW_ARBITRARY_VALS, list_line_padding, LANG_LIST_LINE_PADDING,
+                    -1, "list padding", "auto,off", UNIT_PIXEL, list_pad_formatter,
+                    list_pad_getlang, NULL, 16,
+                    -1,0,2,4,6,8,10,12,16,20,24,28,32,38,44,50),
 #endif
 #if LCD_DEPTH > 1
     TABLE_SETTING(F_ALLOW_ARBITRARY_VALS, list_separator_height, LANG_LIST_SEPARATOR,

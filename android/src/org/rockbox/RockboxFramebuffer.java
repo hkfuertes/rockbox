@@ -38,6 +38,7 @@ import android.util.Log;
 import android.os.Handler;
 import android.os.Looper;
 import eu.chainfire.libsuperuser.Shell;
+import android.graphics.Paint;
 
 public class RockboxFramebuffer extends SurfaceView 
                                  implements SurfaceHolder.Callback
@@ -45,6 +46,7 @@ public class RockboxFramebuffer extends SurfaceView
     private final DisplayMetrics metrics;
     private final ViewConfiguration view_config;
     private Bitmap btm;
+    private final Paint sharpPaint = new Paint();
 
     private static final int[] duration_mapping = {
         0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50
@@ -63,6 +65,10 @@ public class RockboxFramebuffer extends SurfaceView
         }
     };
 
+    // Add framebuffer size constants at the top of the class
+    private static final int FB_WIDTH = 320;
+    private static final int FB_HEIGHT = 240;
+
     /* first stage init; needs to run from a thread that has a Looper 
      * setup stuff that needs a Context */
     public RockboxFramebuffer(Context c)
@@ -77,6 +83,7 @@ public class RockboxFramebuffer extends SurfaceView
         setClickable(true);
         /* don't draw until native is ready (2nd stage) */
         setEnabled(false);
+        sharpPaint.setFilterBitmap(false);
     }
 
     private void update(ByteBuffer framebuffer)
@@ -89,32 +96,27 @@ public class RockboxFramebuffer extends SurfaceView
         btm.copyPixelsFromBuffer(framebuffer);
         synchronized (holder)
         { /* draw */
-            c.drawBitmap(btm, 0.0f, 0.0f, null);
+            c.drawColor(android.graphics.Color.BLACK); // clear canvas first!
+            // Always scale the full framebuffer to the full canvas
+            Rect src = new Rect(0, 0, FB_WIDTH, FB_HEIGHT);
+            Rect dst = new Rect(0, 0, c.getWidth(), c.getHeight());
+            c.drawBitmap(btm, src, dst, sharpPaint);
         }
         holder.unlockCanvasAndPost(c);
     }
     
     private void update(ByteBuffer framebuffer, Rect dirty)
     {
-        SurfaceHolder holder = getHolder();         
-        Canvas c = holder.lockCanvas(dirty);
-        
-        if (c == null)
-			return;
-
-        /* can't copy a partial buffer, but it doesn't make a noticeable difference anyway */
-        btm.copyPixelsFromBuffer(framebuffer);
-        synchronized (holder)
-        {   /* draw */
-            c.drawBitmap(btm, dirty, dirty, null);   
-        }
-        holder.unlockCanvasAndPost(c);
+        update(framebuffer);
     }
 
     public boolean onTouchEvent(MotionEvent me)
     {
-        int x = (int) me.getX();
-        int y = (int) me.getY();
+        // Map input from surface (e.g., 480x360) to framebuffer (320x240)
+        float scaleX = (float)FB_WIDTH / (float)getWidth();
+        float scaleY = (float)FB_HEIGHT / (float)getHeight();
+        int x = (int) (me.getX() * scaleX);
+        int y = (int) (me.getY() * scaleY);
 
         switch (me.getAction())
         {
@@ -212,8 +214,10 @@ public class RockboxFramebuffer extends SurfaceView
     public native static void triggerVibrationNative(int baseDuration, int boostDuration);
     
     public native void surfaceCreated(SurfaceHolder holder);
-    public native void surfaceDestroyed(SurfaceHolder holder);
     
+    // Add native method to force a full redraw from native code
+    public native void forceFullRedraw();
+
     /* Trigger vibration for button feedback */
     public static void triggerVibration(Context context, int baseDuration, int boostDuration) {
         try {
@@ -230,9 +234,18 @@ public class RockboxFramebuffer extends SurfaceView
             android.util.Log.e("RockboxFramebuffer", "Vibration error: " + e.getMessage());
         }
     }
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
-    {
-        btm = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        // Always create the bitmap at the framebuffer size (320x240)
+        btm = Bitmap.createBitmap(FB_WIDTH, FB_HEIGHT, Bitmap.Config.RGB_565);
         setEnabled(true);
+        // Trigger a full framebuffer redraw from native code
+        forceFullRedraw();
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        setEnabled(false);
+        btm = null;
     }
 }

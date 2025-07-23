@@ -247,6 +247,15 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandlerRepeat(JNIEnv*env, jclass class
     return false;
 }
 
+/* JNI method to force a full framebuffer redraw from Java */
+JNIEXPORT void JNICALL
+Java_org_rockbox_RockboxFramebuffer_forceFullRedraw(JNIEnv* env, jobject thiz)
+{
+    (void)env;
+    (void)thiz;
+    lcd_update();
+}
+
 void button_init_device(void)
 {
     JNIEnv e = *env_ptr;
