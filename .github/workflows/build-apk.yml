@@ -46,8 +46,20 @@ jobs:
         make unsigned-apk
     - name: sign apk
       run: |
+        # Check if apksigner is available (Android SDK Build Tools 24.0.3+)
+        APKSIGNER=""
+        if command -v apksigner >/dev/null 2>&1; then
+            APKSIGNER="apksigner"
+        elif [ -n "$ANDROID_SDK_PATH" ] && [ -f "$ANDROID_SDK_PATH/build-tools/$(ls -1 "$ANDROID_SDK_PATH/build-tools" | tail -1)/apksigner" ]; then
+            APKSIGNER="$ANDROID_SDK_PATH/build-tools/$(ls -1 "$ANDROID_SDK_PATH/build-tools" | tail -1)/apksigner"
+        fi
         cd android/build
-        ../sign_apk_ci.sh
+        $APKSIGNER sign --key ../platform.pk8 --cert ../platform.x509.pem rockbox_unsigned.apk
+        cp rockbox_unsigned.apk rockbox.apk
+    - name: zip libs
+      run: |
+        cd android/build
+        zip -r libs.zip libs/
     - name: create release
       id: create_release
       uses: shogo82148/actions-create-release@v1
@@ -61,4 +73,12 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./android/build/rockbox.apk
         asset_name: rockbox-240p-${{ github.sha }}.apk
-        asset_content_type: application/vnd.android.package-archive        
+        asset_content_type: application/vnd.android.package-archive
+    - name: upload libs 
+      uses: shogo82148/actions-upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./android/build/libs.zip
+        asset_name: libs.zip
+        asset_content_type: application/zip
+

@@ -37,7 +37,8 @@ import android.os.Vibrator;
 import android.util.Log;
 import android.os.Handler;
 import android.os.Looper;
-import eu.chainfire.libsuperuser.Shell;
+import android.os.PowerManager;
+import android.os.SystemClock;
 import android.graphics.Paint;
 
 public class RockboxFramebuffer extends SurfaceView 
@@ -57,6 +58,7 @@ public class RockboxFramebuffer extends SurfaceView
     private Handler longPressHandler = new Handler(Looper.getMainLooper());
     private boolean centerLongPressDetected = false;
     private boolean screenWasOff = false;
+    private PowerManager powerManager;
     private Runnable centerLongPressRunnable = new Runnable() {
         @Override
         public void run() {
@@ -84,6 +86,7 @@ public class RockboxFramebuffer extends SurfaceView
         /* don't draw until native is ready (2nd stage) */
         setEnabled(false);
         sharpPaint.setFilterBitmap(false);
+        powerManager = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
     }
 
     private void update(ByteBuffer framebuffer)
@@ -159,22 +162,17 @@ public class RockboxFramebuffer extends SurfaceView
             // Cancel pending timer
             longPressHandler.removeCallbacks(centerLongPressRunnable);
 
-            // Only send POWER keyevent if long-press was detected
+            // Only put device to sleep if long-press was detected
             if (centerLongPressDetected) {
                 centerLongPressDetected = false;
-                Log.d("RockboxButton", "Sending POWER keyevent as root");
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Shell.SU.run("input keyevent POWER");
-                            screenWasOff = true;
-                            Log.d("RockboxButton", "POWER keyevent sent");
-                        } catch (Exception e) {
-                            Log.e("RockboxButton", "Failed to send POWER keyevent: " + e.getMessage());
-                        }
-                    }
-                }).start();
+                Log.d("RockboxButton", "Putting device to sleep");
+                try {
+                    powerManager.goToSleep(SystemClock.uptimeMillis());
+                    screenWasOff = true;
+                    Log.d("RockboxButton", "Device put to sleep");
+                } catch (Exception e) {
+                    Log.e("RockboxButton", "Failed to put device to sleep: " + e.getMessage());
+                }
                 return true;
             } 
             else {

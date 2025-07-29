@@ -45,8 +45,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.ResultReceiver;
+import android.os.PowerManager;
+import android.os.SystemClock;
 import android.view.KeyEvent;
-import eu.chainfire.libsuperuser.Shell;
 import android.util.Log;
 
 /* This class is used as the main glue between java and c.
@@ -472,7 +473,13 @@ public class RockboxService extends Service
                             // Run shutdown in background thread
                             new Thread(new Runnable() {
                                 public void run() {
-                                    Shell.SU.run("reboot -p");
+                                    try {
+                                        java.lang.Process process = Runtime.getRuntime().exec("reboot -p");
+                                        process.waitFor();
+                                        Log.d("RockboxService", "Device shutdown initiated");
+                                    } catch (Exception e) {
+                                        Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
+                                    }
                                 }
                             }).start();
                         }
@@ -488,10 +495,19 @@ public class RockboxService extends Service
             @Override
             public void run() {
                 try {
-                    Shell.SU.run("date -s " + dateString +" &");
-                    Log.d("RockboxTime", "Date set as root: " + dateString);
+                    // Parse the date string and convert to milliseconds
+                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyyMMdd.HHmmss");
+                    java.util.Date date = sdf.parse(dateString);
+                    long timeInMillis = date.getTime();
+                    
+                    // Set the system time
+                    Log.d("RockboxTime", "System time set to: " + dateString);
+                    SystemClock.setCurrentTimeMillis(timeInMillis);
+                    Log.d("RockboxTime", "Restart Rockbox after setting time");
+                    java.lang.Process process = Runtime.getRuntime().exec("am force-stop org.rockbox");
+                    process.waitFor();
                 } catch (Exception e) {
-                    Log.e("RockboxTime", "Failed to set date as root: " + e.getMessage());
+                    Log.e("RockboxTime", "Failed to set system time: " + e.getMessage());
                 }
             }
         }).start();
