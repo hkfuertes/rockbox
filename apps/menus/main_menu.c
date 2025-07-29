@@ -167,8 +167,8 @@ static char* read_file_content(const char* filename)
 
 static int show_legal(void)
 {
-    char* copying_text = read_file_content("/sdcard/.rockbox/docs/COPYING.txt");
-    char* licenses_text = read_file_content("/sdcard/.rockbox/docs/LICENSES.txt");
+    char* copying_text = read_file_content("/data/data/org.rockbox/app_rockbox/rockbox/docs/COPYING.txt");
+    char* licenses_text = read_file_content("/data/data/org.rockbox/app_rockbox/rockbox/docs/LICENSES.txt");
 
     if (copying_text) {
         char* copying_params[] = { "COPYING", copying_text };
