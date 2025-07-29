@@ -620,8 +620,6 @@ MAKE_MENU(display_menu, ID2P(LANG_DISPLAY),
             &peak_meter_menu,
             &codepage_setting,
 #ifdef HAVE_TOUCHSCREEN
-#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
             &touchscreen_menu,
-#endif
 #endif
             );
