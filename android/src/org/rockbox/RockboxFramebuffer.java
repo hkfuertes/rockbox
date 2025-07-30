@@ -57,8 +57,9 @@ public class RockboxFramebuffer extends SurfaceView
     private static final long LONG_PRESS_DURATION_MS = 1000;
     private Handler longPressHandler = new Handler(Looper.getMainLooper());
     private boolean centerLongPressDetected = false;
-    private boolean screenWasOff = false;
     private PowerManager powerManager;
+
+    private boolean justCreated = true;
     private Runnable centerLongPressRunnable = new Runnable() {
         @Override
         public void run() {
@@ -138,6 +139,7 @@ public class RockboxFramebuffer extends SurfaceView
 
     public boolean onKeyDown(int keyCode, KeyEvent event)
     {
+        justCreated = false;
         if ((keyCode == CENTER_KEYCODE) && event.getRepeatCount() == 0) {
             centerLongPressDetected = false;
             longPressHandler.postDelayed(centerLongPressRunnable, LONG_PRESS_DURATION_MS);
@@ -168,32 +170,31 @@ public class RockboxFramebuffer extends SurfaceView
                 Log.d("RockboxButton", "Putting device to sleep");
                 try {
                     powerManager.goToSleep(SystemClock.uptimeMillis());
-                    screenWasOff = true;
                     Log.d("RockboxButton", "Device put to sleep");
                 } catch (Exception e) {
                     Log.e("RockboxButton", "Failed to put device to sleep: " + e.getMessage());
                 }
                 return true;
-            } 
-            else {
-                if (!screenWasOff){
-                    // center button was pressed but not long enough, handle like a normal press
+            } else if (!justCreated){
+                // center button was pressed but not long enough, handle like a normal press
+                try {
                     buttonHandler(keyCode, true);
-                    try {
-                        // pause to make Rockbox catch up
-                        Thread.sleep(10);
-                        return buttonHandler(keyCode, false);
-                    }
-                    catch (InterruptedException e){
-                        Log.e("RockboxButton", "Failed sending center key-up");
-                    }
-                } else {
-                    screenWasOff = false;
-                    Log.d("RockboxButton", "Screen was just off, do not process this center key press");
+                    // pause to make Rockbox catch up
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    Log.e("RockboxButton", "Failed sending center keyDown event: " + e.getMessage());
                 }
             }
         }
-        return buttonHandler(keyCode, false);
+        if (!(keyCode == CENTER_KEYCODE && justCreated)){
+            justCreated = false;
+            return buttonHandler(keyCode, false);
+        }
+        else {
+            Log.d("RockboxButton", "Just woke up - don't handle this center press");
+            justCreated = false;
+            return true;
+        }
     }
  
     private int getDpi()
