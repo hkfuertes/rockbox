@@ -46,6 +46,9 @@
 #include "viewport.h"
 #include "statusbar.h" /* statusbar_vals enum*/
 #include "rbunicode.h"
+#ifdef CONFIG_PLATFORM_ANDROID
+#include "firmware/target/hosted/android/screen-timeout-android.h"
+#endif
 
 #ifdef HAVE_BACKLIGHT
 static int selectivebacklight_callback(int action,
@@ -586,6 +589,10 @@ MAKE_MENU(touchscreen_menu, ID2P(LANG_TOUCHSCREEN_SETTINGS), NULL, Icon_NOICON, 
             &touchscreen_menu_calibrate, &touchscreen_menu_reset_calibration);
 #endif
 
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+MENUITEM_SETTING(android_screen_timeout, &global_settings.android_screen_timeout, NULL);
+#endif
+
 static int codepage_callback(int action,
                              const struct menu_item_ex *this_item,
                              struct gui_synclist *this_list)
@@ -617,6 +624,9 @@ MAKE_MENU(display_menu, ID2P(LANG_DISPLAY),
 #endif
 #ifdef HAVE_REMOTE_LCD
             &lcd_remote_settings,
+#endif
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+            &android_screen_timeout,
 #endif
             &scroll_settings_menu,
             &peak_meter_menu,

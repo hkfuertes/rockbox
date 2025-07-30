@@ -932,7 +932,7 @@ struct user_settings
     bool playback_log; /* ROCKBOX_DIR/playback.log for tracks played */
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     int wheel_vibration_intensity; /* Vibration intensity for wheel/DPAD buttons (0-50ms) */
-
+    int android_screen_timeout; /* Android screen timeout in seconds (0=never, -1=system default) */
 #endif
 };
 

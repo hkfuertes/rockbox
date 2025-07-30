@@ -22,6 +22,7 @@
 #include "config.h"
 #include <stdbool.h>
 #include "string-extra.h"
+#include "debug.h"
 #include "system.h"
 #include "storage.h"
 #include "lang.h"
@@ -72,6 +73,10 @@
 #if defined(DX50) || defined(DX90)
 #include "governor-ibasso.h"
 #include "usb-ibasso.h"
+#endif
+
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+#include "../firmware/target/hosted/android/screen-timeout-android.h"
 #endif
 
 #define UNUSED {.RESERVED=NULL}
@@ -843,6 +848,50 @@ static void hp_lo_select_apply(int arg)
     (void)arg;
 
     sound_settings_apply();
+}
+#endif
+
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+void android_screen_timeout_callback(int timeout)
+{
+    /* Convert choice index to actual timeout value */
+    int timeout_seconds;
+    switch (timeout) {
+        case 0: /* system */
+            timeout_seconds = -1;
+            break;
+        case 1: /* 15 seconds */
+            timeout_seconds = 15;
+            break;
+        case 2: /* 30 seconds */
+            timeout_seconds = 30;
+            break;
+        case 3: /* 1 minute */
+            timeout_seconds = 60;
+            break;
+        case 4: /* 2 minutes */
+            timeout_seconds = 120;
+            break;
+        case 5: /* 5 minutes */
+            timeout_seconds = 300;
+            break;
+        case 6: /* never */
+            timeout_seconds = 0;
+            break;
+        default:
+            timeout_seconds = -1;
+            break;
+    }
+
+    /* Apply the timeout setting using Android API */
+    /* Only apply if the Android environment is ready */
+    if (timeout_seconds != -1) {
+        int result = android_screen_timeout_set(timeout_seconds);
+        if (result != 0) {
+            /* Log error but don't crash */
+            DEBUGF("Failed to set Android screen timeout: %d\n", result);
+        }
+    }
 }
 #endif
 
@@ -2346,6 +2395,11 @@ const struct settings_list settings[] = {
     CHOICE_SETTING(0, wheel_vibration_intensity, LANG_WHEEL_VIBRATIONS, 25,
                    "wheel vibration intensity", "0,5,10,15,20,25,30,35,40,45,50", NULL, 11,
                    "0ms", "5ms", "10ms", "15ms", "20ms", "25ms", "30ms", "35ms", "40ms", "45ms", "50ms"),
+#endif
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    CHOICE_SETTING(0, android_screen_timeout, LANG_ANDROID_SCREEN_TIMEOUT, -1,
+                   "android screen timeout", "15,30,60,120,300,never", android_screen_timeout_callback, 7,
+                   "15 seconds", "30 seconds", "1 minute", "2 minutes", "5 minutes", ID2P(LANG_NEVER)),
 #endif
 };
 

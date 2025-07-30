@@ -35,6 +35,7 @@ import org.rockbox.Helper.Logger;
 import org.rockbox.Helper.MediaButtonReceiver;
 import org.rockbox.Helper.RunForegroundManager;
 import org.rockbox.Helper.BrightnessController;
+import org.rockbox.Helper.ScreenTimeoutController;
 import org.rockbox.Helper.ExternalAppsManager;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -359,6 +360,7 @@ public class RockboxService extends Service
 
     /* Android brightness control methods for JNI interface */
     private BrightnessController brightnessController = null;
+    private ScreenTimeoutController screenTimeoutController = null;
 
     /**
      * Set Android brightness to a specific percentage
@@ -383,6 +385,32 @@ public class RockboxService extends Service
             brightnessController = new BrightnessController();
         }
         return brightnessController.getBrightnessPercent();
+    }
+
+    /* Android screen timeout control methods for JNI interface */
+    /**
+     * Set Android screen timeout to a specific value in seconds
+     * Called from native code via JNI
+     */
+    public int setAndroidScreenTimeout(int timeoutSeconds)
+    {
+        if (screenTimeoutController == null) {
+            screenTimeoutController = new ScreenTimeoutController();
+        }
+        return screenTimeoutController.setScreenTimeout(timeoutSeconds);
+    }
+
+    /**
+     * Get current Android screen timeout in seconds
+     * Called from native code via JNI
+     * @return Current screen timeout in seconds (0=never, -1=system default)
+     */
+    public int getAndroidScreenTimeout()
+    {
+        if (screenTimeoutController == null) {
+            screenTimeoutController = new ScreenTimeoutController();
+        }
+        return screenTimeoutController.getScreenTimeout();
     }
 
     /* Android external apps methods for JNI interface */

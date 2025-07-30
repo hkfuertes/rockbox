@@ -17138,3 +17138,17 @@
     *: "Shutdown Device"
   </voice>
 </phrase>
+<phrase>
+  id: LANG_ANDROID_SCREEN_TIMEOUT
+  desc: Android screen timeout setting
+  user: core
+  <source>
+    *: "Screen Timeout"
+  </source>
+  <dest>
+    *: "Screen Timeout"
+  </dest>
+  <voice>
+    *: "Screen timeout"
+  </voice>
+</phrase>
