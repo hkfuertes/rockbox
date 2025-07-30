@@ -110,6 +110,9 @@ public class RockboxActivity extends Activity
     public void onResume()
     {
         super.onResume();
+        RockboxFramebuffer fb = new RockboxFramebuffer(this);
+        setContentView(fb);
+        fb.requestFocus();
         setVisible(true);
         setServiceActivity(true);
     }
