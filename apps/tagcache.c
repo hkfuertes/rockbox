@@ -5011,11 +5011,7 @@ static bool check_dir(const char *dirname, int add_files)
                     if (dst_len > 0 && dst_path[dst_len-1] != '/')
                         strlcat(dst_path, "/", sizeof(dst_path));
                     strlcat(dst_path, entry->d_name, sizeof(dst_path));
-                    /* Only copy playlist if not already present */
-                    if (!file_exists(dst_path))
-                    {
-                        copy_playlist_with_absolute_paths(src_path, dst_path);
-                    }
+                    copy_playlist_with_absolute_paths(src_path, dst_path);
                 }
             }
             if (add_files)
