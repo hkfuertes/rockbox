@@ -112,6 +112,7 @@ adb shell chown root:root /system/app/org.rockbox.apk
 adb push libs/armeabi/librockbox.so /system/lib/
 adb shell chmod 644 /system/lib/librockbox.so
 adb shell chown root:root /system/lib/librockbox.so
+adb shell rm -rf /data/data/org.rockbox/lib
 adb shell mkdir /data/data/org.rockbox/lib
 adb push libs/armeabi/* /data/data/org.rockbox/lib/.
 ```

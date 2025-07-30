@@ -502,11 +502,12 @@ public class RockboxService extends Service
                             new Thread(new Runnable() {
                                 public void run() {
                                     try {
-                                        java.lang.Process process = Runtime.getRuntime().exec("reboot -p");
-                                        process.waitFor();
-                                        Log.d("RockboxService", "Device shutdown initiated");
+                                        Log.d("RockboxService", "Attempting device shutdown...");
+                                        Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});
+                                        proc.waitFor();
                                     } catch (Exception e) {
                                         Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
+                                        e.printStackTrace();
                                     }
                                 }
                             }).start();
