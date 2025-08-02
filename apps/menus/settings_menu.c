@@ -125,6 +125,11 @@ static void tagcache_rebuild_with_splash(void)
 {
     tagcache_rebuild();
     splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    splash(HZ, "Restarting Rockbox to apply...");
+    system("am force-stop org.rockbox");
+    system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
+#endif
 }
 
 static void tagcache_update_with_splash(void)
@@ -151,8 +156,13 @@ static int dirs_to_scan(void)
 MENUITEM_SETTING(tagcache_ram, &global_settings.tagcache_ram, NULL);
 #endif
 MENUITEM_SETTING(tagcache_autoupdate, &global_settings.tagcache_autoupdate, NULL);
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID) // Always force update to avoid duplicates
+MENUITEM_FUNCTION(tc_init, 0, ID2P(LANG_TAGCACHE_UPDATE),
+                  (int(*)(void))tagcache_rebuild_with_splash, NULL, Icon_NOICON);
+#else
 MENUITEM_FUNCTION(tc_init, 0, ID2P(LANG_TAGCACHE_FORCE_UPDATE),
                   (int(*)(void))tagcache_rebuild_with_splash, NULL, Icon_NOICON);
+#endif
 MENUITEM_FUNCTION(tc_update, 0, ID2P(LANG_TAGCACHE_UPDATE),
                   (int(*)(void))tagcache_update_with_splash, NULL, Icon_NOICON);
 MENUITEM_SETTING(runtimedb, &global_settings.runtimedb, NULL);
@@ -172,7 +182,11 @@ MAKE_MENU(tagcache_menu, ID2P(LANG_TAGCACHE), 0, Icon_NOICON,
 #ifdef HAVE_TC_RAMCACHE
                 &tagcache_ram,
 #endif
-                &tagcache_autoupdate, &tc_init, &tc_update, &runtimedb,
+                &tagcache_autoupdate, &tc_init, 
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID) // normal update function seems to create duplicates sometimes
+                &tc_update, 
+#endif
+                &runtimedb,
                 &tc_export, &tc_import, &tc_paths, &playlist_copy_on_scan
                 );
 #endif /* HAVE_TAGCACHE */
