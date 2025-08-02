@@ -89,6 +89,8 @@ static const struct button_mapping button_context_list[]  = {
 }; /* button_context_list */
 
 static const struct button_mapping button_context_tree[]  = {
+    /* Long-press top-left touch area to open WPS (triggered by media play/pause long-press) */
+    { ACTION_TREE_WPS,        BUTTON_TOPLEFT|BUTTON_REL, BUTTON_NONE },
     LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_LIST)
 }; /* button_context_tree */
 

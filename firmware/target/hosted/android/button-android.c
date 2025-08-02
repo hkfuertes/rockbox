@@ -32,10 +32,15 @@
 #include "powermgmt.h"
 #include "android_keyevents.h"
 #include "settings.h"
+#include "action.h"
+
+/* Flag to track if we've handled a long-press for play/pause */
+static bool handled_playpause_longpress = false;
 
 /* Android keycode definitions for media keys */
-#define KEYCODE_MEDIA_NEXT     22
-#define KEYCODE_MEDIA_PREVIOUS 21
+#define KEYCODE_MEDIA_NEXT       22
+#define KEYCODE_MEDIA_PREVIOUS   21
+#define KEYCODE_MEDIA_PLAY_PAUSE 85
 
 extern volatile long current_tick;
 
@@ -144,6 +149,13 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
             button = dpad_to_button((int)keycode);
         if (button)
         {
+            /* Check if this is a play/pause release and we've handled a long-press */
+            if (button == BUTTON_MULTIMEDIA_PLAYPAUSE && handled_playpause_longpress)
+            {
+                /* Reset the flag and ignore this release event */
+                handled_playpause_longpress = false;
+                return true;
+            }
             /* ensure button_queue can be safely posted to */
             wait_rockbox_ready();
             reset_poweroff_timer();
@@ -224,6 +236,17 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandlerRepeat(JNIEnv*env, jclass class
     else if (keycode == KEYCODE_MEDIA_PREVIOUS)
     {
         button = BUTTON_MEDIA_PREV;
+    }
+    else if (keycode == KEYCODE_MEDIA_PLAY_PAUSE)
+    {
+        button = BUTTON_MULTIMEDIA_PLAYPAUSE;
+        /* Handle long-press directly here */
+        /* Use BUTTON_TOPLEFT as a placeholder trigger for opening WPS */
+        wait_rockbox_ready();
+        reset_poweroff_timer();
+        button_queue_post(BUTTON_TOPLEFT | BUTTON_REL, 0);
+        handled_playpause_longpress = true;
+        return true;
     }
     else
     {
