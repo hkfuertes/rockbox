@@ -95,6 +95,8 @@ struct resume_info{
 #define TEMP_BUF_SIZE (MAX(MAX_BOOKMARK_SIZE, MAX_PATH + 1))
 static char global_temp_buffer[TEMP_BUF_SIZE];
 
+static const char* get_current_directory_path(void);
+
 static inline void get_hash(const char *key, uint32_t *hash, int len)
 {
     *hash = crc_32(key, len, *hash); /* this is probably sufficient */
@@ -390,6 +392,46 @@ static bool generate_bookmark_file_name(char *filenamebuf,
                                         const char *bmarknamein,
                                         size_t bmarknamelen)
 {
+    /* Check if this is a playlist file */
+    bool is_playlist_file = false;
+    if (bmarknamelen > 4) {
+        const char *ext = bmarknamein + bmarknamelen - 4;
+        if (strcasecmp(ext, ".m3u") == 0 ||
+            (bmarknamelen > 5 && strcasecmp(ext - 1, ".m3u8") == 0)) {
+            is_playlist_file = true;
+        }
+    }
+
+    /* If this is a playlist file and we have a current track playing,
+       use the current directory path instead of the playlist location */
+    if (is_playlist_file) {
+        const char* dir_path = get_current_directory_path();
+        if (dir_path) {
+            /* Use the current directory path for bookmark location */
+            size_t dir_len = strlen(dir_path);
+            if (dir_len >= filenamebufsz)
+                return false;
+
+            strmemccpy(filenamebuf, dir_path, dir_len + 1);
+
+            /* Remove trailing slash if present */
+            size_t len = strlen(filenamebuf);
+            if (len > 0 && filenamebuf[len-1] == '/') {
+                filenamebuf[len-1] = '\0';
+                len--;
+            }
+
+            /* Add .bmark extension */
+            if (strlcat(filenamebuf, ".bmark", filenamebufsz) >= filenamebufsz)
+                return false;
+
+            logf("generated playlist bookmark name '%s' from directory '%s'",
+                  filenamebuf, dir_path);
+            return true;
+        }
+    }
+
+    /* Logic for directory-based bookmarks */
     /* if this is a root dir MP3, rename the bookmark file root_dir.bmark */
     /* otherwise, name it based on the bmarknamein variable */
     if (!strncmp("/", bmarknamein, bmarknamelen))
@@ -488,25 +530,33 @@ static char* create_bookmark(char **name,
     buf += bmarksz;
     bufsz -= bmarksz;
 
-    /* create the bookmark */
-    playlist_get_name(NULL, buf, bufsz);
+    /* Get the currently playing file path to determine the directory */
+    const char *dir_path = get_current_directory_path();
+    if (!dir_path)
+        return NULL;
+
+    /* Copy the directory path to the buffer */
+    size_t dir_len = strlen(dir_path);
+    if (dir_len >= bufsz)
+        return NULL;
+
+    strmemccpy(buf, dir_path, dir_len + 1);
     bmarksz = strlen(buf);
 
     if (bmarksz == 0 || (bmarksz + 1) >= bufsz) /* include the separator & NULL*/
         return NULL;
 
-    *name = buf;     /* return the playlist name through the *pointer */
+    *name = buf;     /* return the directory name through the *pointer */
     *namelen = bmarksz; /* return the name length through the pointer */
 
     /* Get the currently playing file minus the path */
     /* This is used when displaying the available bookmarks */
-    file = strrchr(resume_info->id3->path,'/');
-    if(NULL == file)
-        return NULL;
-
-    if (buf[bmarksz - 1] != '/')
-        file = resume_info->id3->path;
-    else file++;
+    const char *file_path = resume_info->id3->path;
+    const char *last_slash = strrchr(file_path, '/');
+    if (last_slash)
+        file = last_slash + 1;
+    else
+        file = file_path;
 
     buf += bmarksz;
     bufsz -= (bmarksz + 1);
@@ -1156,6 +1206,33 @@ static bool play_bookmark(const char* bookmark)
     return false;
 }
 
+/* ----------------------------------------------------------------------- */
+/* This function gets the directory path from the currently playing track. */
+/* Returns the directory path or NULL if not available.                   */
+/* ----------------------------------------------------------------------- */
+static const char* get_current_directory_path(void)
+{
+    const struct mp3entry *id3 = audio_current_track();
+    if (!id3 || !id3->path[0])
+        return NULL;
+
+    const char *last_slash = strrchr(id3->path, '/');
+    if (last_slash == NULL)
+        return NULL;
+
+    /* Return a pointer to the directory part of the path */
+    static char dir_path[MAX_PATH];
+    size_t dir_len = last_slash - id3->path;
+    if (dir_len == 0)
+        dir_len = 1; /* Root directory case */
+
+    if (dir_len >= sizeof(dir_path))
+        return NULL;
+
+    strmemccpy(dir_path, id3->path, dir_len + 1);
+    return dir_path;
+}
+
 /*-------------------------------------------------------------------------*/
 /* PUBLIC INTERFACE -------------------------------------------------------*/
 /*-------------------------------------------------------------------------*/
@@ -1187,20 +1264,10 @@ int bookmark_load_menu(void)
     char* bookmark;
     int ret = BOOKMARK_FAIL;
 
-    /* To prevent root dir ("/") bookmarks  from being displayed
-       when 'List Bookmarks' hotkey or button is pressed, check:
-    */
-    if (playlist_dynamic_only())
-    {
-        splash(HZ, ID2P(LANG_BOOKMARK_LOAD_EMPTY));
-        return ret;
-    }
-
     push_current_activity(ACTIVITY_BOOKMARKSLIST);
 
-    char* name = playlist_get_name(NULL, global_temp_buffer,
-                                       sizeof(global_temp_buffer));
-    if (generate_bookmark_file_name(bm_filename, sizeof(bm_filename), name, -1))
+    const char* dir_path = get_current_directory_path();
+    if (dir_path && generate_bookmark_file_name(bm_filename, sizeof(bm_filename), dir_path, -1))
     {
         ret = select_bookmark(bm_filename, false, &bookmark);
         if (bookmark != NULL)
@@ -1288,10 +1355,38 @@ int bookmark_autoload(const char* file)
     if(global_settings.autoloadbookmark == BOOKMARK_NO)
         return BOOKMARK_DONT_RESUME;
 
-    /*Checking to see if a bookmark file exists.*/
-    if(!generate_bookmark_file_name(bm_filename, sizeof(bm_filename), file, -1))
-    {
-        return BOOKMARK_DONT_RESUME;
+    /* Check if this is a playlist file */
+    bool is_playlist_file = false;
+    size_t file_len = strlen(file);
+    if (file_len > 4) {
+        const char *ext = file + file_len - 4;
+        if (strcasecmp(ext, ".m3u") == 0 || 
+            (file_len > 5 && strcasecmp(ext - 1, ".m3u8") == 0)) {
+            is_playlist_file = true;
+        }
+    }
+
+    /* For playlist files, we need to handle them differently since
+       bookmarks should be based on the actual file locations, not the playlist location */
+    if (is_playlist_file) {
+        /* Try to get current directory path first */
+        const char* dir_path = get_current_directory_path();
+        if (dir_path) {
+            /* Use current directory for bookmark location */
+            if (!generate_bookmark_file_name(bm_filename, sizeof(bm_filename), dir_path, -1)) {
+                return BOOKMARK_DONT_RESUME;
+            }
+        } else {
+            /* No current track playing, can't determine bookmark location */
+            logf("bookmark_autoload: playlist file but no current track");
+            return BOOKMARK_DONT_RESUME;
+        }
+    } else {
+        /* Original logic for directory-based bookmarks */
+        if(!generate_bookmark_file_name(bm_filename, sizeof(bm_filename), file, -1))
+        {
+            return BOOKMARK_DONT_RESUME;
+        }
     }
 
     if(!file_exists(bm_filename))
@@ -1370,10 +1465,8 @@ bool bookmark_exists(void)
     char bm_filename[MAX_PATH];
     bool exist=false;
 
-    char* name = playlist_get_name(NULL, global_temp_buffer,
-                                   sizeof(global_temp_buffer));
-    if (!playlist_dynamic_only() &&
-        generate_bookmark_file_name(bm_filename, sizeof(bm_filename), name, -1))
+    const char* dir_path = get_current_directory_path();
+    if (dir_path && generate_bookmark_file_name(bm_filename, sizeof(bm_filename), dir_path, -1))
     {
         exist = file_exists(bm_filename);
     }
@@ -1393,13 +1486,13 @@ bool bookmark_is_bookmarkable_state(void)
         /* no track playing */
        (playlist_get_resume_info(&resume_index) == -1) ||
         /* invalid queue info */
-       (playlist_modified(NULL)) ||
+       (playlist_modified(NULL)))
         /* can't bookmark playlists modified by user */
-       (playlist_dynamic_only()))
-        /* can't bookmark playlists without associated folder or playlist file */
     {
         return false;
     }
 
+    /* Allow bookmarks for all playlists as long as we have a current track.
+       We can always use the file location for bookmark storage. */
     return true;
 }
