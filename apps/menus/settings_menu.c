@@ -290,7 +290,13 @@ static int dircache_callback(int action,
             if (global_settings.dircache)
             {
                 if (dircache_enable() < 0)
-                    splash(HZ*2, ID2P(LANG_PLEASE_REBOOT));
+            #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+                    splash(HZ, "Restarting Rockbox to apply...");
+                    system("am force-stop org.rockbox");
+                    system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
+            #else
+                    splash(HZ, ID2P(LANG_PLEASE_REBOOT));
+            #endif
             }
             else
             {

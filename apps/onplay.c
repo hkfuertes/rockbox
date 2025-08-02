@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "config.h"
 #include "debug.h"
 #include "lcd.h"
 #include "audio.h"
@@ -988,7 +989,13 @@ static bool set_databasedir(void)
     struct tagcache_stat *tc_stat = tagcache_get_stat();
     if (strcasecmp(selected_file.path, tc_stat->db_path))
     {
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+        splash(HZ, "Restarting Rockbox to apply...");
+        system("am force-stop org.rockbox");
+        system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
+#else
         splash(HZ, ID2P(LANG_PLEASE_REBOOT));
+#endif
     }
 
     set_dir_helper(global_settings.tagcache_db_path,

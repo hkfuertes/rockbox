@@ -167,7 +167,13 @@ static int timestretch_callback(int action,
     {
         case ACTION_EXIT_MENUITEM: /* on exit */
             if (global_settings.timestretch_enabled && !dsp_timestretch_available())
-                splash(HZ*2, ID2P(LANG_PLEASE_REBOOT));
+                #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+                        splash(HZ, "Restarting Rockbox...");
+                        system("am force-stop org.rockbox");
+                        system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
+                #else
+                        splash(HZ, ID2P(LANG_PLEASE_REBOOT));
+                #endif
             break;
     }
     lowlatency_callback(action, this_item, NULL);
