@@ -348,7 +348,7 @@ bool set_time_screen(const char* title, struct tm *tm, bool set_date)
                     done = true;
                     tm->tm_year = -1;
 #ifdef __ANDROID__
-                    splash(HZ, "Setting new time...");
+                    splash(2*HZ, "Setting time and restarting Rockbox...");
                     android_rtc_commit_pending_time();
 #endif
                     break;
@@ -397,7 +397,7 @@ bool set_time_screen(const char* title, struct tm *tm, bool set_date)
                 case ACTION_STD_CANCEL:
                     adjust_mode = false;
 #ifdef __ANDROID__
-                    splash(HZ, "Setting new time...");
+                    splash(2*HZ, "Setting time and restarting Rockbox...");
                     android_rtc_commit_pending_time();
 #endif
                     break;

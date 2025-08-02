@@ -524,16 +524,16 @@ public class RockboxService extends Service
             @Override
             public void run() {
                 try {
-                    // Parse the date string and convert to milliseconds
+                    // Parse the date string and convert to Unix timestamp
                     java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyyMMdd.HHmmss");
                     java.util.Date date = sdf.parse(dateString);
-                    long timeInMillis = date.getTime();
-                    
-                    // Set the system time
-                    Log.d("RockboxTime", "System time set to: " + dateString);
-                    SystemClock.setCurrentTimeMillis(timeInMillis);
-                    Log.d("RockboxTime", "Restart Rockbox after setting time");
-                    java.lang.Process process = Runtime.getRuntime().exec("am force-stop org.rockbox");
+                    long unixTimestamp = date.getTime() / 1000; // Convert to Unix timestamp
+
+                    // Set the system time using system call
+                    Log.d("RockboxTime", "Setting system time to: " + dateString + " (Unix: " + unixTimestamp + ")");
+                    String dateCmd = "date " + unixTimestamp + " & am force-stop org.rockbox";
+                    Log.d("RockboxTime", "Executing command: " + dateCmd);
+                    java.lang.Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", dateCmd});
                     process.waitFor();
                 } catch (Exception e) {
                     Log.e("RockboxTime", "Failed to set system time: " + e.getMessage());
