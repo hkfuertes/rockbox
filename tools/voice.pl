@@ -212,16 +212,10 @@ sub init_tts {
 	    die("Need PIPER_MODEL_DIR\n") if (!defined($ENV{'PIPER_MODEL_DIR'}));
        	    $tts_engine_opts = "--model $ENV{PIPER_MODEL_DIR}/$piper_lang_map{$language} ";
 	}
-	my $cmd = "piper $tts_engine_opts --json-input";
-        print("> $cmd\n") if $verbose;
-
-        my $pid = open3(*CMD_IN, *CMD_OUT, *CMD_ERR, $cmd);
-        $SIG{INT} = sub { kill TERM => $pid; print("foo"); panic_cleanup(); };
-        $SIG{KILL} = sub { kill TERM => $pid; print("boo"); panic_cleanup(); };
-        $ret{"pid"} = $pid;
-        binmode(*CMD_IN, ':encoding(utf8)');
-        binmode(*CMD_OUT, ':encoding(utf8)');
-        binmode(*CMD_ERR, ':encoding(utf8)');
+	# Piper doesn't need a persistent process like festival
+	# We'll call it directly for each text-to-speech conversion
+	$ret{"format"} = 'wav';
+	$ret{"ttsoptions"} = $tts_engine_opts;
 
     } elsif ($tts_engine eq 'sapi') {
         my $toolsdir = dirname($0);
@@ -265,8 +259,7 @@ sub shutdown_tts {
         kill TERM => $$tts_object{"pid"};
     }
     elsif ($$tts_object{'name'} eq 'piper') {
-        # Send SIGTERM to piper
-        kill TERM => $$tts_object{"pid"};
+        # Piper doesn't use a persistent process, nothing to shut down
     }
     elsif ($$tts_object{'name'} eq 'sapi') {
         print({$$tts_object{"stdin"}} "QUIT\r\n");
@@ -326,11 +319,10 @@ sub voicestring {
         close(CMD_ERR);
     }
     elsif ($name eq 'piper') {
-	$cmd = "{ \"text\": \"$string\", \"output_file\": \"$output\" }";
-        print(">> $cmd\n") if $verbose;
-	print(CMD_IN "$cmd\n");
-	my $res = <CMD_OUT>;
-	$res = <CMD_ERR>;
+        # Use Piper's command-line interface with -f for output file
+        $cmd = "piper $tts_engine_opts -f \"$output\" -- \"$string\"";
+        print("> $cmd\n") if $verbose;
+        system($cmd);
     }
     elsif ($name eq 'flite') {
         $cmd = "flite $tts_engine_opts -t \"$string\" \"$output\"";
