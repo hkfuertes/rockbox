@@ -86,7 +86,7 @@ sed -i '/key 108   DPAD_DOWN/c\key 106   DPAD_DOWN' Generic.kl
 sed -i '/key 105   DPAD_LEFT/c\key 103   MEDIA_PREVIOUS' Generic.kl
 sed -i '/key 106   DPAD_RIGHT/c\key 108   MEDIA_NEXT' Generic.kl
 sed -i '/key 163   MEDIA_NEXT/c\key 163   DPAD_RIGHT' Generic.kl
-sed -i '/key 165   MEDIA_PREV/c\key 165   DPAD_LEFT' Generic.kl
+sed -i '/key 165   MEDIA_PREVIOUS/c\key 165   DPAD_LEFT' Generic.kl
 adb push Generic.kl /system/usr/keylayout/Generic.kl
 adb shell chmod 644 /system/usr/keylayout/Generic.kl
 adb reboot
@@ -120,11 +120,7 @@ adb push libs/armeabi/* /data/data/org.rockbox/lib/.
 ```
 adb reboot
 ```
-
-**First start might take up to 10s or even display an error about reading the SD card:**
-
-- That's not a problem and should only happen once
-- Restart Rockbox when in doubt via `Main Menu > System > Restart Rockbox (last option in list)`
+- (optional) Download the voice pack from the releases, extract it, drag the .rockbox folder onto your device
 
 ## Controls
 
@@ -189,6 +185,8 @@ When you initialize the database Rockbox will ask you to restart. You can do thi
 - Menu item to launch FM radio
 - Hold center button to turn screen off
 - Menu item to shutdown device
+- Long-press of Play/Pause opens WPS
+- Long-press of Menu/Back opens context menu
 
 ## Known issues
 
