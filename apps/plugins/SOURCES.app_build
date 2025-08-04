@@ -6,6 +6,17 @@
 chopper.c
 clix.c
 credits.c
+bounce.c
+demystify.c
+fire.c
+fireworks.c
+logo.c
+matrix.c
+mosaique.c
+plasma.c
+rocklife.c
+snow.c
+starfield.c
 properties.c
 random_folder_advance_config.c
 search.c
