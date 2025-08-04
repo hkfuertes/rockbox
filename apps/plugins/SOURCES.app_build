@@ -24,6 +24,8 @@ sort.c
 theme_remove.c
 vbrfix.c
 view_text.c
+lastfm_scrobbler.c
+lastfm_scrobbler_viewer.c
 #if PLUGIN_BUFFER_SIZE >= 0x80000
 boomshine.lua
 stopwatch.lua

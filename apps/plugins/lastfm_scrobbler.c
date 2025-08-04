@@ -499,8 +499,11 @@ static int sbl_check_or_open(bool check_only)
     char scrobbler_file[MAX_PATH];
     int fd;
     int used;
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    used = rb->snprintf(scrobbler_file, sizeof(scrobbler_file), "%s", BASE_FILENAME);
+#else
     used = rb->snprintf(scrobbler_file, sizeof(scrobbler_file), "/%s", BASE_FILENAME);
-
+#endif
     if (used <= 0 || used >= (int)sizeof(scrobbler_file))
     {
         logf("%s: not enough buffer space for log filename", __func__);
