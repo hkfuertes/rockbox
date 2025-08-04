@@ -17031,13 +17031,13 @@
   desc: Main menu item for external Android apps
   user: core
   <source>
-    *: "External Apps"
+    *: "Apps"
   </source>
   <dest>
-    *: "External Apps"
+    *: "Apps"
   </dest>
   <voice>
-    *: "External Apps"
+    *: "Apps"
   </voice>
 </phrase>
 <phrase>
