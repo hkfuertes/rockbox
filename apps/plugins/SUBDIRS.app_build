@@ -18,6 +18,7 @@ reversi
 #ifdef HAVE_TAGCACHE
 pictureflow
 tagcache
+imageviewer
 #endif
 
 /* For all the swcodec targets */
