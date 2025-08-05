@@ -2,11 +2,7 @@
 
 | <img src="./img/240p_menu.png" alt="Rockbox-240p Menu" width="75%"/> | <img src="./img/240p_wps.png" alt="Rockbox-240p WPS" width="75%"/> |
 |:--:|:--:|
-| Rockbox 240p - Menu | Rockbox 240p - WPS |
-
-| <img src="./img/360p_menu.png" alt="Rockbox-360p Menu" width="75%"/> | <img src="./img/360p_wps.png" alt="Rockbox-360p WPS" width="75%"/> |
-|:--:|:--:|
-| Rockbox 360p - Menu | Rockbox 360p - WPS |
+| Rockbox Menu | Rockbox WPS |
 
 ## General Information
 
@@ -17,31 +13,6 @@ Most of the work was already done by the original Rockbox team - all credits to 
 I mostly added quick hacks to make this usable on a device without any touch inputs.
 
 Do NOT run this if you don't know what you are doing. You might brick your device in the process of installing this app. You have been warned.
-
-## 240p vs 360p Releases
-
-The Innioasis Y1 has a 480x360px screen. Most Rockbox themes were developed for devices with a resolution of 320x240px screens. Those themes usually do not work on a 360p Rockbox Android build.
-
-Therefore there are 2 versions of this Rockbox port:
-
-### 360p Rockbox
-**Pros**:
-
-- crisp high-resolution and minimalist Rockbox experience
-- included, ready to go, Light and Dark Theme (modified versions of MacClassic https://themes.rockbox.org/index.php?themeid=3104)
-
-**Cons**:
-
-- Themes built for other devices usually don't work
-
-### 240p Rockbox
-**Pros**:
-
-- huge themes backlog (roughly 2/3 of themes here seem to work: https://themes.rockbox.org/index.php?target=ipod6g)
-
-**Cons**:
-
-- lower resolution (1/3 smaller than 360p - images might be blurry, fonts can look a bit off)
 
 ## Installation
 ### Y1 Helper (recommended for Windows)
@@ -106,7 +77,7 @@ adb shell pm disable-user <package>
 - Install rockbox as system app:
 ```
 adb remount
-adb push rockbox-[240p/360p]-[release].apk /system/app/org.rockbox.apk
+adb push rockbox-[release].apk /system/app/org.rockbox.apk
 adb shell chmod 644 /system/app/org.rockbox.apk
 adb shell chown root:root /system/app/org.rockbox.apk
 adb push libs/armeabi/librockbox.so /system/lib/
@@ -121,6 +92,7 @@ adb push libs/armeabi/* /data/data/org.rockbox/lib/.
 adb reboot
 ```
 - (optional) Download the voice pack from the releases, extract it, drag the .rockbox folder onto your device
+- **If rockbox gets stuck at the Rockbox logo and doesn't load your theme please delete .rockbox/config.cfg on your SD card**
 
 ## Controls
 
@@ -128,10 +100,12 @@ adb reboot
 - Scroll Wheel (Now Playing screen): Volume
 - Center (Short): Accept / Enter
 - Center (Long): Turn Off Screen
-- Menu/Back: Cancel / Back
-- Media Buttons: Media Actions
+- Menu/Back (Short): Cancel / Back
+- Menu/Back (Long): Open Context Menu
+- Play/Pause (Long): Open While Playing Screen
+- Media Buttons: Play/Pause/Next/Previous/Seek
 
-## Themes (240p)
+## Themes
 
 ### Installation
 
