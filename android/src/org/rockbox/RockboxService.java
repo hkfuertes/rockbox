@@ -50,6 +50,9 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Process;
 
 /* This class is used as the main glue between java and c.
  * All access should be done through RockboxService.get_instance() for safety.
@@ -66,6 +69,15 @@ public class RockboxService extends Service
     private RunForegroundManager mFgRunner;
     private MediaButtonReceiver mMediaButtonReceiver;
     private ResultReceiver mResultReceiver;
+    
+    /* Config file check mechanism */
+    private Handler mConfigCheckHandler;
+    private Runnable mConfigCheckRunnable;
+    private static final int CONFIG_CHECK_INTERVAL_MS = 500; // Check every second
+    private long mLastRestartTime = 0; // Timestamp of last restart attempt
+    private static final long RESTART_COOLDOWN_MS = 500; // Minimum 1 seconds between restarts
+    private boolean mSdConfigWasUnavailable = false; // Track if SD config was initially unavailable
+    private boolean mInitialCheckDone = false; // Track if initial check has been performed
 
     /* possible result values for intent handling */ 
     public static final int RESULT_INVOKING_MAIN = 0;
@@ -81,6 +93,17 @@ public class RockboxService extends Service
         instance = this;
         mMediaButtonReceiver = new MediaButtonReceiver(this);
         mFgRunner = new RunForegroundManager(this);
+        
+        // Initialize config check mechanism
+        mConfigCheckHandler = new Handler(Looper.getMainLooper());
+        mConfigCheckRunnable = new Runnable() {
+            @Override
+            public void run() {
+                checkConfigFile();
+                // Schedule next check
+                mConfigCheckHandler.postDelayed(this, CONFIG_CHECK_INTERVAL_MS);
+            }
+        };
     }
 
     public static RockboxService getInstance()
@@ -150,6 +173,8 @@ public class RockboxService extends Service
         putResult(RESULT_SERVICE_RUNNING);
 
         rockbox_running = true;
+        
+        // Note: Config file check will be started after config file initialization in startService()
     }
 
     public void onStart(Intent intent, int startId) {
@@ -292,6 +317,9 @@ public class RockboxService extends Service
                     }
                 }
 
+                // Start the config file check after config file has been initialized
+                startConfigCheck();
+
                 /* Start native code */
                 putResult(RESULT_INVOKING_MAIN);
 
@@ -349,6 +377,13 @@ public class RockboxService extends Service
         mMediaButtonReceiver = null;
         /* Make sure our notification is gone. */
         stopForeground();
+        
+        // Stop the config file check and reset restart timestamp
+        stopConfigCheck();
+        mLastRestartTime = 0;
+        mSdConfigWasUnavailable = false; // Reset the flag on service destruction
+        mInitialCheckDone = false; // Reset the initial check flag
+        
         instance = null;
         rockbox_running = false;
         System.runFinalization();
@@ -504,7 +539,7 @@ public class RockboxService extends Service
                                 public void run() {
                                     try {
                                         Log.d("RockboxService", "Attempting device shutdown...");
-                                        Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});
+                                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});
                                         proc.waitFor();
                                     } catch (Exception e) {
                                         Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
@@ -541,5 +576,90 @@ public class RockboxService extends Service
                 }
             }
         }).start();
+    }
+
+    /**
+     * Check if the config file can be read and automatically restart if not
+     */
+    private void checkConfigFile() {
+        File sdConfigFile = new File("/sdcard/.rockbox/config.cfg");
+        
+        // Check if SD card config file exists and can be read
+        boolean isAccessible = sdConfigFile.exists() && sdConfigFile.canRead();
+
+        if (!mInitialCheckDone) {
+            // Initial check - just remember the state, don't restart
+            mSdConfigWasUnavailable = !isAccessible;
+            mInitialCheckDone = true;
+            if (isAccessible) {
+                Log.d("RockboxService", "Initial check: SD card config is available");
+            } else {
+                Log.w("RockboxService", "Initial check: SD card config is not available, will restart when it becomes available");
+            }
+        } else {
+            // Subsequent checks - only restart if SD config becomes available after being initially unavailable
+            if (!isAccessible) {
+                Log.w("RockboxService", "SD card config file is not accessible: " + sdConfigFile.getAbsolutePath());
+            } else {
+                // SD card config is accessible
+                if (mSdConfigWasUnavailable) {
+                    // SD card config was initially unavailable but is now available
+                    // This means Rockbox was using fallback config and should switch to SD card config
+                    Log.w("RockboxService", "SD card config file is now available, restarting to switch from fallback config");
+                    restartApp();
+                    mSdConfigWasUnavailable = false; // Reset the flag
+                } else {
+                    Log.d("RockboxService", "Config file check passed: " + sdConfigFile.getAbsolutePath());
+                }
+            }
+        }
+    }
+    
+    /**
+     * Restart the app using system call
+     */
+    private void restartApp() {
+        long currentTime = SystemClock.elapsedRealtime();
+        if (currentTime - mLastRestartTime < RESTART_COOLDOWN_MS) {
+            Log.w("RockboxService", "Restart cooldown active. Skipping restart.");
+            return;
+        }
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Log.d("RockboxService", "Restarting app via system call...");
+                    java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"am", "force-stop", "org.rockbox"});
+                    proc.waitFor();
+                    mLastRestartTime = SystemClock.elapsedRealtime(); // Update timestamp after successful restart
+                } catch (Exception e) {
+                    Log.e("RockboxService", "Failed to restart app: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+    
+    /**
+     * Start the periodic config file check
+     */
+    private void startConfigCheck() {
+        if (mConfigCheckHandler != null && mConfigCheckRunnable != null) {
+            Log.d("RockboxService", "Starting config file check (interval: " + CONFIG_CHECK_INTERVAL_MS + "ms)");
+            mConfigCheckHandler.postDelayed(mConfigCheckRunnable, CONFIG_CHECK_INTERVAL_MS);
+        } else {
+            Log.w("RockboxService", "Cannot start config check - handler or runnable is null");
+        }
+    }
+    
+    /**
+     * Stop the periodic config file check
+     */
+    private void stopConfigCheck() {
+        if (mConfigCheckHandler != null && mConfigCheckRunnable != null) {
+            Log.d("RockboxService", "Stopping config file check");
+            mConfigCheckHandler.removeCallbacks(mConfigCheckRunnable);
+        }
     }
 }
