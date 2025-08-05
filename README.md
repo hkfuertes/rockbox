@@ -142,26 +142,6 @@ There are likely more but these are tested.
 
 When you initialize the database Rockbox will ask you to restart. You can do this via `Main Menu > System > Restart Rockbox (last option in list)`.
 
-## Changes vs. upstream Rockbox
-
-- Remapped controls
-- Enable seek forward/backward by holding next/previous media keys
-- Change default theme to an adjusted version of MacClassic https://themes.rockbox.org/index.php?themeid=3104
-- Dark theme variant of MacClassic
-- Playlist creation without keyboard
-- Option to copy playlists found on the device to the playlist menu (Settings > Database > Copy Playlists on Scan)
-- Display brightness settings (Settings > Brightness)
-- Disable broken menu items
-- External app launcher
-- Haptic scroll wheel vibration (Settings > Wheel Vibration Intensity)
-- Menu item to restart the Rockbox app (for easier DB updates)
-- Menu item to launch android bluetooth and systems menu
-- Menu item to launch FM radio
-- Hold center button to turn screen off
-- Menu item to shutdown device
-- Long-press of Play/Pause opens WPS
-- Long-press of Menu/Back opens context menu
-
 ## Known issues
 
 - Setting different theme might need a restart of Rockbox (Main Menu > System > Restart Rockbox) or clearing the backdrop (Theme Settings)
