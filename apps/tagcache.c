@@ -88,27 +88,75 @@
 #include "debug.h"
 #include "dircache.h"
 #include "errno.h"
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+#include <android/log.h>
+#endif
 
 static int copy_playlist_with_absolute_paths(const char *src, const char *dst)
 {
     FILE *src_fp = fopen(src, "r");
     if (!src_fp)
+    {
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+        __android_log_print(ANDROID_LOG_DEBUG, "RockboxTagCache", "Failed to open src: %s", src);
+#else
+        DEBUGF("RockboxTagCache: Failed to open src: %s", src);
+#endif
         return -1;
+    }
     FILE *dst_fp = fopen(dst, "w");
     if (!dst_fp)
     {
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+        __android_log_print(ANDROID_LOG_DEBUG, "RockboxTagCache", "Failed to open dst: %s", dst);
+#else
+        DEBUGF("RockboxTagCache: Failed to open dst: %s", dst);
+#endif
         fclose(src_fp);
         return -1;
     }
 
     char line[4096];
-    char src_dir[MAX_PATH];
-    strncpy(src_dir, src, sizeof(src_dir));
-    src_dir[sizeof(src_dir)-1] = 0;
-    char *dir = dirname(src_dir);
+    char src_dir_buf[MAX_PATH];
+    const char *src_dir;
+    size_t src_dir_len;
+    
+    // Get the directory containing the playlist file
+    const char *last_slash = strrchr(src, '/');
+    if (last_slash && last_slash > src)
+    {
+        src_dir_len = last_slash - src;
+        if (src_dir_len < sizeof(src_dir_buf))
+        {
+            strlcpy(src_dir_buf, src, src_dir_len + 1);
+            src_dir = src_dir_buf;
+        }
+        else
+        {
+            src_dir_buf[0] = '\0';
+            src_dir = src_dir_buf;
+            src_dir_len = 0;
+        }
+    }
+    else
+    {
+        src_dir_buf[0] = '\0';
+        src_dir = src_dir_buf;
+        src_dir_len = 0;
+    }
+    
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    __android_log_print(ANDROID_LOG_DEBUG, "RockboxTagCache", "Copying playlist: %s -> %s", src, dst);
+    __android_log_print(ANDROID_LOG_DEBUG, "RockboxTagCache", "Source dir: %s (len: %zu)", src_dir, src_dir_len);
+#else
+    DEBUGF("RockboxTagCache: Copying playlist: %s -> %s", src, dst);
+    DEBUGF("RockboxTagCache: Source dir: %s (len: %zu)", src_dir, src_dir_len);
+#endif
 
+    int line_count = 0;
     while (fgets(line, sizeof(line), src_fp))
     {
+        line_count++;
         // Remove trailing newline
         size_t len = strlen(line);
         if (len && (line[len-1] == '\n' || line[len-1] == '\r'))
@@ -126,16 +174,46 @@ static int copy_playlist_with_absolute_paths(const char *src, const char *dst)
         // If path is absolute, write as-is
         if (line[0] == '/')
         {
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+            __android_log_print(ANDROID_LOG_DEBUG, "RockboxTagCache", "Line %d: Absolute path: %s", line_count, line);
+#else
+            DEBUGF("RockboxTagCache: Line %d: Absolute path: %s", line_count, line);
+#endif
             fprintf(dst_fp, "%s\n", line);
         }
         else
         {
-            // Make absolute path
+            // Make absolute path by prepending the source directory
             char abs_path[MAX_PATH*2];
-            snprintf(abs_path, sizeof(abs_path), "%s/%s", dir, line);
+            if (src_dir_len > 0)
+            {
+                // Copy the directory path
+                strlcpy(abs_path, src_dir, sizeof(abs_path));
+                // Add separator if needed
+                if (abs_path[strlen(abs_path)-1] != '/')
+                    strlcat(abs_path, "/", sizeof(abs_path));
+                // Add the relative path
+                strlcat(abs_path, line, sizeof(abs_path));
+            }
+            else
+            {
+                // If no directory, just use the line as-is
+                strlcpy(abs_path, line, sizeof(abs_path));
+            }
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+            __android_log_print(ANDROID_LOG_DEBUG, "RockboxTagCache", "Line %d: Relative path: %s -> %s", line_count, line, abs_path);
+#else
+            DEBUGF("RockboxTagCache: Line %d: Relative path: %s -> %s", line_count, line, abs_path);
+#endif
             fprintf(dst_fp, "%s\n", abs_path);
         }
     }
+
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    __android_log_print(ANDROID_LOG_DEBUG, "RockboxTagCache", "Copied %d lines from playlist", line_count);
+#else
+    DEBUGF("RockboxTagCache: Copied %d lines from playlist", line_count);
+#endif
 
     fclose(src_fp);
     fclose(dst_fp);
@@ -4961,6 +5039,18 @@ static bool check_dir(const char *dirname, int add_files)
         pl_dir = (const char*)global_settings.playlist_catalog_dir;
     handle_special_dirs(pl_dir, 0, playlist_dir, sizeof(playlist_dir));
     pl_dir = playlist_dir;
+
+    /* Skip scanning the playlist directory entirely */
+    if (strcmp(dirname, playlist_dir) == 0)
+    {
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+        __android_log_print(ANDROID_LOG_DEBUG, "RockboxTagCache", "Skipping playlist directory: %s", dirname);
+#else
+        DEBUGF("RockboxTagCache: Skipping playlist directory: %s", dirname);
+#endif
+        closedir(dir);
+        return true;
+    }
 
     /* Recursively scan the dir. */
     while (!check_event_queue())
