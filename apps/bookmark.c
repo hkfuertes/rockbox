@@ -76,7 +76,6 @@ struct bookmark_list
 /* flags for optional bookmark tokens */
 #define BM_PITCH    0x01
 #define BM_SPEED    0x02
-#define BM_NAME     0x04
 
 /* bookmark values */
 struct resume_info{
@@ -90,7 +89,6 @@ struct resume_info{
     /* optional values */
     int  pitch;
     int  speed;
-    char name[64];  /* bookmark name */
 };
 
 /* Temp buffer used for reading, create_bookmark and filename creation */
@@ -192,7 +190,6 @@ static bool parse_bookmark(char *filenamebuf,
     int opt_flags = 0;
     int opt_pitch = 0;
     int opt_speed = 0;
-    int opt_name = 0;
     int old_format = ((strchr(s, '>') == s) ? 0 : 1);
     if (old_format == 0) /* this is a new format bookmark */
     {
@@ -200,7 +197,6 @@ static bool parse_bookmark(char *filenamebuf,
         GET_INT_TOKEN(opt_flags);
         opt_pitch = (opt_flags & BM_PITCH) ? 1:0;
         opt_speed = (opt_flags & BM_SPEED) ? 1:0;
-        opt_name = (opt_flags & BM_NAME) ? 1:0;
     }
 
     /* extract all original bookmark tokens */
@@ -221,31 +217,6 @@ static bool parse_bookmark(char *filenamebuf,
             GET_INT_TOKEN(resume_info->pitch);
         if (opt_speed != 0)
             GET_INT_TOKEN(resume_info->speed);
-        if (opt_name != 0)
-        {
-            /* Extract name - it's a string, not a number */
-            const char *name_start = s;
-            const char *name_end = strchr(s, ';');
-            if (name_end)
-            {
-                size_t name_len = name_end - name_start;
-                if (name_len >= sizeof(resume_info->name))
-                    name_len = sizeof(resume_info->name) - 1;
-                strmemccpy(resume_info->name, name_start, name_len + 1);
-                resume_info->name[name_len] = '\0';
-                s = name_end + 1;
-            }
-            else
-            {
-                /* No semicolon found, take the rest of the string */
-                strlcpy(resume_info->name, s, sizeof(resume_info->name));
-                s += strlen(s);
-            }
-        }
-        else
-        {
-            resume_info->name[0] = '\0';  /* Empty name for old format */
-        }
     }
     else /* no resume info we just want the file name strings */
     {
@@ -531,15 +502,15 @@ static char* create_bookmark(char **name,
                              /* new optional bookmark token descriptors should
                                 be inserted just after ';"' in this line... */
 #if defined(HAVE_PITCHCONTROL)
-                             ">%d;%d;%ld;%d;%ld;%d;%d;%ld;%ld;%s;",
+                             ">%d;%d;%ld;%d;%ld;%d;%d;%ld;%ld;",
 #else
-                             ">%d;%d;%ld;%d;%ld;%d;%d;%s;",
+                             ">%d;%d;%ld;%d;%ld;%d;%d;",
 #endif
                              /* ... their flags should go here ... */
 #if defined(HAVE_PITCHCONTROL)
-                             BM_PITCH | BM_SPEED | BM_NAME,
+                             BM_PITCH | BM_SPEED,
 #else
-                             BM_NAME,
+                             0,
 #endif
                              resume_info->resume_index,
                              resume_info->id3->offset,
@@ -550,9 +521,8 @@ static char* create_bookmark(char **name,
                              /* ...and their values should go here */
 #if defined(HAVE_PITCHCONTROL)
                              (long)resume_info->pitch,
-                             (long)resume_info->speed,
+                             (long)resume_info->speed
 #endif
-                             resume_info->name
                     ); /*sprintf*/
 /* mandatory tokens */
     if (bmarksz >= bufsz) /* include NULL*/
@@ -606,32 +576,6 @@ static char* create_bookmark(char **name,
 #pragma GCC diagnostic pop /* -Wformat-truncation */
 #endif
 
-static bool get_bookmark_name(char *name, size_t name_size)
-{
-    const struct mp3entry *id3 = audio_current_track();
-    if (!id3 || !id3->path[0])
-    {
-        strlcpy(name, "Bookmark", name_size);
-        return true;
-    }
-
-    /* Extract filename from the current track path */
-    const char *last_slash = strrchr(id3->path, '/');
-    const char *filename = last_slash ? last_slash + 1 : id3->path;
-
-    /* Copy filename to name buffer */
-    strlcpy(name, filename, name_size);
-
-    /* Remove file extension */
-    char *dot = strrchr(name, '.');
-    if (dot)
-    {
-        *dot = '\0';
-    }
-
-    return true;
-}
-
 /* ----------------------------------------------------------------------- */
 /* This function gets some basic resume information for the current song   */
 /* from rockbox,  */
@@ -651,7 +595,6 @@ static void get_track_resume_info(struct resume_info *resume_info)
     resume_info->pitch = sound_get_pitch();
     resume_info->speed = dsp_get_timestretch();
 #endif
-    get_bookmark_name(resume_info->name, sizeof(resume_info->name));
 }
 
 /* ----------------------------------------------------------------------- */
@@ -903,19 +846,39 @@ static const char* get_bookmark_info(int list_index,
 
     if (list_index % 2 == 0)
     {
-        /* If bookmark has a name, use it as the primary display */
-        if (resume_info.name[0] != '\0')
+        char *name;
+        char *format;
+        int len = strlen(global_temp_buffer);
+
+        if (bookmarks->show_playlist_name && len > 0)
         {
-            snprintf(buffer, buffer_len, "%s", resume_info.name);
-            return buffer;
+            name = global_temp_buffer;
+            len--;
+
+            if (name[len] != '/')
+            {
+                strrsplt(name, '.');
+            }
+            else if (len > 1)
+            {
+                name[len] = '\0';
+            }
+
+            if (len > 1)
+            {
+                name = strrsplt(name, '/');
+            }
+
+            format = "%s : %s";
+        }
+        else
+        {
+            name = fnamebuf;
+            format = "%s";
         }
 
-        /* For bookmarks without names, always show the filename */
-        char display_name[MAX_PATH];
-        strlcpy(display_name, fnamebuf, sizeof(display_name));
-        strrsplt(display_name, '.');
-
-        snprintf(buffer, buffer_len, "%s", display_name);
+        strrsplt(fnamebuf, '.');
+        snprintf(buffer, buffer_len, format, name, fnamebuf);
         return buffer;
     }
     else
@@ -964,12 +927,6 @@ static void say_bookmark(const char* bookmark,
 
     if(resume_info.shuffle)
         talk_id(LANG_SHUFFLE, true);
-
-    /* Say bookmark name if available */
-    if (resume_info.name[0] != '\0')
-    {
-        talk_spell(resume_info.name, true);
-    }
 
     talk_id(VOICE_BOOKMARK_SELECT_INDEX_TEXT, true);
     talk_number(resume_info.resume_index + 1, true);
