@@ -74,6 +74,10 @@ adb uninstall <package>
 # or if that fails
 adb shell pm disable-user <package>
 ```
+- Uninstall old Rockbox version (can be skipped if v0.1 was never installed)
+```
+adb uninstall org.rockbox
+```
 - Install rockbox as system app:
 ```
 adb remount
