@@ -39,8 +39,8 @@ If, despite all warnings, you still want to try installing it manually you need 
 adb install Framaroot-1.9.3.apk
 adb shell monkey -p com.alephzain.framaroot -c android.intent.category.LAUNCHER 1
 # wait for it to start
-adb shell input DPAD_DOWN
-adb shell input DPAD_CENTER
+adb shell input keyevent DPAD_DOWN
+adb shell input keyevent DPAD_CENTER
 # wait for the success message
 ```
 - Reboot device
