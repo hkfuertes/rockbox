@@ -36,12 +36,17 @@ If, despite all warnings, you still want to try installing it manually you need 
 - have an Innioasis Y1 with ADB enabled
 - root the device (see https://xdaforums.com/t/root-framaroot-a-one-click-apk-to-root-some-devices.2130276/):
 ```
+wget https://supersuroot.org/downloads/supersu-2-82.apk
+adb install supersu-2-82.apk
 adb install Framaroot-1.9.3.apk
 adb shell monkey -p com.alephzain.framaroot -c android.intent.category.LAUNCHER 1
 # wait for it to start
 adb shell input keyevent DPAD_DOWN
 adb shell input keyevent DPAD_CENTER
 # wait for the success message
+adb shell monkey -p eu.chainfire.supersu -c android.intent.category.LAUNCHER 1
+# follow instructions, once done
+adb reboot
 ```
 - Reboot device
 ```
@@ -97,6 +102,37 @@ adb reboot
 ```
 - (optional) Download the voice pack from the releases, extract it, drag the .rockbox folder onto your device
 - **If rockbox gets stuck at the Rockbox logo and doesn't load your theme please delete .rockbox/config.cfg on your SD card**
+
+### Recommended in case of black screens: Tasker script to restart rockbox
+
+- install Tasker (https://tasker.joaoapps.com/releases/direct/Tasker.4.9u4.apk)
+- setup profile that listens to headphone unplugged
+- execute task that kills and restarts rockbox
+- How to (comments indicate things to do via the scroll wheel/buttons):
+```
+adb install Tasker.4.9u4.apk
+adb shell monkey -p net.dinglisch.android.tasker -c android.intent.category.LAUNCHER 1
+# navigate to tasks
+adb shell input touchscreen tap 250 340
+adb shell input text "restart"
+adb shell input touchscreen tap 450 300
+# chose "Code" then "Shell"
+# navigate to command field
+adb shell input text su%s-u%sroot%s-c%sam%sforce-stop%sorg.rockbox\;
+adb shell input text su%s-u%sroot%s-c%smonkey%s-p%sorg.rockbox%s-c%sandroid.intent.category.LAUNCHER%s1
+# scroll down, tick field "run as root"
+# navigate back to the task screen
+adb shell input touchscreen tap 250 340
+# navigate to "Alert" then "Vibrate"
+# navigate back to task screen
+# navigate to profile screen
+adb shell input touchscreen tap 250 340
+# chose "State" then "Hardware" then "Headset Plugged"
+# tick "Invert"
+# navigate back, choose "restart" task
+adb shell am force-stop net.dinglisch.android.tasker
+# unplug headphones to test and allow root when asked
+```
 
 ## Controls
 
