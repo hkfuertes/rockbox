@@ -555,6 +555,42 @@ public class RockboxService extends Service
         });
     }
 
+    public void updateRockbox() {
+        final Activity activity = getActivity();
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new AlertDialog.Builder(activity)
+                    .setTitle("Update Rockbox")
+                    .setMessage("Do you want to update Rockbox? \n\nThe device will restart automatically afterwards.")
+                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Run shutdown in background thread
+                            new Thread(new Runnable() {
+                                public void run() {
+                                    try {
+                                        Log.d("RockboxService", "Attempting Rockbox Update...");
+                                        String[] cmdArray = new String[] {
+                                            "su", "-u", "root", "-c",
+                                            "nohup sh /sdcard/.rockbox/update/update.sh > /sdcard/.rockbox/update/nohup.out 2>&1 &"
+                                            };
+                                        java.lang.Process proc = Runtime.getRuntime().exec(cmdArray);
+                                        proc.waitFor();
+                                    } catch (Exception e) {
+                                        Log.e("RockboxService", "Failed to update Rockbox: " + e.getMessage());
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                        }
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
+            }
+        });
+    }
+
     public static void setSystemTimeAsRoot(final String dateString) {
         new Thread(new Runnable() {
             @Override

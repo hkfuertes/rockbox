@@ -17069,6 +17069,20 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_UPDATE_ROCKBOX
+  desc: Main menu item to update Rockbox on Android
+  user: core
+  <source>
+    *: "Update Rockbox"
+  </source>
+  <dest>
+    *: "Update Rockbox"
+  </dest>
+  <voice>
+    *: "Update Rockbox"
+  </voice>
+</phrase>
+<phrase>
   id: LANG_DEBUG_SYSCALL
   desc: Debug menu item for system calls
   user: core
