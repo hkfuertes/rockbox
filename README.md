@@ -6,7 +6,7 @@
 
 ## General Information
 
-This is an experimental build of Rockbox.
+This is an experimental build of Rockbox that is not in any way associated with or developed by Innioasis/Timmkoo.
 
 Most of the work was already done by the original Rockbox team - all credits to them.
 
@@ -15,13 +15,17 @@ I mostly added quick hacks to make this usable on a device without any touch inp
 Do NOT run this if you don't know what you are doing. You might brick your device in the process of installing this app. You have been warned.
 
 ## Installation
-### Y1 Helper (recommended for Windows)
+### Innioasis Updater (recommended)
 
-Install the most recent release of the Y1 Helper application and follow the instructions to install Rockbox: https://github.com/team-slide/Y1-helper/releases/latest
+This is a multi-platform community-built tool for updating official firmware and installing custom firmware (which often includes this Rockbox port). 
 
-### SPFlash Tool (recommended for Linux)
+The Innioasis Updater was developed independently by TeamSlide without input from Innioasis/Timmkoo.
 
-1. Download the latest Rockbox included firmware here (the RAR archive, not the ZIP): https://github.com/team-slide/project-gallagher/releases/latest
+You can find it here: https://innioasis.app/
+
+### SPFlash Tool
+
+1. Download the latest Rockbox included firmware here: https://innioasis.app/firmware.html
 2. Unpack the archive
 3. Install SP Flash Tool v5.1904:
   - Windows: included in the archive, alternatively: https://spflashtools.com/windows/sp-flash-tool-v5-1904
