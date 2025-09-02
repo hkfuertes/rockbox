@@ -23,6 +23,8 @@ The Innioasis Updater was developed independently by TeamSlide without input fro
 
 You can find it here: https://innioasis.app/
 
+The firmware image included in the releases is based on multiwirth's firmware: https://github.com/multiwirth/Innioasis_Y1_system_dumps/releases/tag/custom_wifi_type_a_v0.2
+
 ### SPFlash Tool
 
 1. Download the latest Rockbox included firmware here: https://innioasis.app/firmware.html
@@ -120,10 +122,11 @@ adb shell monkey -p net.dinglisch.android.tasker -c android.intent.category.LAUN
 adb shell input touchscreen tap 250 340
 adb shell input text "restart"
 adb shell input touchscreen tap 450 300
+adb shell input touchscreen tap 250 340
 # chose "Code" then "Shell"
 # navigate to command field
-adb shell input text su%s-u%sroot%s-c%sam%sforce-stop%sorg.rockbox\;
-adb shell input text su%s-u%sroot%s-c%smonkey%s-p%sorg.rockbox%s-c%sandroid.intent.category.LAUNCHER%s1
+adb shell input text "su%s-u%sroot%s-c%sam%sforce-stop%sorg.rockbox\;"
+adb shell input text "su%s-u%sroot%s-c%smonkey%s-p%sorg.rockbox%s-c%sandroid.intent.category.LAUNCHER%s1"
 # scroll down, tick field "run as root"
 # navigate back to the task screen
 adb shell input touchscreen tap 250 340
