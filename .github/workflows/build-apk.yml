@@ -60,6 +60,33 @@ jobs:
       run: |
         cd android/build
         zip -r libs.zip libs/
+    - name: bundle image
+      run: |
+        mkdir base
+        cd base
+        wget https://github.com/rockbox-y1/rockbox/releases/download/dev-17418724257/rom.zip
+        unzip rom.zip
+        mkdir mount_sys
+        mkdir mount_user
+        sudo mount -t ext4 -o loop system.img mount_sys
+        sudo mount -t ext4 -o loop userdata.img mount_user
+        sudo cp ../android/build/rockbox.apk mount_sys/app/org.rockbox.apk
+        sudo chmod 644 mount_sys/app/org.rockbox.apk
+        sudo chown root:root mount_sys/app/org.rockbox.apk
+        sudo mkdir -p mount_sys/lib
+        sudo cp ../android/build/libs/armeabi/librockbox.so mount_sys/lib/.
+        sudo chmod 644 mount_sys/lib/librockbox.so
+        sudo chown root:root mount_sys/lib/librockbox.so
+        sudo rm -rf mount_user/data/org.rockbox/lib
+        sudo mkdir -p mount_user/data/org.rockbox/lib
+        sudo cp ../android/build/libs/armeabi/* mount_user/data/org.rockbox/lib/.
+        sudo umount mount_sys
+        sudo umount mount_user
+        rm rom.zip
+        rm -r mount_sys
+        rm -r mount_user
+        cd ../
+        zip -j rom.zip base/*
     - name: create release
       id: create_release
       uses: shogo82148/actions-create-release@v1
@@ -80,5 +107,12 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./android/build/libs.zip
         asset_name: libs.zip
+        asset_content_type: application/zip
+    - name: upload rom 
+      uses: shogo82148/actions-upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./rom.zip
+        asset_name: rom.zip
         asset_content_type: application/zip
 
