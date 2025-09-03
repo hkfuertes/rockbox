@@ -64,7 +64,7 @@ jobs:
       run: |
         mkdir base
         cd base
-        wget https://github.com/rockbox-y1/rockbox/releases/download/dev-17418724257/rom.zip
+        wget https://github.com/rockbox-y1/rockbox/releases/latest/download/rom.zip
         unzip rom.zip
         mkdir mount_sys
         mkdir mount_user
