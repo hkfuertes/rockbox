@@ -87,13 +87,17 @@ jobs:
         rm -r mount_user
         cd ../
         zip -j rom.zip base/*
+    - name: Set release date
+      id: date
+      run: echo "release_date=$(date +'%d-%m-%Y')" >> $GITHUB_OUTPUT
     - name: create release
       id: create_release
       uses: shogo82148/actions-create-release@v1
       with:
-        release_name: Rockbox-Y1 dev-${{ github.sha }}
-        tag_name: dev-${{ github.run_id }}
-        prerelease: true
+        release_name: Rockbox-Y1 Nightly-${{ steps.date.outputs.release_date }}
+        tag_name: nightly-${{ github.run_id }}
+        prerelease: false
+        latest: true
     - name: upload apk
       uses: shogo82148/actions-upload-release-asset@v1
       with:
