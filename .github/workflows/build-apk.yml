@@ -56,10 +56,10 @@ jobs:
         cd android/build
         $APKSIGNER sign --key ../platform.pk8 --cert ../platform.x509.pem rockbox_unsigned.apk
         cp rockbox_unsigned.apk rockbox.apk
-    - name: zip libs
+    - name: gzip libs
       run: |
         cd android/build
-        zip -r libs.zip libs/
+        tar -czvf libs.tar.gz libs/
     - name: bundle image
       run: |
         mkdir base
@@ -109,9 +109,9 @@ jobs:
       uses: shogo82148/actions-upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./android/build/libs.zip
-        asset_name: libs.zip
-        asset_content_type: application/zip
+        asset_path: ./android/build/libs.tar.gz
+        asset_name: libs.tar.gz
+        asset_content_type: application/gzip
     - name: upload rom 
       uses: shogo82148/actions-upload-release-asset@v1
       with:

@@ -74,7 +74,7 @@ adb shell chmod 644 /system/usr/keylayout/Generic.kl
 adb reboot
 ```
 - Download the latest Rockbox release APK from the sidebar
-- Download the latest Rockbox libs.zip and unzip it such that there is a folder called `libs/armeabi`
+- Download the latest Rockbox libs.tar.gz and unpack it (`tar -xzf libs.tar.gz`) such that there is a folder called `libs/armeabi`
 - Either use one of the preinstalled themes or supply your own in the .rockbox folder on the SD card
 - Uninstall any apps you do not want
 ```
