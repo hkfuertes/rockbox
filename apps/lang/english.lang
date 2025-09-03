@@ -17041,6 +17041,21 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_DISPLAY_RESOLUTION_MODE
+  desc: Resolution Mode (240/360p) 
+  user: core
+  <source>
+    *: "Compatibility Mode"
+  </source>
+  <dest>
+    *: "Compatibility Mode"
+  </dest>
+  <voice>
+    *: "Compatibility Mode"
+  </voice>
+</phrase>
+
+<phrase>
   id: LANG_WHEEL_VIBRATIONS
   desc: wheel vibration settings 
   user: core

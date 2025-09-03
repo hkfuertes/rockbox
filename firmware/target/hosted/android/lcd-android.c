@@ -27,11 +27,13 @@
 #include "kernel.h"
 #include "lcd.h"
 #include "button.h"
+#include "settings.h"
+#include "misc.h"
 
 extern JNIEnv *env_ptr;
 extern jobject RockboxService_instance;
 
-static jobject RockboxFramebuffer_instance;
+jobject RockboxFramebuffer_instance;
 static jmethodID java_lcd_update;
 static jmethodID java_lcd_update_rect;
 
@@ -174,4 +176,38 @@ int lcd_get_dpi(void)
 int touchscreen_get_scroll_threshold(void)
 {
     return scroll_threshold;
+}
+
+/* JNI method to get current display resolution mode setting */
+JNIEXPORT jint JNICALL
+Java_org_rockbox_RockboxFramebuffer_getDisplayResolutionMode(JNIEnv *env, jobject this)
+{
+    (void)env;
+    (void)this;
+    return global_settings.display_resolution_mode;
+}
+
+/* JNI method to handle display resolution mode change */
+JNIEXPORT void JNICALL
+Java_org_rockbox_RockboxFramebuffer_onDisplayResolutionChanged(JNIEnv *env, jobject this, jint mode)
+{
+    (void)env;  // Mark parameter as unused
+    (void)this; // Mark parameter as unused
+    
+    // Update the setting
+    global_settings.display_resolution_mode = mode;
+    settings_save();
+    
+    // Force a full redraw to show the new resolution
+    lcd_update();
+}
+
+/* JNI method to get current activity */
+JNIEXPORT jint JNICALL
+Java_org_rockbox_RockboxFramebuffer_getCurrentActivity(JNIEnv *env, jobject this)
+{
+    (void)env;  // Mark parameter as unused
+    (void)this; // Mark parameter as unused
+    
+    return (jint)get_current_activity();
 }
