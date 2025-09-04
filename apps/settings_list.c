@@ -898,26 +898,6 @@ void android_screen_timeout_callback(int timeout)
 }
 #endif
 
-static void display_resolution_callback(int mode)
-{
-    (void)mode; // Mark parameter as unused to avoid warning
-    
-    // Trigger the resolution change via the Android Java code
-    if (RockboxFramebuffer_instance != NULL) {
-        JNIEnv *env = env_ptr;
-        if (env != NULL) {
-            // Call the Java method to change resolution
-            jclass fb_class = (*env)->GetObjectClass(env, RockboxFramebuffer_instance);
-            jmethodID onDisplayResolutionChanged_method = (*env)->GetMethodID(env, fb_class,
-                                                                             "onDisplayResolutionChanged", "(I)V");
-            if (onDisplayResolutionChanged_method != NULL) {
-                (*env)->CallVoidMethod(env, RockboxFramebuffer_instance, 
-                                     onDisplayResolutionChanged_method, (jint)mode);
-            }
-        }
-    }
-}
-
 const struct settings_list settings[] = {
 /* system_status settings .resume.cfg */
     SYSTEM_STATUS_SOUND(F_NO_WRAP, volume, LANG_VOLUME, "volume", SOUND_VOLUME),
@@ -2424,9 +2404,6 @@ const struct settings_list settings[] = {
                    "android screen timeout", "15,30,60,120,300,600,1800", android_screen_timeout_callback, 7,
                    "15 seconds", "30 seconds", "1 minute", "2 minutes", "5 minutes", "10 minutes", "30 minutes"),
 #endif
-    CHOICE_SETTING(0, display_resolution_mode, LANG_DISPLAY_RESOLUTION_MODE, 0,
-                   "display resolution mode", "240p,360p", display_resolution_callback, 2,
-                   "iPod Classic Mode", "Off"),
 };
 
 const int nb_settings = sizeof(settings)/sizeof(*settings);

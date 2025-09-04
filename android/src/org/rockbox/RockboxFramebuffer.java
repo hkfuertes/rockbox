@@ -71,6 +71,10 @@ public class RockboxFramebuffer extends SurfaceView
     // Framebuffer size constants
     private int FB_WIDTH = 480;   // Native resolution
     private int FB_HEIGHT = 360;  // Native resolution
+    
+    // Virtual framebuffer dimensions for 240p mode
+    private int VIRTUAL_FB_WIDTH = 320;
+    private int VIRTUAL_FB_HEIGHT = 240;
 
     /* first stage init; needs to run from a thread that has a Looper 
      * setup stuff that needs a Context */
@@ -97,41 +101,32 @@ public class RockboxFramebuffer extends SurfaceView
         if (c == null)
             return;
 
+        // Get current mode and dimensions
+        int currentActivity = getCurrentActivity();
+        
+        // Get actual framebuffer dimensions from native code
+        int[] dimensions = new int[2];
+        getVirtualFramebufferDimensions(dimensions);
+        int actualWidth = dimensions[0];
+        int actualHeight = dimensions[1];
+        
+        // Make sure our bitmap matches the actual framebuffer dimensions
+        if (btm == null || btm.getWidth() != actualWidth || btm.getHeight() != actualHeight) {
+            if (btm != null) {
+                btm.recycle();
+            }
+            btm = Bitmap.createBitmap(actualWidth, actualHeight, Bitmap.Config.RGB_565);
+        }
+
         btm.copyPixelsFromBuffer(framebuffer);
         synchronized (holder)
         { /* draw */
             c.drawColor(android.graphics.Color.BLACK); // clear canvas first!
             
-            // Check resolution mode
-            int currentMode = getDisplayResolutionMode();
-            int currentActivity = getCurrentActivity();
-            
-            // Don't scale plugins - they're designed for 360p resolution
-            boolean isPlugin = (currentActivity == 14); // ACTIVITY_PLUGIN = 14
-
-            if (isPlugin) {
-                // Plugin mode - render the full 480x360 framebuffer directly, no scaling
-                Rect src = new Rect(0, 0, FB_WIDTH, FB_HEIGHT);
-                Rect dst = new Rect(0, 0, c.getWidth(), c.getHeight());
-                c.drawBitmap(btm, src, dst, sharpPaint);
-            } else if (currentMode == 1) {
-                // 360p native mode - no scaling, render at native 480x360
-                Rect src = new Rect(0, 0, FB_WIDTH, FB_HEIGHT);
-                Rect dst = new Rect(0, 0, c.getWidth(), c.getHeight());
-                c.drawBitmap(btm, src, dst, sharpPaint);
-            } else {
-                // 240p compatibility mode - extract 320x240 from center of 480x360 and scale up
-                int virtualWidth = 320;
-                int virtualHeight = 240;
-                
-                // Source: extract 320x240 from the top left of the 480x360 framebuffer
-                Rect src = new Rect(0, 0, virtualWidth, virtualHeight);
-                
-                // Destination: scale the 320x240 to fill the entire screen
-                Rect dst = new Rect(0, 0, c.getWidth(), c.getHeight());
-                
-                c.drawBitmap(btm, src, dst, sharpPaint);
-            }
+            // Plugin mode - render the full framebuffer directly, no scaling
+            Rect src = new Rect(0, 0, actualWidth, actualHeight);
+            Rect dst = new Rect(0, 0, c.getWidth(), c.getHeight());
+            c.drawBitmap(btm, src, dst, sharpPaint);
         }
         holder.unlockCanvasAndPost(c);
     }
@@ -144,18 +139,17 @@ public class RockboxFramebuffer extends SurfaceView
     public boolean onTouchEvent(MotionEvent me)
     {
         // Check resolution mode for proper scaling
-        int currentMode = getDisplayResolutionMode();
         float scaleX, scaleY;
         
-        if (currentMode == 1) {
-            // 360p native mode - direct mapping from screen to 480x360
-            scaleX = (float)FB_WIDTH / (float)getWidth();
-            scaleY = (float)FB_HEIGHT / (float)getHeight();
-        } else {
-            // 240p compatibility mode - map from screen to 320x240
-            scaleX = 320.0f / (float)getWidth();
-            scaleY = 240.0f / (float)getHeight();
-        }
+        // Get actual framebuffer dimensions from native code
+        int[] dimensions = new int[2];
+        getVirtualFramebufferDimensions(dimensions);
+        int actualWidth = dimensions[0];
+        int actualHeight = dimensions[1];
+        
+        // Map touch events to appropriate coordinates
+        scaleX = (float)actualWidth / (float)getWidth();
+        scaleY = (float)actualHeight / (float)getHeight();
         
         int x = (int) (me.getX() * scaleX);
         int y = (int) (me.getY() * scaleY);
@@ -254,15 +248,12 @@ public class RockboxFramebuffer extends SurfaceView
     
     // Add native method to force a full redraw from native code
     public native void forceFullRedraw();
-
-    // Add method to change resolution
-    public native int getDisplayResolutionMode();
     
     // Add method to get current activity
     public native int getCurrentActivity();
-
-    // Add native method to notify setting change
-    public native void onDisplayResolutionChanged(int mode);
+  
+    // Add native method to get virtual framebuffer dimensions
+    public native void getVirtualFramebufferDimensions(int[] dimensions);
 
     /* Trigger vibration for button feedback */
     public static void triggerVibration(Context context, int baseDuration, int boostDuration) {
@@ -282,8 +273,16 @@ public class RockboxFramebuffer extends SurfaceView
     }
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        // Always create the bitmap at the native framebuffer size (480x360)
-        btm = Bitmap.createBitmap(FB_WIDTH, FB_HEIGHT, Bitmap.Config.RGB_565);
+        // Get actual framebuffer dimensions from native code
+        int[] dimensions = new int[2];
+        getVirtualFramebufferDimensions(dimensions);
+        int actualWidth = dimensions[0];
+        int actualHeight = dimensions[1];
+        
+        // Create bitmap with the appropriate dimensions
+        btm = Bitmap.createBitmap(actualWidth, actualHeight, Bitmap.Config.RGB_565);
+        Log.d("RockboxFramebuffer", "Created bitmap with dimensions: " + actualWidth + "x" + actualHeight);
+        
         setEnabled(true);
         // Trigger a full framebuffer redraw from native code
         forceFullRedraw();
@@ -292,6 +291,9 @@ public class RockboxFramebuffer extends SurfaceView
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         setEnabled(false);
-        btm = null;
+        if (btm != null) {
+            btm.recycle();
+            btm = null;
+        }
     }
 }

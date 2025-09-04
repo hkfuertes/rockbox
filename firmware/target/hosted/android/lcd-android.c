@@ -45,6 +45,13 @@ static int scroll_threshold;
 static bool display_on;
 static bool connected;
 
+/* Virtual framebuffer dimensions for 240p mode */
+#define VIRTUAL_FB_WIDTH  320
+#define VIRTUAL_FB_HEIGHT 240
+
+/* Calculate framebuffer size based on current mode */
+#define VIRTUAL_FRAMEBUFFER_SIZE (sizeof(fb_data) * VIRTUAL_FB_WIDTH * VIRTUAL_FB_HEIGHT)
+
 /* this might actually be called before lcd_init_device() or even main(), so
  * be sure to only access static storage initalized at library loading,
  * and not more */
@@ -85,9 +92,7 @@ void lcd_update(void)
     if (display_on)
     {
         JNIEnv e = *env_ptr;
-        jobject buffer = e->NewDirectByteBuffer(env_ptr, FBADDR(0,0),
-                                               (jlong) FRAMEBUFFER_SIZE);
-
+        jobject buffer = e->NewDirectByteBuffer(env_ptr, FBADDR(0,0), FRAMEBUFFER_SIZE);
         e->CallVoidMethod(env_ptr, RockboxFramebuffer_instance,
                                    java_lcd_update, buffer);
         e->DeleteLocalRef(env_ptr, buffer);
@@ -99,8 +104,8 @@ void lcd_update_rect(int x, int y, int width, int height)
     if (display_on)
     {
         JNIEnv e = *env_ptr;
-        jobject buffer = e->NewDirectByteBuffer(env_ptr, FBADDR(0,0),
-                                                   (jlong) FRAMEBUFFER_SIZE);
+        jobject buffer = e->NewDirectByteBuffer(env_ptr, FBADDR(0,0), FRAMEBUFFER_SIZE);
+        
         jobject rect = e->NewObject(env_ptr, AndroidRect_class, AndroidRect_constructor,
                                         x, y, x + width, y + height);
         e->CallVoidMethod(env_ptr, RockboxFramebuffer_instance,
@@ -178,30 +183,6 @@ int touchscreen_get_scroll_threshold(void)
     return scroll_threshold;
 }
 
-/* JNI method to get current display resolution mode setting */
-JNIEXPORT jint JNICALL
-Java_org_rockbox_RockboxFramebuffer_getDisplayResolutionMode(JNIEnv *env, jobject this)
-{
-    (void)env;
-    (void)this;
-    return global_settings.display_resolution_mode;
-}
-
-/* JNI method to handle display resolution mode change */
-JNIEXPORT void JNICALL
-Java_org_rockbox_RockboxFramebuffer_onDisplayResolutionChanged(JNIEnv *env, jobject this, jint mode)
-{
-    (void)env;  // Mark parameter as unused
-    (void)this; // Mark parameter as unused
-    
-    // Update the setting
-    global_settings.display_resolution_mode = mode;
-    settings_save();
-    
-    // Force a full redraw to show the new resolution
-    lcd_update();
-}
-
 /* JNI method to get current activity */
 JNIEXPORT jint JNICALL
 Java_org_rockbox_RockboxFramebuffer_getCurrentActivity(JNIEnv *env, jobject this)
@@ -210,4 +191,18 @@ Java_org_rockbox_RockboxFramebuffer_getCurrentActivity(JNIEnv *env, jobject this
     (void)this; // Mark parameter as unused
     
     return (jint)get_current_activity();
+}
+
+/* Get virtual framebuffer dimensions based on current mode */
+JNIEXPORT void JNICALL
+Java_org_rockbox_RockboxFramebuffer_getVirtualFramebufferDimensions(JNIEnv *env, jobject this, jintArray dimensions)
+{
+    (void)env;  // Mark parameter as unused
+    (void)this; // Mark parameter as unused
+    
+    jint dims[2];
+    dims[0] = LCD_WIDTH;
+    dims[1] = LCD_HEIGHT;
+
+    (*env)->SetIntArrayRegion(env, dimensions, 0, 2, dims);
 }

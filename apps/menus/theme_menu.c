@@ -411,9 +411,6 @@ MAKE_MENU(theme_menu, ID2P(LANG_THEME_MENU),
 #ifdef HAVE_BACKDROP_IMAGE
             &clear_main_bd,
 #endif
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-            &display_resolution_mode,
-#endif
             &bars_menu,
             &cursor_style,
 #if LCD_DEPTH > 1
