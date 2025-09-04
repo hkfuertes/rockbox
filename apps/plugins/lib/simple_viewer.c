@@ -264,6 +264,7 @@ int view_text(const char *title, const char *text)
         { PLA_DOWN,             BUTTON_DPAD_DOWN|BUTTON_REL,        BUTTON_NONE },
         { PLA_LEFT,             BUTTON_DPAD_LEFT|BUTTON_REL,        BUTTON_NONE },
         { PLA_RIGHT,            BUTTON_DPAD_RIGHT|BUTTON_REL,       BUTTON_NONE },
+        { PLA_CANCEL,           BUTTON_BACK|BUTTON_REL,             BUTTON_NONE },
     };
 
     const struct button_mapping *view_contexts[] = {
