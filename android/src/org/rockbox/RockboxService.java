@@ -33,6 +33,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.rockbox.Helper.Logger;
 import org.rockbox.Helper.MediaButtonReceiver;
+import org.rockbox.Helper.HeadphoneUnpluggedReceiver;
 import org.rockbox.Helper.RunForegroundManager;
 import org.rockbox.Helper.BrightnessController;
 import org.rockbox.Helper.ScreenTimeoutController;
@@ -42,6 +43,7 @@ import android.app.AlertDialog;
 import android.app.Service;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
@@ -68,12 +70,17 @@ public class RockboxService extends Service
     private Activity mCurrentActivity = null;
     private RunForegroundManager mFgRunner;
     private MediaButtonReceiver mMediaButtonReceiver;
+    private HeadphoneUnpluggedReceiver mHeadphoneUnpluggedReceiver;
     private ResultReceiver mResultReceiver;
+    private int mtpEnable = 1; // default disable MTP
     
-    /* Config file check mechanism */
+    /* Regular checks */
     private Handler mConfigCheckHandler;
     private Runnable mConfigCheckRunnable;
-    private static final int CONFIG_CHECK_INTERVAL_MS = 500; // Check every second
+    private static final int CONFIG_CHECK_INTERVAL_MS = 500; // Check every half second
+    private Handler mMTPHandler;
+    private Runnable mMTPRunnable;
+    private static final int MTP_CHECK_INTERVAL_MS = 500; // Check every half second
     private long mLastRestartTime = 0; // Timestamp of last restart attempt
     private static final long RESTART_COOLDOWN_MS = 500; // Minimum 1 seconds between restarts
     private boolean mSdConfigWasUnavailable = false; // Track if SD config was initially unavailable
@@ -89,9 +96,11 @@ public class RockboxService extends Service
 
     @Override
     public void onCreate()
-    {
+    {      
         instance = this;
+        mtpEnable = 1;
         mMediaButtonReceiver = new MediaButtonReceiver(this);
+        mHeadphoneUnpluggedReceiver = new HeadphoneUnpluggedReceiver();
         mFgRunner = new RunForegroundManager(this);
         
         // Initialize config check mechanism
@@ -102,6 +111,19 @@ public class RockboxService extends Service
                 checkConfigFile();
                 // Schedule next check
                 mConfigCheckHandler.postDelayed(this, CONFIG_CHECK_INTERVAL_MS);
+            }
+        };
+
+        // Initialize mtp check mechanism
+        mMTPHandler = new Handler(Looper.getMainLooper());
+        mMTPRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (mtpEnable == 1){
+                    enableMTP(mtpEnable);
+                }
+                // Schedule next check
+                mMTPHandler.postDelayed(this, MTP_CHECK_INTERVAL_MS);
             }
         };
     }
@@ -170,6 +192,7 @@ public class RockboxService extends Service
 
         /* (Re-)attach the media button receiver, in case it has been lost */
         mMediaButtonReceiver.register();
+        registerReceiver(mHeadphoneUnpluggedReceiver, new IntentFilter(Intent.ACTION_HEADSET_PLUG));
         putResult(RESULT_SERVICE_RUNNING);
 
         rockbox_running = true;
@@ -375,6 +398,7 @@ public class RockboxService extends Service
          * garbage collected.
          *  mMediaButtonReceiver.unregister(); */
         mMediaButtonReceiver = null;
+        mHeadphoneUnpluggedReceiver = null;
         /* Make sure our notification is gone. */
         stopForeground();
         
@@ -447,6 +471,17 @@ public class RockboxService extends Service
             screenTimeoutController = new ScreenTimeoutController();
         }
         return screenTimeoutController.getScreenTimeout();
+    }
+
+    /* Android screen timeout control methods for JNI interface */
+    /**
+     * Set Android screen timeout to a specific value in seconds
+     * Called from native code via JNI
+     */
+    public int restartAndroidApp(int config)
+    {
+        mHeadphoneUnpluggedReceiver.setRestart(config);
+        return 1;
     }
 
     /* Android external apps methods for JNI interface */
@@ -676,7 +711,33 @@ public class RockboxService extends Service
             }
         }).start();
     }
-    
+
+    /**
+     * Enable MTP using system call
+     */
+    public int enableMTP(int config) {
+        Log.d("RockboxService", "Check if MTP should be enabled");
+        mtpEnable = config;
+        if (mtpEnable == 0){
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Log.d("RockboxService", "Starting MTP");
+                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"svc", "usb", "setFunction", "mtp"});
+                        proc.waitFor();
+                    } catch (Exception e) {
+                        Log.e("RockboxService", "Failed to start MTP: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+        } else {
+            Log.d("RockboxService", "Not enabling.");
+        }
+        return 1;
+    }
+
     /**
      * Start the periodic config file check
      */

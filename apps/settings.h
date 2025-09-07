@@ -931,9 +931,10 @@ struct user_settings
 #endif
     bool playback_log; /* ROCKBOX_DIR/playback.log for tracks played */
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-    int display_resolution_mode; /* 0=240p compatibility mode, 1=360p native mode */
     int wheel_vibration_intensity; /* Vibration intensity for wheel/DPAD buttons (0-50ms) */
     int android_screen_timeout; /* Android screen timeout in seconds (0=never, -1=system default) */
+    int android_restart_app; /* Restart Rockbox when headphones are being unplugged */
+    int android_enable_mtp; /* Automatically enable MTP */
 #endif
 };
 
