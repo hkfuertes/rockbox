@@ -1574,6 +1574,10 @@ const struct settings_list settings[] = {
                   "Announce Battery Level", NULL),
     INT_SETTING(0, talk_mixer_amp, LANG_TALK_MIXER_LEVEL, 100,
         "talk mixer level", UNIT_PERCENT, 0, 100, 5, NULL, NULL, voice_set_mixer_level),
+#ifdef HAVE_HOTKEY
+    TEXT_SETTING(0, wps_announcement_format, "wps announcement format", "", NULL, NULL),
+#endif
+
 
 #ifdef HAVE_RECORDING
      /* recording */
@@ -2314,10 +2318,10 @@ const struct settings_list settings[] = {
 #ifdef HAVE_HOTKEY
     TABLE_SETTING(F_CB_ON_SELECT_ONLY, hotkey_wps,
         LANG_HOTKEY_WPS, HOTKEY_VIEW_PLAYLIST, "hotkey wps",
-        "off,view playlist,show track info,pitchscreen,open with,delete,bookmark,plugin,bookmark list"
-        ,UNIT_INT, hotkey_formatter, hotkey_getlang, hotkey_callback,9, HOTKEY_OFF,
+        "off,view playlist,show track info,pitchscreen,open with,delete,bookmark,plugin,bookmark list,voiceinfo"
+        ,UNIT_INT, hotkey_formatter, hotkey_getlang, hotkey_callback,10, HOTKEY_OFF,
         HOTKEY_VIEW_PLAYLIST, HOTKEY_SHOW_TRACK_INFO, HOTKEY_PITCHSCREEN,
-        HOTKEY_OPEN_WITH, HOTKEY_DELETE, HOTKEY_BOOKMARK, HOTKEY_PLUGIN, HOTKEY_BOOKMARK_LIST),
+        HOTKEY_OPEN_WITH, HOTKEY_DELETE, HOTKEY_BOOKMARK, HOTKEY_PLUGIN, HOTKEY_BOOKMARK_LIST, HOTKEY_VOICEINFO),
     TABLE_SETTING(0, hotkey_tree,
         LANG_HOTKEY_FILE_BROWSER, HOTKEY_OFF, "hotkey tree",
 #ifdef HAVE_TAGCACHE

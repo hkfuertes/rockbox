@@ -153,6 +153,7 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
             if (button == BUTTON_MULTIMEDIA_PLAYPAUSE && handled_playpause_longpress)
             {
                 /* Reset the flag and ignore this release event */
+                button_queue_post(BUTTON_TOPLEFT | BUTTON_REL, 0);
                 handled_playpause_longpress = false;
                 return true;
             }
@@ -243,7 +244,7 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandlerRepeat(JNIEnv*env, jclass class
         /* Use BUTTON_TOPLEFT as a placeholder trigger for opening WPS */
         wait_rockbox_ready();
         reset_poweroff_timer();
-        button_queue_post(BUTTON_TOPLEFT | BUTTON_REL, 0);
+        button_queue_post(BUTTON_TOPLEFT|BUTTON_REPEAT, 0);
         handled_playpause_longpress = true;
         return true;
     }

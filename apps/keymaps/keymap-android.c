@@ -74,6 +74,7 @@ static const struct button_mapping button_context_wps[]  = {
     { ACTION_WPS_SKIPPREV,      BUTTON_MEDIA_PREV,                  BUTTON_NONE },
     { ACTION_WPS_SEEKFWD,       BUTTON_MEDIA_NEXT|BUTTON_REPEAT,    BUTTON_NONE },
     { ACTION_WPS_SEEKBACK,      BUTTON_MEDIA_PREV|BUTTON_REPEAT,    BUTTON_NONE },
+    { ACTION_WPS_HOTKEY,        BUTTON_TOPLEFT|BUTTON_REL,          BUTTON_NONE },
 
     LAST_ITEM_IN_LIST
 }; /* button_context_wps */
