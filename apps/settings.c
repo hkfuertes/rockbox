@@ -109,7 +109,6 @@ static long lasttime = 0;
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 #include "../firmware/target/hosted/android/brightness-android.h"
 #include "../firmware/target/hosted/android/screen-timeout-android.h"
-#include "../firmware/target/hosted/android/restart-app-android.h"
 #include "../firmware/target/hosted/android/enable-mtp-android.h"
 #endif
 
@@ -902,7 +901,6 @@ void settings_apply(bool read_disk)
     /* Note: Android screen timeout is applied when the user changes the setting,
        not during initialization to avoid JNI environment issues */
     
-    android_set_restart_app(global_settings.android_restart_app);
     android_enable_mtp(global_settings.android_enable_mtp);
 #endif
 #ifdef HAVE_BACKLIGHT

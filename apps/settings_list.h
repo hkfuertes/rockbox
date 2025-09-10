@@ -190,7 +190,6 @@ const struct settings_list* get_settings_list(int*count);
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 void android_screen_timeout_callback(int timeout);
-void android_restart_app_callback(int restart);
 void android_enable_mtp_callback(int mtp_enable);
 #endif
 #ifndef PLUGIN

@@ -81,6 +81,13 @@ jobs:
         sudo rm -rf mount_user/data/org.rockbox/lib
         sudo mkdir -p mount_user/data/org.rockbox/lib
         sudo cp ../android/build/libs/armeabi/* mount_user/data/org.rockbox/lib/.
+
+        sudo cp ../android/scripts/install-recovery.sh mount_sys/etc/install-recovery.sh
+        sudo chmod 755 mount_sys/etc/install-recovery.sh
+        sudo mkdir -p mount_sys/etc/init.d
+        sudo cp ../android/scripts/99RockboxComboRestart mount_sys/etc/init.d/
+        sudo chmod 755 mount_sys/etc/init.d/99RockboxComboRestart
+        
         sudo umount mount_sys
         sudo umount mount_user
         rm rom.zip

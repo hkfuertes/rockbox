@@ -933,7 +933,6 @@ struct user_settings
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     int wheel_vibration_intensity; /* Vibration intensity for wheel/DPAD buttons (0-50ms) */
     int android_screen_timeout; /* Android screen timeout in seconds (0=never, -1=system default) */
-    int android_restart_app; /* Restart Rockbox when headphones are being unplugged */
     int android_enable_mtp; /* Automatically enable MTP */
 #endif
 };

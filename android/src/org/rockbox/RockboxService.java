@@ -33,7 +33,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.rockbox.Helper.Logger;
 import org.rockbox.Helper.MediaButtonReceiver;
-import org.rockbox.Helper.HeadphoneUnpluggedReceiver;
 import org.rockbox.Helper.RunForegroundManager;
 import org.rockbox.Helper.BrightnessController;
 import org.rockbox.Helper.ScreenTimeoutController;
@@ -70,7 +69,6 @@ public class RockboxService extends Service
     private Activity mCurrentActivity = null;
     private RunForegroundManager mFgRunner;
     private MediaButtonReceiver mMediaButtonReceiver;
-    private HeadphoneUnpluggedReceiver mHeadphoneUnpluggedReceiver;
     private ResultReceiver mResultReceiver;
     private int mtpEnable = 1; // default disable MTP
     
@@ -100,7 +98,6 @@ public class RockboxService extends Service
         instance = this;
         mtpEnable = 1;
         mMediaButtonReceiver = new MediaButtonReceiver(this);
-        mHeadphoneUnpluggedReceiver = new HeadphoneUnpluggedReceiver();
         mFgRunner = new RunForegroundManager(this);
         
         // Initialize config check mechanism
@@ -192,7 +189,6 @@ public class RockboxService extends Service
 
         /* (Re-)attach the media button receiver, in case it has been lost */
         mMediaButtonReceiver.register();
-        registerReceiver(mHeadphoneUnpluggedReceiver, new IntentFilter(Intent.ACTION_HEADSET_PLUG));
         putResult(RESULT_SERVICE_RUNNING);
 
         rockbox_running = true;
@@ -398,7 +394,6 @@ public class RockboxService extends Service
          * garbage collected.
          *  mMediaButtonReceiver.unregister(); */
         mMediaButtonReceiver = null;
-        mHeadphoneUnpluggedReceiver = null;
         /* Make sure our notification is gone. */
         stopForeground();
         
@@ -471,17 +466,6 @@ public class RockboxService extends Service
             screenTimeoutController = new ScreenTimeoutController();
         }
         return screenTimeoutController.getScreenTimeout();
-    }
-
-    /* Android screen timeout control methods for JNI interface */
-    /**
-     * Set Android screen timeout to a specific value in seconds
-     * Called from native code via JNI
-     */
-    public int restartAndroidApp(int config)
-    {
-        mHeadphoneUnpluggedReceiver.setRestart(config);
-        return 1;
     }
 
     /* Android external apps methods for JNI interface */

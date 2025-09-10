@@ -424,7 +424,6 @@ MAKE_MENU(sel_softlock, ID2P(LANG_SOFTLOCK_SELECTIVE),
 MENUITEM_SETTING(governor, &global_settings.governor, NULL);
 #endif
 
-MENUITEM_SETTING(android_restart_app, &global_settings.android_restart_app, NULL);
 MENUITEM_SETTING(android_enable_mtp, &global_settings.android_enable_mtp, NULL);
 
 MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
@@ -438,7 +437,6 @@ MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
 #endif
             &limits_menu,
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-            &android_restart_app,
             &android_enable_mtp,
 #endif
 
