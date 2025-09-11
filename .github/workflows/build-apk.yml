@@ -1,8 +1,10 @@
-name: Build latest APK
+name: Build latest APK (240p)
 
 on:
-  push:
-    branches: [ "y1-240p" ]
+  workflow_run:
+    workflows: ["Build latest APK (360p)"]
+    types:
+      - completed
 
 jobs:
   build:
