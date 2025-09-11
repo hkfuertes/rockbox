@@ -1,0 +1,40 @@
+#!/system/bin/sh
+# Innioasis Y1 script
+# Makes the Keyboard appear in input fields when the center button is pressed.
+
+DEVICE="/dev/input/event2"
+
+# Exit if the input device is not found
+if [ ! -e "$DEVICE" ]; then
+    exit 1
+fi
+
+# Function to reverse byte order (little-endian to big-endian)
+reverse_bytes() {
+    hex="$1"
+    echo "$hex" | sed 's/../& /g' | awk '{for(i=NF;i>0;i--)printf $i; print ""}'
+}
+
+# Main loop: read raw input events
+while true; do
+    event_bytes=$(dd if="$DEVICE" bs=16 count=1 2>/dev/null | xxd -p)
+    [ -z "$event_bytes" ] && break
+
+    # Extract event type, code, and value
+    type_hex=$(reverse_bytes ${event_bytes:16:4})
+    value_hex=$(reverse_bytes ${event_bytes:24:8})
+    code_hex=$(reverse_bytes ${event_bytes:20:4})
+
+    type=$((0x$type_hex))
+    value=$((0x$value_hex))
+    code=$((0x$code_hex))
+
+    # Only process key events
+    if [ "$type" -eq 1 ]; then
+        case "$code" in
+            164) # (play/pause button)
+		input trackball press
+                ;;
+        esac
+    fi
+done

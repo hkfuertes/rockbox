@@ -87,6 +87,8 @@ jobs:
         sudo mkdir -p mount_sys/etc/init.d
         sudo cp ../android/scripts/99RockboxComboRestart mount_sys/etc/init.d/
         sudo chmod 755 mount_sys/etc/init.d/99RockboxComboRestart
+        sudo cp ../android/scripts/98KeyboardTrigger mount_sys/etc/init.d/
+        sudo chmod 755 mount_sys/etc/init.d/98KeyboardTrigger
 
         sudo umount mount_sys
         sudo umount mount_user
