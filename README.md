@@ -14,6 +14,62 @@ I mostly added quick hacks to make this usable on a device without any touch inp
 
 Do NOT run this if you don't know what you are doing. You might brick your device in the process of installing this app. You have been warned.
 
+Installation instructions can be found here: https://innioasis.app/
+
+## Controls
+
+- Scroll Wheel (Most Screens): Up / Down
+- Scroll Wheel (Now Playing screen): Volume
+- Center (Short): Accept / Enter
+- Center (Long): Turn Off Screen
+- Menu/Back (Short): Cancel / Back
+- Menu/Back (Long): Open Context Menu
+- Play/Pause (Long) (Most Screens): Open While Playing Screen
+- Play/Pause (Long) (Now Playing screen): WPS Hotkey
+- Play/Pause (Short) (Text Input): Open Keyboard
+- Media Buttons: Play/Pause/Next/Previous/Seek
+- Holding Next + Previous: Restart Rockbox
+
+## Themes
+
+### Installation
+
+1. (optional) Download the fontpack, extract it, drag the .rockbox folder onto your device https://www.rockbox.org/dl.cgi?bin=fonts
+2. Download a theme from (360p see below, 240p: https://themes.rockbox.org/index.php?target=ipod6g)
+3. extract it
+4. drag the .rockbox folder onto your device
+
+### List of 360p Themes
+
+- PodOne-Y1: https://github.com/AkikoKumagara/PodOne-Y1/releases/latest
+- iClassic 360p: https://old.reddit.com/r/innioasis/comments/1n9envr/iclassic_theme_for_rockbox_now_in_240p_and_360p/
+- ipodmod3blk-y1: https://github.com/AkikoKumagara/ipodmod3blk-y1
+- MacClassic: https://github.com/rockbox-y1/rockbox/releases/download/macclassic-360p/MacClassic.zip
+
+### List of working Themes (240p)
+
+There are likely more but these are tested.
+
+- CenterArt
+- FreshOSInstall (needs manual steps)
+- Horizon
+- iLike
+- OneBit_OLED
+- OneBit_Mono
+- OneBit_VFD_ALT
+- OP_1
+- Orbit
+- SKIDMARK (artefacting in menus)
+- SNAZZ2 (artefacting in menus)
+- SNAZZ3 (artefacting in menus)
+- InfoMatrix
+- naranjada
+- PodOne
+- Redux
+- Themify
+- Win95
+- xplorr
+
 ## Installation
 ### Innioasis Updater (recommended)
 
@@ -109,82 +165,6 @@ adb reboot
 - (optional) Download the voice pack from the releases, extract it, drag the .rockbox folder onto your device
 - **If rockbox gets stuck at the Rockbox logo and doesn't load your theme please delete .rockbox/config.cfg on your SD card**
 
-### Recommended in case of black screens: Tasker script to restart rockbox
-
-- install Tasker (https://tasker.joaoapps.com/releases/direct/Tasker.4.9u4.apk)
-- setup profile that listens to headphone unplugged
-- execute task that kills and restarts rockbox
-- How to (comments indicate things to do via the scroll wheel/buttons):
-```
-adb install Tasker.4.9u4.apk
-adb shell monkey -p net.dinglisch.android.tasker -c android.intent.category.LAUNCHER 1
-# navigate to tasks
-adb shell input touchscreen tap 250 340
-adb shell input text "restart"
-adb shell input touchscreen tap 450 300
-adb shell input touchscreen tap 250 340
-# chose "Code" then "Shell"
-# navigate to command field
-adb shell input text "su%s-u%sroot%s-c%sam%sforce-stop%sorg.rockbox\;"
-adb shell input text "su%s-u%sroot%s-c%smonkey%s-p%sorg.rockbox%s-c%sandroid.intent.category.LAUNCHER%s1"
-# scroll down, tick field "run as root"
-# navigate back to the task screen
-adb shell input touchscreen tap 250 340
-# navigate to "Alert" then "Vibrate"
-# navigate back to task screen
-# navigate to profile screen
-adb shell input touchscreen tap 250 340
-# chose "State" then "Hardware" then "Headset Plugged"
-# tick "Invert"
-# navigate back, choose "restart" task
-adb shell am force-stop net.dinglisch.android.tasker
-# unplug headphones to test and allow root when asked
-```
-
-## Controls
-
-- Scroll Wheel (Most Screens): Up / Down
-- Scroll Wheel (Now Playing screen): Volume
-- Center (Short): Accept / Enter
-- Center (Long): Turn Off Screen
-- Menu/Back (Short): Cancel / Back
-- Menu/Back (Long): Open Context Menu
-- Play/Pause (Long): Open While Playing Screen
-- Media Buttons: Play/Pause/Next/Previous/Seek
-
-## Themes
-
-### Installation
-
-1. (optional) Download the fontpack, extract it, drag the .rockbox folder onto your device https://www.rockbox.org/dl.cgi?bin=fonts
-2. Download a theme from https://themes.rockbox.org/index.php?target=ipod6g
-3. extract it
-4. drag the .rockbox folder onto your device
-
-### List of working Themes
-
-There are likely more but these are tested.
-
-- CenterArt
-- FreshOSInstall (needs manual steps)
-- Horizon
-- iLike
-- OneBit_OLED
-- OneBit_Mono
-- OneBit_VFD_ALT
-- OP_1
-- Orbit
-- SKIDMARK (artefacting in menus)
-- SNAZZ2 (artefacting in menus)
-- SNAZZ3 (artefacting in menus)
-- InfoMatrix
-- naranjada
-- PodOne
-- Redux
-- Themify
-- Win95
-- xplorr
-
 ## How to restart the app
 
 When you initialize the database Rockbox will ask you to restart. You can do this via `Main Menu > System > Restart Rockbox (last option in list)`.
@@ -202,11 +182,6 @@ adb shell monkey -p org.rockbox -c android.intent.category.LAUNCHER 1
 Ordered by priority
 
 ### Unknown/Long-term
-#### Settings Menus
-
-- Screen timeout
-- Wifi (not enabled in current ROMs)
-
 #### Connectivity
 
-- Fetch podcasts via rss (dependent on wifi)
+- Fetch podcasts via rss
