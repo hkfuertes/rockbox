@@ -28,7 +28,7 @@ Installation instructions can be found here: https://innioasis.app/
 - Play/Pause (Long) (Now Playing screen): WPS Hotkey
 - Play/Pause (Short) (Text Input): Open Keyboard
 - Media Buttons: Play/Pause/Next/Previous/Seek
-- Holding Next + Previous: Restart Rockbox
+- Holding Next + Previous: Restart Rockbox (Thanks, u/thinkVHS!)
 
 ## Themes
 
