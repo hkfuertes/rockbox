@@ -14,25 +14,54 @@ of a Rockbox theme. Copies other files without modifying them.
 import argparse
 from pathlib import Path
 from PIL import Image
+import cv2
 from tqdm import tqdm
 import shutil
 import re
+import subprocess, os
+
+def get_bit_depth(file_path):
+    result = subprocess.run(
+        ['identify', '-format', '%z', file_path],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        bit_depth = int(result.stdout.strip())
+        return bit_depth
+    else:
+        return None
+
 
 def resize_bmp(input_path, output_path, factor, filter_bg, filter_icon):
     """
     Rescale a BMP image. If detected as an icon (≤32px), NEAREST is used;
     otherwise, the configured filter is applied.
     """
-    img = Image.open(input_path)
-    new_size = (int(img.width * factor[0]), int(img.height * factor[1]))
+    bit_depth = get_bit_depth(input_path)
+    img = cv2.imread(input_path, cv2.IMREAD_UNCHANGED)
+    if img is not None:
+        new_size = (round(img.shape[1] * factor[0]), round(img.shape[0] * factor[1]))  # width, height
+        if img.shape[1] <= 32 or img.shape[0] <= 32:
+            interpolation = filter_icon
+        else:
+            interpolation = filter_bg
+     
+        if bit_depth != 1:
+           
+            resized = cv2.resize(img, new_size, interpolation=interpolation)
+            
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(output_path), resized)
+        else:
+            if interpolation == cv2.INTER_NEAREST:
+                magick_filter = "Point"
+            else:
+                magick_filter = "Lanczos"
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            os.system(f"magick '{input_path}' -filter {magick_filter} -resize {new_size[0]}x{new_size[1]}  -monochrome '{output_path}'")
 
-    if img.width <= 32 or img.height <= 32:
-        resized = img.resize(new_size, filter_icon)
     else:
-        resized = img.resize(new_size, filter_bg)
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    resized.save(output_path)
+        print(f"ERROR: couldn't convert {input_path}")
 
 def scale_value(val, factor):
     val = val.strip()
@@ -43,7 +72,16 @@ def scale_value(val, factor):
     except ValueError:
         return val
 
-def rescale_wps_file(file_path, out_path, factor_x, factor_y):
+def get_image_height(image_path):
+    """Retrieve the height of the image at the given path."""
+    try:
+        with Image.open(image_path) as img:
+            return img.height
+    except Exception as e:
+        print(f"Error opening image {image_path}: {e}")
+        return None  # Return None if there's an error
+
+def rescale_wps_file(file_path, out_path, factor_x, factor_y, FILTER_BG, FILTER_ICON):
     """
     Rescale coordinates inside .wps, .sbs, or .fms files.
     """
@@ -52,6 +90,8 @@ def rescale_wps_file(file_path, out_path, factor_x, factor_y):
     except UnicodeDecodeError:
         text = file_path.read_text(encoding="latin-1")
 
+    processed_bmps = []
+
     patterns = {
         "%V":  ["x","y","width","height","fontid"],
         "%Vl": ["id","x","y","width","height","fontid"],
@@ -59,7 +99,7 @@ def rescale_wps_file(file_path, out_path, factor_x, factor_y):
         "%dr": ["x","y","width","height","colour1","colour2"],
         "%pb": ["x","y","width","height","filename"],
         "%x":  ["label","filename","x","y"],
-        "%xl": ["label","filename","x","y","nimages"],
+        "%xl": ["label","filename","x","y","nimages"],  # Updated to include nimages
         "%Cl": ["xpos","ypos","maxwidth","maxheight","halign","valign"],
         "%T":  ["label","x","y","width","height","action","options"],
         "%Lb": ["viewport","width","height","tile"],
@@ -72,14 +112,33 @@ def rescale_wps_file(file_path, out_path, factor_x, factor_y):
             parts = [p.strip() for p in match.group(1).split(",")]
             for i, name in enumerate(params):
                 if i < len(parts):
-                    if name in ["x","y","width","height","xpos","ypos","maxwidth","maxheight"]:
+                    if name in ["x","y","width","height","xpos","ypos","maxwidth","maxheight"] and key != "%xl":
                         factor = factor_x if "x" in name else factor_y
                         parts[i] = scale_value(parts[i], factor)
+                    elif name == "nimages":
+                        # Handle the nimages scaling
+                        image_filename = parts[1]  # Assuming the filename is the second parameter
+                        image_path = file_path.parent / file_path.stem / image_filename  # Construct the full path
+                        original_height = get_image_height(image_path)  # Get the original height
+                        scaled_height = int(original_height * factor_y)
+                        
+                        # Find the next best integer multiple of nimages
+                        nimages = int(parts[i]) if parts[i].isdigit() else 1
+                        if scaled_height % nimages != 0:
+                            factor_new = ((scaled_height // nimages) * nimages ) / original_height
+                            height_new = ((scaled_height // nimages) * nimages ) 
+                        else:
+                            factor_new = factor_x
+                        resize_bmp(image_path, Path(out_path.parent) / Path(out_path.stem) / image_filename, (factor_new, factor_new), FILTER_BG, FILTER_ICON)
+                        processed_bmps.append(image_path)
+
             return f"{key}({','.join(parts)})"
         text = regex.sub(repl, text)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(text, encoding="utf-8")
+
+    return processed_bmps
 
 def main():
     parser = argparse.ArgumentParser(description="Rescale BMP images and WPS coordinates of a Rockbox theme.")
@@ -103,11 +162,13 @@ def main():
     factor_x = out_w / in_w
     factor_y = out_h / in_h
 
-    FILTER_BG = Image.NEAREST if args.filter.upper() == "NEAREST" else Image.LANCZOS
-    FILTER_ICON = Image.NEAREST
+    FILTER_BG = cv2.INTER_NEAREST if args.filter.upper() == "NEAREST" else cv2.INTER_LANCZOS4
+    FILTER_ICON = cv2.INTER_NEAREST
 
     files = list(input_dir.rglob("*"))
     with tqdm(total=len(files), desc="Processing files") as pbar:
+        already_processed = []
+        # First pass: Process .wps, .sbs, .fms files
         for file in files:
             if not file.is_file():
                 pbar.update(1)
@@ -116,13 +177,17 @@ def main():
             rel_path = file.relative_to(input_dir)
             out_file = output_dir / rel_path
 
-            # TODO: filter for specific icons and scale these to multiples of 10px (or however many images it contains)
-            # Maybe parse these icons from .wps
+            rel_path = file.relative_to(input_dir)
+            out_file = output_dir / rel_path
+
             if file.suffix.lower() == ".bmp":
-                resize_bmp(file, out_file, (factor_x, factor_y), FILTER_BG, FILTER_ICON)
+                if file not in already_processed:
+                    resize_bmp(file, out_file, (factor_x, factor_y), FILTER_BG, FILTER_ICON)
 
             elif file.suffix.lower() in [".wps", ".sbs", ".fms"]:
-                rescale_wps_file(file, out_file, factor_x, factor_y)
+                processed_bmps = rescale_wps_file(file, out_file, factor_x, factor_y, FILTER_BG, FILTER_ICON)
+                for b in processed_bmps:
+                    already_processed.append(b)
 
             else:
                 out_file.parent.mkdir(parents=True, exist_ok=True)
