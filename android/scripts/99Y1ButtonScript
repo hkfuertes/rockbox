@@ -1,9 +1,11 @@
 #!/system/bin/sh
 # Innioasis Y1 script
-# Forces a restart of Rockbox when the combination (previous track + next track / LEFT + RIGHT) 
-# is held for 5 seconds.
-# Note: For reliable detection, press LEFT first, then RIGHT immediately, and hold both for 5 seconds.
-# Pressing both very quickly at the same time may miss events and fail to trigger the restart.
+# Functionality:
+# 1. Forces a restart of Rockbox when the combination (previous track + next track / LEFT + RIGHT) 
+#    is held for 5 seconds.
+#    Note: For reliable detection, press LEFT first, then RIGHT immediately, and hold both for 5 seconds.
+#    Pressing both very quickly at the same time may miss events and fail to trigger the restart.
+# 2. Trigger Keyboard when Play/Pause is pressed in a text input prompt
 
 DEVICE="/dev/input/event2"
 MAX_HOLD=5  # seconds to trigger restart
@@ -50,6 +52,9 @@ while true; do
     # Only process key events
     if [ "$type" -eq 1 ]; then
         case "$code" in
+            164) # (play/pause button triggers keyboard in text fields)
+                input trackball press
+                ;;
             105) # KEY_LEFT / previous track
                 left_down=$value
                 ;;
