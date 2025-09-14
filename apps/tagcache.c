@@ -92,7 +92,7 @@
 #include <android/log.h>
 #endif
 
-static int copy_playlist_with_absolute_paths(const char *src, const char *dst)
+static int NO_INLINE copy_playlist_with_absolute_paths(const char *src, const char *dst)
 {
     FILE *src_fp = fopen(src, "r");
     if (!src_fp)
