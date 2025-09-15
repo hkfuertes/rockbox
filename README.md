@@ -41,10 +41,19 @@ Installation instructions can be found here: https://innioasis.app/
 
 ### List of 360p Themes
 
-- PodOne-Y1: https://github.com/AkikoKumagara/PodOne-Y1/releases/latest
-- iClassic 360p: https://old.reddit.com/r/innioasis/comments/1n9envr/iclassic_theme_for_rockbox_now_in_240p_and_360p/
+- Theme Pack with included Fonts: https://github.com/rockbox-y1/rockbox/releases/tag/360p-theme-pack
+  - BONES
+  - iClassic_v1.2 (based on https://old.reddit.com/r/innioasis/comments/1n9envr/iclassic_theme_for_rockbox_now_in_240p_and_360p/)
+  - iMMXX
+  - InfoMatrix
+  - MacClassic
+  - PodOne
+  - PodTwo
+  - SNAZZ
+  - SNAZZ2
+  - SNAZZ3
+  - SPAZZ
 - ipodmod3blk-y1: https://github.com/AkikoKumagara/ipodmod3blk-y1
-- MacClassic: https://github.com/rockbox-y1/rockbox/releases/download/macclassic-360p/MacClassic.zip
 
 ### List of working Themes (240p)
 
