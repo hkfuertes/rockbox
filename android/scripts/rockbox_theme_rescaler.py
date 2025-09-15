@@ -98,8 +98,9 @@ def rescale_wps_file(file_path, out_path, factor_x, factor_y, FILTER_BG, FILTER_
         "%Vi": ["label","x","y","width","height","fontid"],
         "%dr": ["x","y","width","height","colour1","colour2"],
         "%pb": ["x","y","width","height","filename"],
+        "%pv": ["x","y","width","height","filename"],
         "%x":  ["label","filename","x","y"],
-        "%xl": ["label","filename","x","y","nimages"],  # Updated to include nimages
+        "%xl": ["label","filename","x","y","nimages"],
         "%Cl": ["xpos","ypos","maxwidth","maxheight","halign","valign"],
         "%T":  ["label","x","y","width","height","action","options"],
         "%Lb": ["viewport","width","height","tile"],
