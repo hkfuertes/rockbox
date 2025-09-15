@@ -61,7 +61,13 @@ def resize_bmp(input_path, output_path, factor, filter_bg, filter_icon):
             os.system(f"magick '{input_path}' -filter {magick_filter} -resize {new_size[0]}x{new_size[1]}  -monochrome '{output_path}'")
 
     else:
-        print(f"ERROR: couldn't convert {input_path}")
+        print(f"Warning: couldn't convert {input_path}, falling back to magick")
+        interpolation = filter_bg
+        if interpolation == cv2.INTER_NEAREST:
+            magick_filter = "Point"
+        else:
+            magick_filter = "Lanczos"
+        os.system(f"magick '{input_path}' -filter {magick_filter} -resize {int(factor[0]*100)}% '{output_path}'")
 
 def scale_value(val, factor):
     val = val.strip()
