@@ -23,12 +23,50 @@ reverse_bytes() {
 
 left_down=0
 right_down=0
+menu_down=0
+play_down=0
 press_start_sec=0
+press_start_sec_dual_boot=0
 
 # Function to restart Rockbox
 restart_rockbox() {
     am force-stop org.rockbox
     am start -n org.rockbox/.RockboxActivity
+}
+
+dual_boot() {
+   package_rb="org.rockbox"
+   package_stock="com.innioasis.y1"
+   keymap_rb="/system/usr/keylayout/Rockbox.kl"
+   keymap_stock="/system/usr/keylayout/Stock.kl"
+   keymap="/system/usr/keylayout/Generic.kl"
+
+   # Check if the package is disabled
+    if pm list packages -d | grep -q "$package_rb"; then
+        # Package is disabled
+        echo "Package $package_rb is disabled."
+        echo "Setting up Rockbox Keymap."
+        mount -o remount,rw /system
+        cp "$keymap_rb" "$keymap"
+        echo "Enabling Rockbox"
+        pm enable org.rockbox
+        echo "Disabling Stock"
+        pm disable com.innioasis.y1
+        echo "Rebooting"
+        reboot
+    else
+        # Package is enabled
+        echo "Package $package_rb is enabled."
+        echo "Setting up Stock Keymap."
+        mount -o remount,rw /system
+        cp "$keymap_stock" "$keymap"
+        echo "Disabling Rockbox"
+        pm disable org.rockbox
+        echo "Enabling Stock"
+        pm enable com.innioasis.y1
+        echo "Rebooting"
+        reboot
+    fi
 }
 
 # Main loop: read raw input events
@@ -51,9 +89,14 @@ while true; do
 
     # Only process key events
     if [ "$type" -eq 1 ]; then
+        echo $code
         case "$code" in
             164) # (play/pause button triggers keyboard in text fields)
+                play_down=$value
                 input trackball press
+                ;;
+            158) # Back/Menu
+                menu_down=$value
                 ;;
             105) # KEY_LEFT / previous track
                 left_down=$value
@@ -68,13 +111,27 @@ while true; do
             press_start_sec=$sec
         fi
 
-        # Check if either key is released
+        if [ "$menu_down" -eq 1 ] && [ "$play_down" -eq 1 ] && [ "$press_start_sec_dual_boot" -eq 0 ]; then
+            press_start_sec_dual_boot=$sec
+        fi
+
+
+        # Check if either key is released (left/right)
         if [ "$press_start_sec" -ne 0 ] && { [ "$left_down" -eq 0 ] || [ "$right_down" -eq 0 ]; }; then
             hold_time=$((sec - press_start_sec))
             if [ "$hold_time" -ge "$MAX_HOLD" ]; then
                 restart_rockbox
             fi
             press_start_sec=0
+        fi
+
+        # Check if either key is released (menu/play)
+        if [ "$press_start_sec_dual_boot" -ne 0 ] && { [ "$menu_down" -eq 0 ] || [ "$play_down" -eq 0 ]; }; then
+            hold_time=$((sec - press_start_sec_dual_boot))
+            if [ "$hold_time" -ge "$MAX_HOLD" ]; then
+                dual_boot
+            fi
+            press_start_sec_dual_boot=0
         fi
     fi
 done

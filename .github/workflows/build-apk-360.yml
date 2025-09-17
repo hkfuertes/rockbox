@@ -88,6 +88,9 @@ jobs:
         sudo cp ../android/scripts/99Y1ButtonScript mount_sys/etc/init.d/
         sudo chmod 755 mount_sys/etc/init.d/99Y1ButtonScript
 
+        sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Rockbox.kl
+        sudo cp ../android/scripts/Stock.kl mount_sys/usr/keylayout/Stock.kl
+
         sudo umount mount_sys
         sudo umount mount_user
         rm rom.zip
