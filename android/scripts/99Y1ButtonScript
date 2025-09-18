@@ -9,6 +9,7 @@
 
 DEVICE="/dev/input/event2"
 MAX_HOLD=5  # seconds to trigger restart
+MAX_HOLD_DUAL_BOOT=10
 
 # Exit if the input device is not found
 if [ ! -e "$DEVICE" ]; then
@@ -94,16 +95,33 @@ while true; do
             164) # (play/pause button triggers keyboard in text fields)
                 play_down=$value
                 input trackball press
+                # reset other keys, combination is interrupted
+                left_down=0
+                right_down=0
                 ;;
             158) # Back/Menu
                 menu_down=$value
+                # reset other keys, combination is interrupted
+                left_down=0
+                right_down=0
                 ;;
             105) # KEY_LEFT / previous track
                 left_down=$value
+                # reset other keys, combination is interrupted
+                play_down=0
+                menu_down=0
                 ;;
             106) # KEY_RIGHT / next track
                 right_down=$value
+                # reset other keys, combination is interrupted
+                play_down=0
+                menu_down=0
                 ;;
+	    *) # reset keys if any other is pressed
+                play_down=0
+                menu_down=0
+                left_down=0
+                right_down=0
         esac
 
         # Record start of the combination
@@ -128,7 +146,7 @@ while true; do
         # Check if either key is released (menu/play)
         if [ "$press_start_sec_dual_boot" -ne 0 ] && { [ "$menu_down" -eq 0 ] || [ "$play_down" -eq 0 ]; }; then
             hold_time=$((sec - press_start_sec_dual_boot))
-            if [ "$hold_time" -ge "$MAX_HOLD" ]; then
+            if [ "$hold_time" -ge "$MAX_HOLD_DUAL_BOOT" ]; then
                 dual_boot
             fi
             press_start_sec_dual_boot=0
