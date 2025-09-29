@@ -569,11 +569,11 @@ static int android_debug_func(void)
     return 0;
 }
 
-static int android_update_func(void)
-{
-    android_update();
-    return 0;
-}
+//static int android_update_func(void)
+//{
+//    android_update();
+//    return 0;
+//}
 
 static int system_menu_func(void)
 {
@@ -596,8 +596,8 @@ static int android_shutdown_func(void)
 
 MENUITEM_FUNCTION(android_restart_item, 0, ID2P(LANG_RESTART_ROCKBOX),
                   android_restart_func, NULL, Icon_NOICON);
-MENUITEM_FUNCTION(android_update_item, 0, ID2P(LANG_UPDATE_ROCKBOX),
-                  android_update_func, NULL, Icon_NOICON);
+//MENUITEM_FUNCTION(android_update_item, 0, ID2P(LANG_UPDATE_ROCKBOX),
+//                  android_update_func, NULL, Icon_NOICON);
 MENUITEM_FUNCTION(android_debug_item, 0, ID2P(LANG_DEBUG_SYSCALL),
                   android_debug_func, NULL, Icon_NOICON);
 MENUITEM_FUNCTION(system_menu_item, 0, ID2P(LANG_SYSTEM_SETTINGS),
@@ -608,7 +608,7 @@ MENUITEM_FUNCTION(android_shutdown_item, 0, ID2P(LANG_SHUTDOWN),
                   android_shutdown_func, NULL, Icon_NOICON);
 
 MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
-            &android_shutdown_item, &android_update_item,
+            &android_shutdown_item, //&android_update_item,
             &show_info_item, &show_credits_item,
             &show_runtime_item, &show_legal_item,
             &android_debug_item, &debug_menu_item, &android_restart_item);
