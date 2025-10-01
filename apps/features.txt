@@ -78,9 +78,7 @@ lcd_sleep
 morse_input
 #endif
 
-#if defined(HAVE_PITCHCONTROL)
 pitchscreen
-#endif
 
 #if defined(HAVE_MULTIVOLUME)
 multivolume

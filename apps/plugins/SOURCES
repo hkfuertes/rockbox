@@ -33,6 +33,7 @@ snow.c
 sort.c
 stats.c
 view_text.c
+pitch_screen.c
 #ifdef HAVE_TOUCHSCREEN
 stopwatch.lua
 #else
@@ -61,9 +62,7 @@ lamp.c
 pitch_detector.c
 #endif
 
-#ifdef HAVE_PITCHCONTROL
 pitch_screen.c
-#endif
 
 mp3_encoder.c
 wav2wv.c
