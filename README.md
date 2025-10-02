@@ -14,7 +14,7 @@ I mostly added quick hacks to make this usable on a device without any touch inp
 
 Do NOT run this if you don't know what you are doing. You might brick your device in the process of installing this app. You have been warned.
 
-Installation instructions can be found here: https://innioasis.app/
+To install the Rockbox ROM, choose one of the releases, download `rom.zip`, extract it and follow this guide (but use the downloaded rom.zip instead of `Y1-English v2.0.7-20241021.rar`): https://support.innioasis.com/download/flashing_tutorial/Flashing_tutorial-Y1_EN%20v2.0.7-20241021.pdf
 
 ## Controls
 
@@ -42,18 +42,31 @@ Installation instructions can be found here: https://innioasis.app/
 
 ### List of 360p Themes
 
-- Theme Pack with included Fonts: https://github.com/rockbox-y1/rockbox/releases/tag/360p-theme-pack
-  - BONES
-  - iClassic_v1.2 (based on https://old.reddit.com/r/innioasis/comments/1n9envr/iclassic_theme_for_rockbox_now_in_240p_and_360p/)
-  - iMMXX
-  - InfoMatrix
-  - MacClassic
-  - PodOne
-  - PodTwo
-  - SNAZZ
-  - SNAZZ2
-  - SNAZZ3
-  - SPAZZ
+- Theme Pack with included Fonts: https://github.com/rockbox-y1/themes/releases/latest
+  - BONES: CHUCK\_LARDO
+  - die-bahn: Jihoon Kim
+  - FreshOS-Y1\_Dark: u/elinks59
+  - FreshOS-Y1\_Light: u/elinks59
+  - Horizon: Jihoon Kim
+  - iClassic\_v1.2: Humberto Santana
+  - iClassic\_Dark-MOD: u/CarlosPixel\_
+  - iClassic\_Square\_Reworked: u/CarlosPixel\_
+  - iLike: u/elinks59
+  - iMMXX: FCorp
+  - InfoMatrix: yuuiko
+  - Interpod: Christian Soffke
+  - MacClassic: Billy Blair
+  - OneBit\_OLED: Jihoon Kim
+  - Orbit: Chris Soffke
+  - PodOne: Guillaume Cocatre-Zilgien
+  - PodTwo: Guillaume Cocatre-Zilgien
+  - SNAZZ: Jihoon Kim
+  - SNAZZ2: Jihoon Kim
+  - SNAZZ3: Vera B
+  - SNAZZx90: DillMillz
+  - SPAZZ: CHUCK\_LARDO
+  - Widepod: Christian Soffke
+
 - ipodmod3blk-y1: https://github.com/AkikoKumagara/ipodmod3blk-y1
 
 ### List of working Themes (240p)
