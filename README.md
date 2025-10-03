@@ -94,16 +94,6 @@ There are likely more but these are tested.
 - xplorr
 
 ## Installation
-### Innioasis Updater (recommended)
-
-This is a multi-platform community-built tool for updating official firmware and installing custom firmware (which often includes this Rockbox port). 
-
-The Innioasis Updater was developed independently by TeamSlide without input from Innioasis/Timmkoo.
-
-You can find it here: https://innioasis.app/
-
-The firmware image included in the releases is based on multiwirth's firmware: https://github.com/multiwirth/Innioasis_Y1_system_dumps/releases/tag/custom_wifi_type_a_v0.2
-
 ### SPFlash Tool
 
 1. Download the latest Rockbox included firmware here: https://innioasis.app/firmware.html
