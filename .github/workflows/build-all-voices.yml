@@ -2,7 +2,7 @@ name: Build All Voice Files
 
 on:
   push:
-    branches: [ "y1-240p" ]
+    branches: [ "y1" ]
     paths:
       - 'apps/lang/*.lang'
       - 'tools/voice.pl'

@@ -2,7 +2,7 @@ name: Build latest APK (360p)
 
 on:
   push:
-    branches: [ "y1-240p" ]
+    branches: [ "y1" ]
 
 jobs:
   build:
