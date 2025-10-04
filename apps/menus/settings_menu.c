@@ -618,6 +618,8 @@ MAKE_MENU(bookmark_settings_menu, ID2P(LANG_BOOKMARK_SETTINGS), 0,
 /*    AUTORESUME MENU              */
 #ifdef HAVE_TAGCACHE
 
+/* Deactivate broken Autoresume feature for now
+
 static int autoresume_callback(int action,
                                const struct menu_item_ex *this_item,
                                struct gui_synclist *this_list)
@@ -625,7 +627,7 @@ static int autoresume_callback(int action,
     (void)this_item;
     (void)this_list;
 
-    if (action == ACTION_EXIT_MENUITEM  /* on exit */
+    if (action == ACTION_EXIT_MENUITEM  // on exit
         && global_settings.autoresume_enable
         && !tagcache_is_usable())
     {
@@ -670,7 +672,7 @@ MENUITEM_SETTING(autoresume_automatic, &global_settings.autoresume_automatic,
 MAKE_MENU(autoresume_menu, ID2P(LANG_AUTORESUME),
           0, Icon_NOICON,
           &autoresume_enable, &autoresume_automatic);
-
+*/
 #endif /* HAVE_TAGCACHE */
 /*    AUTORESUME MENU              */
 /***********************************/
@@ -791,7 +793,7 @@ MAKE_MENU(settings_menu_item, ID2P(LANG_GENERAL_SETTINGS), 0,
           &startup_shutdown_menu,
           &bookmark_settings_menu,
 #ifdef HAVE_TAGCACHE
-          &autoresume_menu,
+          //&autoresume_menu,
 #endif
           &browse_langs, &voice_settings_menu,
           );
