@@ -1,0 +1,11 @@
+# Find your Podcast RSS feed here: https://rss.com/tools/find-my-feed/
+#
+# List your podcasts down below, one line per podcast using this format:
+# DOWNLOAD_PATH;NAME;LAST_N;FEED_URL
+# - DOWNLOAD_PATH: usually something like /sdcard/Podcasts
+# - NAME: the name of the Podcast, will be the subfolder below DOWNLOAD_PATH - avoid special characters like ":"
+# - LAST_N: how many latest podcasts should be downloaded (0 = none, -1 = all)
+# - FEED_URL: the RSS feed URL of the podcast
+#
+# Example:
+# /sdcard/Podcasts/;Example;10;https://example.com/feed.xml
