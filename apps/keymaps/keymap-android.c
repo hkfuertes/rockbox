@@ -38,16 +38,14 @@
  */
 
 static const struct button_mapping button_context_standard[]  = {
-    { ACTION_STD_PREV,        BUTTON_DPAD_UP|BUTTON_REL,        BUTTON_NONE },
-    { ACTION_STD_NEXT,        BUTTON_DPAD_DOWN|BUTTON_REL,      BUTTON_NONE },
+    { ACTION_STD_PREV,        BUTTON_DPAD_UP,        BUTTON_NONE },
+    { ACTION_STD_NEXT,        BUTTON_DPAD_DOWN,      BUTTON_NONE },
     /* Audio skip controls for multimedia buttons outside WPS */
-    { ACTION_STD_AUDIO_PREV,  BUTTON_MEDIA_PREV,                BUTTON_NONE },
-    { ACTION_STD_AUDIO_NEXT,  BUTTON_MEDIA_NEXT,                BUTTON_NONE },
+    { ACTION_STD_AUDIO_PREV,  BUTTON_DPAD_LEFT,                BUTTON_NONE },
+    { ACTION_STD_AUDIO_NEXT,  BUTTON_DPAD_RIGHT,                BUTTON_NONE },
 
     { ACTION_STD_OK,          BUTTON_DPAD_CENTER,               BUTTON_NONE },
-    { ACTION_STD_OK,          BUTTON_DPAD_RIGHT|BUTTON_REL,     BUTTON_NONE },
     { ACTION_STD_CANCEL,      BUTTON_BACK|BUTTON_REL,           BUTTON_BACK },
-    { ACTION_STD_CANCEL,      BUTTON_DPAD_LEFT|BUTTON_REL,      BUTTON_NONE },
 
     { ACTION_STD_MENU,        BUTTON_MENU|BUTTON_REL,           BUTTON_MENU },
     { ACTION_STD_CONTEXT,     BUTTON_MENU|BUTTON_REPEAT,        BUTTON_MENU },
@@ -70,11 +68,11 @@ static const struct button_mapping button_context_wps[]  = {
     { ACTION_WPS_VOLUP,         BUTTON_DPAD_DOWN|BUTTON_REPEAT,     BUTTON_NONE },
     { ACTION_WPS_VOLDOWN,       BUTTON_DPAD_UP,                     BUTTON_NONE },
     { ACTION_WPS_VOLUP,         BUTTON_DPAD_DOWN,                   BUTTON_NONE },
-    { ACTION_WPS_SKIPNEXT,      BUTTON_MEDIA_NEXT,                  BUTTON_NONE },
-    { ACTION_WPS_SKIPPREV,      BUTTON_MEDIA_PREV,                  BUTTON_NONE },
-    { ACTION_WPS_SEEKFWD,       BUTTON_MEDIA_NEXT|BUTTON_REPEAT,    BUTTON_NONE },
-    { ACTION_WPS_SEEKBACK,      BUTTON_MEDIA_PREV|BUTTON_REPEAT,    BUTTON_NONE },
-    { ACTION_WPS_HOTKEY,        BUTTON_TOPLEFT|BUTTON_REL,          BUTTON_NONE },
+    { ACTION_WPS_SKIPNEXT,      BUTTON_DPAD_RIGHT,                  BUTTON_NONE },
+    { ACTION_WPS_SKIPPREV,      BUTTON_DPAD_LEFT,                  BUTTON_NONE },
+    { ACTION_WPS_SEEKFWD,       BUTTON_DPAD_RIGHT|BUTTON_REPEAT,    BUTTON_NONE },
+    { ACTION_WPS_SEEKBACK,      BUTTON_DPAD_LEFT|BUTTON_REPEAT,    BUTTON_NONE },
+    { ACTION_WPS_HOTKEY,        BUTTON_TOPLEFT|BUTTON_REPEAT,          BUTTON_NONE },
 
     LAST_ITEM_IN_LIST
 }; /* button_context_wps */
@@ -91,7 +89,7 @@ static const struct button_mapping button_context_list[]  = {
 
 static const struct button_mapping button_context_tree[]  = {
     /* Long-press top-left touch area to open WPS (triggered by media play/pause long-press) */
-    { ACTION_TREE_WPS,        BUTTON_TOPLEFT|BUTTON_REL, BUTTON_NONE },
+    { ACTION_TREE_WPS,        BUTTON_TOPLEFT|BUTTON_REPEAT, BUTTON_NONE },
     LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_LIST)
 }; /* button_context_tree */
 
@@ -104,8 +102,8 @@ static const struct button_mapping button_context_listtree_scroll_without_combo[
 };
 
 static const struct button_mapping button_context_settings[]  = {
-    { ACTION_SETTINGS_INC,          BUTTON_DPAD_RIGHT|BUTTON_REL,   BUTTON_NONE },
-    { ACTION_SETTINGS_DEC,          BUTTON_DPAD_LEFT|BUTTON_REL,    BUTTON_NONE },
+    { ACTION_SETTINGS_INC,          BUTTON_DPAD_DOWN|BUTTON_REL,   BUTTON_NONE },
+    { ACTION_SETTINGS_DEC,          BUTTON_DPAD_UP|BUTTON_REL,    BUTTON_NONE },
     { ACTION_STD_OK,                BUTTON_DPAD_CENTER,             BUTTON_NONE },
     { ACTION_STD_CANCEL,            BUTTON_BACK|BUTTON_REL,         BUTTON_BACK },
 
@@ -140,7 +138,6 @@ static const struct button_mapping button_context_colorchooser[]  = {
     { ACTION_SETTINGS_DEC,         BUTTON_DPAD_DOWN,                 BUTTON_NONE },
     { ACTION_SETTINGS_DECREPEAT,   BUTTON_DPAD_DOWN|BUTTON_REPEAT,   BUTTON_NONE },
     /* Accept and cancel */
-    { ACTION_STD_OK,               BUTTON_DPAD_RIGHT|BUTTON_REL,     BUTTON_NONE },
     { ACTION_STD_CANCEL,           BUTTON_BACK|BUTTON_REL,           BUTTON_BACK },
 
     LAST_ITEM_IN_LIST
@@ -167,9 +164,18 @@ static const struct button_mapping button_context_quickscreen[]  = {
 
 static const struct button_mapping button_context_pitchscreen[]  = {
 
-    { ACTION_PS_INC_SMALL, BUTTON_DPAD_RIGHT|BUTTON_REL,  BUTTON_NONE },
-    { ACTION_PS_DEC_SMALL, BUTTON_DPAD_LEFT|BUTTON_REL,   BUTTON_NONE },
-    { ACTION_PS_EXIT,      BUTTON_BACK|BUTTON_REL,        BUTTON_BACK },
+    { ACTION_PS_INC_BIG,        BUTTON_DPAD_DOWN|BUTTON_REPEAT,     BUTTON_NONE },
+    { ACTION_PS_DEC_BIG,        BUTTON_DPAD_UP|BUTTON_REPEAT,       BUTTON_NONE },
+    { ACTION_PS_INC_SMALL,      BUTTON_DPAD_DOWN,                   BUTTON_NONE },
+    { ACTION_PS_DEC_SMALL,      BUTTON_DPAD_UP,                     BUTTON_NONE },
+    { ACTION_PS_EXIT,           BUTTON_BACK|BUTTON_REL,             BUTTON_BACK },
+    { ACTION_PS_TOGGLE_MODE,    BUTTON_TOPLEFT|BUTTON_REL,          BUTTON_NONE },
+    { ACTION_PS_SLOWER,         BUTTON_DPAD_LEFT|BUTTON_REPEAT,     BUTTON_NONE },
+    { ACTION_PS_FASTER,         BUTTON_DPAD_RIGHT|BUTTON_REPEAT,    BUTTON_NONE },
+    { ACTION_PS_NUDGE_LEFT,     BUTTON_DPAD_LEFT,                   BUTTON_NONE },
+    // { ACTION_PS_NUDGE_LEFTOFF,  BUTTON_LEFT|BUTTON_REL,     BUTTON_NONE },
+    { ACTION_PS_NUDGE_RIGHT,    BUTTON_DPAD_RIGHT,                  BUTTON_NONE },
+    // { ACTION_PS_NUDGE_RIGHTOFF, BUTTON_RIGHT|BUTTON_REL,    BUTTON_NONE },    
 
     LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_STD)
 }; /* button_context_pitchcreen */

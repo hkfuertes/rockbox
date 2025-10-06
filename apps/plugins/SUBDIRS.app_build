@@ -19,6 +19,7 @@ reversi
 pictureflow
 tagcache
 imageviewer
+doom
 #endif
 
 /* For all the swcodec targets */
@@ -26,4 +27,6 @@ imageviewer
 mikmod
 #endif
 
+shortcuts
+text_viewer
 #endif /* HAVE_TOUCHSCREEN */

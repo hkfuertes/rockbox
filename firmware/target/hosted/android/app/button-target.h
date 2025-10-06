@@ -38,7 +38,7 @@ void android_ignore_back_button(bool yes);
 #define BUTTON_DPAD_CENTER 0x00000040
 #define BUTTON_VOL_UP      0x00000080
 #define BUTTON_VOL_DOWN    0x00000100
-
+#define BUTTON_MAIN        0x00000fff
 /* Hack: Custom buttons for multimedia keys outside of WPS 
  * This was necessary because seek forward and backward is not implemented
  * in misc.c and needed to be handled custom in the WPS. 

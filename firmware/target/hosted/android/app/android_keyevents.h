@@ -20,8 +20,8 @@
 #define KEYCODE_POUND            18
 #define KEYCODE_DPAD_UP          19
 #define KEYCODE_DPAD_DOWN        20
-#define KEYCODE_DPAD_LEFT        88 //21
-#define KEYCODE_DPAD_RIGHT       87 //22
+#define KEYCODE_DPAD_LEFT        21
+#define KEYCODE_DPAD_RIGHT       22
 #define KEYCODE_DPAD_CENTER      23
 #define KEYCODE_VOLUME_UP        24
 #define KEYCODE_VOLUME_DOWN      25
@@ -86,8 +86,8 @@
 #define KEYCODE_SEARCH           84
 #define KEYCODE_MEDIA_PLAY_PAUSE 85
 #define KEYCODE_MEDIA_STOP       86
-#define KEYCODE_MEDIA_NEXT       22 //87
-#define KEYCODE_MEDIA_PREVIOUS   21 //88
+#define KEYCODE_MEDIA_NEXT       87
+#define KEYCODE_MEDIA_PREVIOUS   88
 #define KEYCODE_MEDIA_REWIND     89
 #define KEYCODE_MEDIA_FAST_FORWARD  90
 #define KEYCODE_MUTE             91

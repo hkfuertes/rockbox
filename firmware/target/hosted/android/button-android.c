@@ -37,11 +37,6 @@
 /* Flag to track if we've handled a long-press for play/pause */
 static bool handled_playpause_longpress = false;
 
-/* Android keycode definitions for media keys */
-#define KEYCODE_MEDIA_NEXT       22
-#define KEYCODE_MEDIA_PREVIOUS   21
-#define KEYCODE_MEDIA_PLAY_PAUSE 85
-
 extern volatile long current_tick;
 
 extern JNIEnv *env_ptr;

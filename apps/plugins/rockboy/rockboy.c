@@ -121,6 +121,17 @@ static void setoptions (void)
         options.START   = BUTTON_SELECT;
         options.SELECT  = BUTTON_NONE;
         options.MENU    = (BUTTON_SELECT | BUTTON_REPEAT);
+#elif CONFIG_KEYPAD == ANDROID_PAD
+        options.UP      = BUTTON_DPAD_UP;
+        options.DOWN    = BUTTON_DPAD_DOWN;
+        options.LEFT    = BUTTON_DPAD_LEFT;
+        options.RIGHT   = BUTTON_DPAD_RIGHT;
+
+        options.A       = BUTTON_DPAD_CENTER;
+        options.B       = BUTTON_BACK;
+        options.START   = (BUTTON_DPAD_CENTER | BUTTON_REPEAT);
+        options.SELECT  = (BUTTON_BACK | BUTTON_REPEAT);
+        options.MENU    = (BUTTON_DPAD_CENTER | BUTTON_BACK);
 
 #elif CONFIG_KEYPAD == GIGABEAT_PAD
         options.UP      = BUTTON_UP;

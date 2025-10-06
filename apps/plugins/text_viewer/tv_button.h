@@ -236,6 +236,14 @@
 #define TV_SCROLL_DOWN  BUTTON_PLUS
 #define TV_BOOKMARK     (BUTTON_MENU|BUTTON_PLUS)
 
+/* Android keys */
+#elif CONFIG_KEYPAD == ANDROID_PAD
+#define TV_QUIT         (BUTTON_BACK | BUTTON_REL)
+#define TV_MENU         (BUTTON_BACK | BUTTON_REPEAT)
+#define TV_SCROLL_UP    BUTTON_UP
+#define TV_SCROLL_DOWN  BUTTON_DOWN
+#define TV_BOOKMARK     (BUTTON_RIGHT| BUTTON_REPEAT)
+
 /* Creative Zen Vision:M keys */
 #elif CONFIG_KEYPAD == CREATIVEZVM_PAD
 #define TV_QUIT         BUTTON_BACK
