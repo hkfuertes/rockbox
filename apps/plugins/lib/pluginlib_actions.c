@@ -112,14 +112,14 @@ const struct button_mapping pla_main_ctx[] =
     || (CONFIG_KEYPAD == CREATIVE_ZEN_PAD) \
     || (CONFIG_KEYPAD == AGPTEK_ROCKER_PAD) \
     || (CONFIG_KEYPAD == ANDROID_PAD))
-    { PLA_UP,               BUTTON_UP,                          BUTTON_NONE },
-    { PLA_DOWN,             BUTTON_DOWN,                        BUTTON_NONE },
-    { PLA_LEFT,             BUTTON_LEFT,                        BUTTON_NONE },
-    { PLA_RIGHT,            BUTTON_RIGHT,                       BUTTON_NONE },
-    { PLA_UP_REPEAT,        BUTTON_UP|BUTTON_REPEAT,            BUTTON_NONE },
-    { PLA_DOWN_REPEAT,      BUTTON_DOWN|BUTTON_REPEAT,          BUTTON_NONE },
-    { PLA_LEFT_REPEAT,      BUTTON_LEFT|BUTTON_REPEAT,          BUTTON_NONE },
-    { PLA_RIGHT_REPEAT,     BUTTON_RIGHT|BUTTON_REPEAT,         BUTTON_NONE },
+    { PLA_UP,               BUTTON_DPAD_UP,                          BUTTON_NONE },
+    { PLA_DOWN,             BUTTON_DPAD_DOWN,                        BUTTON_NONE },
+    { PLA_LEFT,             BUTTON_DPAD_LEFT,                        BUTTON_NONE },
+    { PLA_RIGHT,            BUTTON_DPAD_RIGHT,                       BUTTON_NONE },
+    { PLA_UP_REPEAT,        BUTTON_DPAD_UP|BUTTON_REPEAT,            BUTTON_NONE },
+    { PLA_DOWN_REPEAT,      BUTTON_DPAD_DOWN|BUTTON_REPEAT,          BUTTON_NONE },
+    { PLA_LEFT_REPEAT,      BUTTON_DPAD_LEFT|BUTTON_REPEAT,          BUTTON_NONE },
+    { PLA_RIGHT_REPEAT,     BUTTON_DPAD_RIGHT|BUTTON_REPEAT,         BUTTON_NONE },
     /* now the bad ones that don't have standard names for the directional
      * buttons */
 #elif (CONFIG_KEYPAD == IPOD_1G2G_PAD) \
@@ -372,9 +372,9 @@ const struct button_mapping pla_main_ctx[] =
 #elif (CONFIG_KEYPAD == ANDROID_PAD)
     {PLA_CANCEL,            BUTTON_BACK|BUTTON_REL,             BUTTON_BACK},
     {PLA_EXIT,              BUTTON_BACK|BUTTON_REPEAT,          BUTTON_NONE},
-    {PLA_SELECT,            BUTTON_MENU,                        BUTTON_NONE},
-    {PLA_SELECT_REL,        BUTTON_MENU|BUTTON_REL,             BUTTON_MENU},
-    {PLA_SELECT_REPEAT,     BUTTON_MENU|BUTTON_REPEAT,          BUTTON_NONE},
+    {PLA_SELECT,            BUTTON_DPAD_CENTER,                 BUTTON_NONE},
+    {PLA_SELECT_REL,        BUTTON_DPAD_CENTER|BUTTON_REL,      BUTTON_DPAD_CENTER},
+    {PLA_SELECT_REPEAT,     BUTTON_DPAD_CENTER|BUTTON_REPEAT,   BUTTON_NONE},
 #elif (CONFIG_KEYPAD == IAUDIO_M3_PAD)
     {PLA_CANCEL,            BUTTON_RC_REC|BUTTON_REL,           BUTTON_RC_REC},
     {PLA_EXIT,              BUTTON_RC_REC|BUTTON_REPEAT,        BUTTON_NONE},

@@ -21,11 +21,13 @@ keybox.c
 keyremap.c
 bounce.c
 demystify.c
+dice.c
 fire.c
 fireworks.c
 logo.c
 lrcplayer.c
 matrix.c
+main_menu_config.c
 mosaique.c
 pitch_screen.c
 plasma.c
@@ -34,6 +36,7 @@ rockblox.c
 snow.c
 starfield.c
 properties.c
+playing_time.c
 random_folder_advance_config.c
 search.c
 sort.c

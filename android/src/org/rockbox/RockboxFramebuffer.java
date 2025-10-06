@@ -54,6 +54,7 @@ public class RockboxFramebuffer extends SurfaceView
     };
 
     private static final int CENTER_KEYCODE = KeyEvent.KEYCODE_ENTER; // 66
+    private static final int BACK_KEYCODE = 4;
     private static final long LONG_PRESS_DURATION_MS = 1000;
     private Handler longPressHandler = new Handler(Looper.getMainLooper());
     private boolean centerLongPressDetected = false;
@@ -175,7 +176,7 @@ public class RockboxFramebuffer extends SurfaceView
         if ((keyCode == CENTER_KEYCODE) && event.getRepeatCount() == 0) {
             centerLongPressDetected = false;
             longPressHandler.postDelayed(centerLongPressRunnable, LONG_PRESS_DURATION_MS);
-            return true;
+            return buttonHandler(keyCode, true);
         }
         /* Handle repeat events */
         else {
@@ -203,6 +204,12 @@ public class RockboxFramebuffer extends SurfaceView
                 try {
                     powerManager.goToSleep(SystemClock.uptimeMillis());
                     Log.d("RockboxButton", "Device put to sleep");
+                    // post button-up for center, then cancel action
+                    buttonHandler(keyCode, false);
+                    Thread.sleep(10);
+                    buttonHandler(BACK_KEYCODE, true);
+                    Thread.sleep(10);
+                    buttonHandler(BACK_KEYCODE, false);                
                 } catch (Exception e) {
                     Log.e("RockboxButton", "Failed to put device to sleep: " + e.getMessage());
                 }

@@ -21,9 +21,11 @@ To install the Rockbox ROM, choose one of the releases, download `rom.zip`, extr
 - Scroll Wheel (Most Screens): Up / Down
 - Scroll Wheel (Now Playing screen): Volume
 - Center (Short): Accept / Enter
-- Center (Long): Turn Off Screen
+- Center (Long): Open Context Menu
+- Center (Very Long): Turn Off Screen
 - Menu/Back (Short): Cancel / Back
-- Menu/Back (Long): Open Context Menu
+- Menu/Back (Long): Open Quick Screen
+- Menu/Back + Center (Plugins): Open Menu
 - Play/Pause (Long) (Most Screens): Open While Playing Screen
 - Play/Pause (Long) (Now Playing screen): WPS Hotkey
 - Play/Pause (Short) (Text Input): Open Keyboard
