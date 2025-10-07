@@ -112,8 +112,8 @@ const struct button_mapping pla_main_ctx[] =
     || (CONFIG_KEYPAD == CREATIVE_ZEN_PAD) \
     || (CONFIG_KEYPAD == AGPTEK_ROCKER_PAD) \
     || (CONFIG_KEYPAD == ANDROID_PAD))
-    { PLA_UP,               BUTTON_DPAD_UP,                          BUTTON_NONE },
-    { PLA_DOWN,             BUTTON_DPAD_DOWN,                        BUTTON_NONE },
+    { PLA_UP,               BUTTON_BACK,                              BUTTON_NONE },
+    { PLA_DOWN,             BUTTON_TOPLEFT,                          BUTTON_NONE },
     { PLA_LEFT,             BUTTON_DPAD_LEFT,                        BUTTON_NONE },
     { PLA_RIGHT,            BUTTON_DPAD_RIGHT,                       BUTTON_NONE },
     { PLA_UP_REPEAT,        BUTTON_DPAD_UP|BUTTON_REPEAT,            BUTTON_NONE },

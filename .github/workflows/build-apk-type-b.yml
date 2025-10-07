@@ -1,8 +1,10 @@
-name: Build latest APK (360p)
+name: Build latest APK (240p) - Type B
 
 on:
-  push:
-    branches: [ "y1" ]
+  workflow_run:
+    workflows: ["Build latest APK (360p) - Type B"]
+    types:
+      - completed
 
 jobs:
   build:
@@ -14,8 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    # 360p Build Process
-    - name: prepare build environment (360p)
+    # 240p Build Process
+    - name: prepare build environment (240p)
       run: |
         sudo apt install lib32z1
         sudo apt install openjdk-17-jdk
@@ -28,7 +30,7 @@ jobs:
     - name: configure
       run: |
         cd android/build
-        ../../tools/configure --target=201 --lcdwidth=480 --lcdheight=360 --type=n
+        ../../tools/configure --target=201 --lcdwidth=320 --lcdheight=240 --type=n
     - name: make
       run: |
         cd android/build
@@ -65,7 +67,7 @@ jobs:
       run: |
         mkdir base
         cd base
-        wget https://github.com/rockbox-y1/rockbox/releases/latest/download/rom.zip
+        wget https://github.com/rockbox-y1/rockbox/releases/download/type-b-base/rom.zip
         wget https://github.com/rockbox-y1/rockbox/releases/download/stock-menu/com.innioasis.y1_2.7.2.apk
         unzip rom.zip
         mkdir mount_sys
@@ -108,16 +110,16 @@ jobs:
       id: create_release
       uses: shogo82148/actions-create-release@v1
       with:
-        release_name: Rockbox-Y1 Nightly-${{ steps.date.outputs.release_date }} (360p)
-        tag_name: nightly-360p-${{ github.sha }}
+        release_name: Rockbox-Y1 Nightly-${{ steps.date.outputs.release_date }} (iPod Theme Compatible) (Type B)
+        tag_name: nightly-ipod-theme-compatible-type-b-${{ github.sha }}
         prerelease: false
-        make_latest: false
+        make_latest: true
     - name: upload apk
       uses: shogo82148/actions-upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./android/build/rockbox.apk
-        asset_name: rockbox-${{ github.sha }}-360p.apk
+        asset_name: rockbox-${{ github.sha }}-240p.apk
         asset_content_type: application/vnd.android.package-archive
     - name: upload libs 
       uses: shogo82148/actions-upload-release-asset@v1
@@ -133,3 +135,4 @@ jobs:
         asset_path: ./rom.zip
         asset_name: rom.zip
         asset_content_type: application/zip
+

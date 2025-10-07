@@ -244,6 +244,8 @@ static int lrc_set_time(const char *title, const char *unit, long *pval,
                     value = min;
                 break;
             case PLA_LEFT:
+                pos = pos_min;
+                break;
             case PLA_LEFT_REPEAT:
                 if (++pos > pos_max)
                     pos = pos_min;

@@ -1,8 +1,10 @@
-name: Build latest APK (360p)
+name: Build latest APK (360p) - Type B
 
 on:
-  push:
-    branches: [ "y1" ]
+  workflow_run:
+    workflows: ["Build latest APK (240p)"]
+    types:
+      - completed
 
 jobs:
   build:
@@ -65,7 +67,7 @@ jobs:
       run: |
         mkdir base
         cd base
-        wget https://github.com/rockbox-y1/rockbox/releases/latest/download/rom.zip
+        wget https://github.com/rockbox-y1/rockbox/releases/download/type-b-base/rom.zip
         wget https://github.com/rockbox-y1/rockbox/releases/download/stock-menu/com.innioasis.y1_2.7.2.apk
         unzip rom.zip
         mkdir mount_sys
@@ -108,8 +110,8 @@ jobs:
       id: create_release
       uses: shogo82148/actions-create-release@v1
       with:
-        release_name: Rockbox-Y1 Nightly-${{ steps.date.outputs.release_date }} (360p)
-        tag_name: nightly-360p-${{ github.sha }}
+        release_name: Rockbox-Y1 Nightly-${{ steps.date.outputs.release_date }} (360p) (Type B)
+        tag_name: nightly-360p-type-b-${{ github.sha }}
         prerelease: false
         make_latest: false
     - name: upload apk

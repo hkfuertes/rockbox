@@ -68,11 +68,13 @@ jobs:
         mkdir base
         cd base
         wget https://github.com/rockbox-y1/rockbox/releases/latest/download/rom.zip
+        wget https://github.com/rockbox-y1/rockbox/releases/download/stock-menu/com.innioasis.y1_2.7.2.apk
         unzip rom.zip
         mkdir mount_sys
         mkdir mount_user
         sudo mount -t ext4 -o loop system.img mount_sys
         sudo mount -t ext4 -o loop userdata.img mount_user
+        sudo cp com.innioasis.y1_2.7.2.apk mount_user/app/com.innioasis.y1-1.apk
         sudo cp ../android/build/rockbox.apk mount_sys/app/org.rockbox.apk
         sudo chmod 644 mount_sys/app/org.rockbox.apk
         sudo chown root:root mount_sys/app/org.rockbox.apk
@@ -96,6 +98,7 @@ jobs:
         sudo umount mount_sys
         sudo umount mount_user
         rm rom.zip
+        rm com.innioasis.y1_2.7.2.apk
         rm -r mount_sys
         rm -r mount_user
         cd ../
