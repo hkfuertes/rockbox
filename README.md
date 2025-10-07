@@ -31,7 +31,13 @@ To install the Rockbox ROM, choose one of the releases, download `rom.zip`, extr
 - Play/Pause (Short) (Text Input): Open Keyboard
 - Media Buttons: Play/Pause/Next/Previous/Seek
 - Holding Next + Previous (>5 seconds): Restart Rockbox (Thanks, u/thinkVHS!)
-- Holding Menu/Back + Play/Pause (>10 seconds): Switch between Rockbox and Stock
+
+## Dual Boot: How to switch between Rockbox and Stock
+### In Rockbox
+- Main Menu > System > Reboot to Stock Firmware
+
+### In Stock
+- Hold Menu/Back + Play/Pause for ~15 seconds
 
 ## Themes
 

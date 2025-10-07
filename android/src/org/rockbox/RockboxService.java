@@ -54,6 +54,7 @@ import android.util.Log;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
+import android.text.Html;
 
 /* This class is used as the main glue between java and c.
  * All access should be done through RockboxService.get_instance() for safety.
@@ -560,6 +561,43 @@ public class RockboxService extends Service
                                     try {
                                         Log.d("RockboxService", "Attempting device shutdown...");
                                         java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});
+                                        proc.waitFor();
+                                    } catch (Exception e) {
+                                        Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                        }
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
+            }
+        });
+    }
+
+    public void switchFirmware() {
+        final Activity activity = getActivity();
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new AlertDialog.Builder(activity)
+                    .setMessage(Html.fromHtml("<br><b>Are you sure you want to switch</b>" +
+                                "<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>to the stock firmware?</b>" +
+                                "<br>" +
+                                "<br><b>&nbsp;&nbsp;&nbsp;&nbsp;To switch back to Rockbox</b>" +
+                                "<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;press & hold:" +
+                                "<br>" +
+                                "<br><b>Back + Play for 15-20 seconds</b>"))
+                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Run shutdown in background thread
+                            new Thread(new Runnable() {
+                                public void run() {
+                                    try {
+                                        Log.d("RockboxService", "Switching to stock firmware...");
+                                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "sh", "/data/data/switch-to-stock.sh"});
                                         proc.waitFor();
                                     } catch (Exception e) {
                                         Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());

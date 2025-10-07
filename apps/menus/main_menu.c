@@ -594,6 +594,12 @@ static int android_shutdown_func(void)
     return 0;
 }
 
+static int android_switch_firmware_func(void)
+{
+    android_switch_firmware();
+    return 0;
+}
+
 MENUITEM_FUNCTION(android_restart_item, 0, ID2P(LANG_RESTART_ROCKBOX),
                   android_restart_func, NULL, Icon_NOICON);
 //MENUITEM_FUNCTION(android_update_item, 0, ID2P(LANG_UPDATE_ROCKBOX),
@@ -606,9 +612,11 @@ MENUITEM_FUNCTION(bluetooth_settings_item_item, 0, ID2P(LANG_BLUETOOTH_SETTINGS)
                   bluetooth_settings_func, NULL, Icon_NOICON);
 MENUITEM_FUNCTION(android_shutdown_item, 0, ID2P(LANG_SHUTDOWN),
                   android_shutdown_func, NULL, Icon_NOICON);
+MENUITEM_FUNCTION(android_switch_firmware_item, 0, ID2P(LANG_SWITCH_FIRMWARE),
+                  android_switch_firmware_func, NULL, Icon_NOICON);
 
 MAKE_MENU(info_menu, ID2P(LANG_SYSTEM), 0, Icon_System_menu,
-            &android_shutdown_item, //&android_update_item,
+            &android_shutdown_item, &android_switch_firmware_item, //&android_update_item,
             &show_info_item, &show_credits_item,
             &show_runtime_item, &show_legal_item,
             &android_debug_item, &debug_menu_item, &android_restart_item);

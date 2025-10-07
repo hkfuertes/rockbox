@@ -6,6 +6,7 @@
 #    Note: For reliable detection, press LEFT first, then RIGHT immediately, and hold both for 5 seconds.
 #    Pressing both very quickly at the same time may miss events and fail to trigger the restart.
 # 2. Trigger Keyboard when Play/Pause is pressed in a text input prompt
+# 3. Switch to Stock app when Back + Play are pressed for 10 seconds.
 
 DEVICE="/dev/input/event2"
 MAX_HOLD=5  # seconds to trigger restart
@@ -36,15 +37,13 @@ restart_rockbox() {
 }
 
 dual_boot() {
-   package_rb="org.rockbox"
-   package_stock="com.innioasis.y1"
-   keymap_rb="/system/usr/keylayout/Rockbox.kl"
-   keymap_stock="/system/usr/keylayout/Stock.kl"
-   keymap="/system/usr/keylayout/Generic.kl"
+    package_rb="org.rockbox"
+    keymap_rb="/system/usr/keylayout/Rockbox.kl"
+    keymap="/system/usr/keylayout/Generic.kl"
 
-   # Check if the package is disabled
+    # Check if Rockbox is disabled
     if pm list packages -d | grep -q "$package_rb"; then
-        # Package is disabled
+        # Rockbox is disabled
         echo "Package $package_rb is disabled."
         echo "Setting up Rockbox Keymap."
         mount -o remount,rw /system
@@ -53,18 +52,6 @@ dual_boot() {
         pm enable org.rockbox
         echo "Disabling Stock"
         pm disable com.innioasis.y1
-        echo "Rebooting"
-        reboot
-    else
-        # Package is enabled
-        echo "Package $package_rb is enabled."
-        echo "Setting up Stock Keymap."
-        mount -o remount,rw /system
-        cp "$keymap_stock" "$keymap"
-        echo "Disabling Rockbox"
-        pm disable org.rockbox
-        echo "Enabling Stock"
-        pm enable com.innioasis.y1
         echo "Rebooting"
         reboot
     fi

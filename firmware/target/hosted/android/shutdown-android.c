@@ -26,4 +26,23 @@ int android_shutdown_device(void)
     }
     return 0;
 }
+int android_switch_firmware(void)
+{
+    if (env_ptr == NULL || RockboxService_instance == NULL) {
+        return -1;
+    }
+    static jmethodID firmware_switch_method = NULL;
+    if (firmware_switch_method == NULL) {
+        firmware_switch_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class, "switchFirmware", "()V");
+        if (firmware_switch_method == NULL) {
+            return -1;
+        }
+    }
+    (*env_ptr)->CallVoidMethod(env_ptr, RockboxService_instance, firmware_switch_method);
+    if ((*env_ptr)->ExceptionCheck(env_ptr)) {
+        (*env_ptr)->ExceptionClear(env_ptr);
+        return -1;
+    }
+    return 0;
+}
 #endif 

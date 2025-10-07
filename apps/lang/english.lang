@@ -17167,6 +17167,20 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_SWITCH_FIRMWARE
+  desc: Shutdown menu item
+  user: core
+  <source>
+    *: "Reboot to Stock Firmware"
+  </source>
+  <dest>
+    *: "Reboot to Stock Firmware"
+  </dest>
+  <voice>
+    *: "Reboot to Stock Firmware"
+  </voice>
+</phrase>
+<phrase>
   id: LANG_ANDROID_SCREEN_TIMEOUT
   desc: Android screen timeout setting
   user: core
