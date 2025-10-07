@@ -50,7 +50,7 @@ static const struct button_mapping button_context_standard[]  = {
     { ACTION_STD_CANCEL,      BUTTON_BACK|BUTTON_REL,           BUTTON_BACK },
     { ACTION_STD_QUICKSCREEN, BUTTON_BACK|BUTTON_REPEAT,        BUTTON_BACK },
     { ACTION_STD_MENU,        BUTTON_BACK|BUTTON_DPAD_CENTER,   BUTTON_NONE },
-    { ACTION_STD_CONTEXT,     BUTTON_DPAD_CENTER|BUTTON_REPEAT, BUTTON_DPAD_CENTER },
+    { ACTION_STD_CONTEXT,     BUTTON_DPAD_CENTER|BUTTON_REL,    BUTTON_DPAD_CENTER|BUTTON_REPEAT },
 
     LAST_ITEM_IN_LIST
 }; /* button_context_standard */
@@ -58,7 +58,7 @@ static const struct button_mapping button_context_standard[]  = {
 static const struct button_mapping button_context_wps[]  = {
     { ACTION_WPS_BROWSE,        BUTTON_BACK|BUTTON_REL,             BUTTON_NONE },
     { ACTION_WPS_MENU,          BUTTON_DPAD_CENTER|BUTTON_REL,      BUTTON_DPAD_CENTER },
-    { ACTION_WPS_CONTEXT,       BUTTON_DPAD_CENTER|BUTTON_REPEAT,   BUTTON_DPAD_CENTER },
+    { ACTION_WPS_CONTEXT,       BUTTON_DPAD_CENTER|BUTTON_REL,      BUTTON_DPAD_CENTER|BUTTON_REPEAT },
     { ACTION_WPS_VOLUP,         BUTTON_VOL_UP,                      BUTTON_NONE },
     { ACTION_WPS_VOLUP,         BUTTON_VOL_UP|BUTTON_REPEAT,        BUTTON_NONE },
     { ACTION_WPS_VOLDOWN,       BUTTON_VOL_DOWN,                    BUTTON_NONE },
