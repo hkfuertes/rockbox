@@ -95,6 +95,7 @@ jobs:
 
         sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Rockbox.kl
         sudo cp ../android/scripts/Stock.kl mount_sys/usr/keylayout/Stock.kl
+        sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Generic.kl
 
         sudo umount mount_sys
         sudo umount mount_user
