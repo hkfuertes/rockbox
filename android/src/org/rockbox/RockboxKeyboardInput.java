@@ -30,6 +30,7 @@ import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.util.Log;
 
 public class RockboxKeyboardInput
 {
@@ -66,6 +67,20 @@ public class RockboxKeyboardInput
                         }
                     })
                     .show();
+
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            Log.d("RockboxKeyboard", "Attempting to launch keyboard...");
+                            java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "input trackball press"});
+                            proc.waitFor();
+                        } catch (Exception e) {
+                            Log.e("RockboxKeyboard", "Failed Launching Keyboard: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
+
             }
         });
     }
