@@ -65,7 +65,7 @@ jobs:
       run: |
         mkdir base
         cd base
-        wget https://github.com/rockbox-y1/rockbox/releases/latest/download/rom.zip
+        wget https://github.com/rockbox-y1/rockbox/releases/download/type-a-base/rom.zip
         wget https://github.com/rockbox-y1/rockbox/releases/download/stock-menu/com.innioasis.y1_2.7.2.apk
         unzip rom.zip
         mkdir mount_sys
