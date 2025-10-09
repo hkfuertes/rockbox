@@ -32,6 +32,9 @@ struct brightness_pick
 /* minimum brightness value */
 #define BRIGHTNESS_MIN 0
 
+/* brightness step size */
+#define BRIGHTNESS_STEP 4
+
 /* Brightness settings file */
 #define BRIGHTNESS_SETTINGS_FILE ROCKBOX_DIR "/brightness.cfg"
 
@@ -191,7 +194,7 @@ bool set_brightness(struct screen *display, char *title, int *brightness)
             case ACTION_SETTINGS_DECREPEAT:
                 /* Decrease brightness */
                 if (brightness_pick.brightness > BRIGHTNESS_MIN) {
-                    brightness_pick.brightness--;
+                    brightness_pick.brightness = brightness_pick.brightness - BRIGHTNESS_STEP;
                     /* Apply the change immediately */
                     android_brightness_set_percent(brightness_pick.brightness);
                 }
@@ -203,7 +206,7 @@ bool set_brightness(struct screen *display, char *title, int *brightness)
             case ACTION_SETTINGS_INCREPEAT:
                 /* Increase brightness */
                 if (brightness_pick.brightness < BRIGHTNESS_MAX) {
-                    brightness_pick.brightness++;
+                    brightness_pick.brightness = brightness_pick.brightness + BRIGHTNESS_STEP;
                     /* Apply the change immediately */
                     android_brightness_set_percent(brightness_pick.brightness);
                 }
