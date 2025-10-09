@@ -179,7 +179,7 @@ public class RockboxFramebuffer extends SurfaceView
             if (event.getRepeatCount() == 0) {
                 centerLongPressDetected = false;                
                 longPressHandler.postDelayed(centerLongPressRunnable, LONG_PRESS_DURATION_MS);
-                return buttonHandler(keyCode, true);
+                return true;
             } else {
                 centerRepeat = true;
                 return true;
