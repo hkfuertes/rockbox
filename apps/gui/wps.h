@@ -35,7 +35,6 @@ struct wps_state
 };
 
 long gui_wps_show(void);
-int android_is_wps(bool);
 
 enum wps_do_action_type
 {

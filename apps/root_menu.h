@@ -79,5 +79,6 @@ void root_menu_set_default(void* setting, void* defaultval);
 bool root_menu_is_changed(void* setting, void* defaultval);
 #endif
 
+int android_is_not_root(bool);
 
 #endif /* __ROOT_MENU_H__ */

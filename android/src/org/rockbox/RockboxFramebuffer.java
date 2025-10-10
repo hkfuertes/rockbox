@@ -60,7 +60,7 @@ public class RockboxFramebuffer extends SurfaceView
     private boolean centerLongPressDetected = false;
     private PowerManager powerManager;
 
-    public static boolean isWPS = false;
+    public static boolean isNotRoot = false;
     private boolean justCreated = true;
     private boolean centerRepeat = false;
     private Runnable centerLongPressRunnable = new Runnable() {
@@ -225,11 +225,10 @@ public class RockboxFramebuffer extends SurfaceView
                         buttonHandlerRepeat(keyCode);
                         // pause to make Rockbox catch up
                         Thread.sleep(10);
-                        if (!isWPS){
+                        if (!isNotRoot){
                             return buttonHandler(keyCode, false);
-                        } else { // hack, for some reason the WPS context menu wants an extra button click
+                        } else { // hack, for some reason the context menu needs an extra button click outside the root menu
                             Log.d("RockboxButton", "Trigger center second time");
-                            isWPS = false;
                             buttonHandler(keyCode, true);
                             Thread.sleep(10);
                             return buttonHandler(keyCode, false);

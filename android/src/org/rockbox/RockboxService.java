@@ -432,17 +432,18 @@ public class RockboxService extends Service
     }
 
     /**
-     * Tell RockboxFramebuffer we are in WPS
+     * Tell RockboxFramebuffer we are not in root menu
      * Called from native code via JNI
      */
-    public int isWPS(boolean wps)
+    public int isNotRoot(boolean notRoot)
     {
-        if (wps) {
-            //Log.d("RockboxButton", "We are in WPS (RockboxService)"); 
-            RockboxFramebuffer.isWPS = true;
+        Log.d("RockboxButton", "Service - isNotRoot: " + notRoot);
+        if (notRoot) {
+            //Log.d("RockboxButton", "We are in root menu (RockboxService)"); 
+            RockboxFramebuffer.isNotRoot = true;
         } else {
-            //Log.d("RockboxButton", "We are NOT in WPS (RockboxService)"); 
-            RockboxFramebuffer.isWPS = false;
+            //Log.d("RockboxButton", "We are NOT in root menu (RockboxService)"); 
+            RockboxFramebuffer.isNotRoot = false;
         }
         return 1;
     }
