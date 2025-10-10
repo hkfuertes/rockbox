@@ -65,6 +65,16 @@
 #include "skin_engine/wps_internals.h"
 #include "open_plugin.h"
 
+#include <jni.h>
+/* External references to JNI environment and service */
+extern JNIEnv *env_ptr;
+extern jclass RockboxService_class;
+extern jobject RockboxService_instance;
+
+/* Method IDs for Java methods */
+static jmethodID android_is_wps_method = NULL;
+
+
 #define FF_REWIND_MAX_PERCENT 3 /* cap ff/rewind step size at max % of file */
                                 /* 3% of 30min file == 54s step size */
 #define MIN_FF_REWIND_STEP 500
@@ -535,6 +545,36 @@ static void wps_lcd_activation_hook(unsigned short id, void *param)
 }
 #endif
 
+/* Tell java side we are in WPS */
+int android_is_wps(bool wps)
+{
+    /* Check if JNI environment and service are available */
+    if (env_ptr == NULL || RockboxService_instance == NULL) {
+        return -1; /* Error if not ready */
+    }
+        
+    /* Get method ID if not already cached */
+    if (android_is_wps_method == NULL) {
+        android_is_wps_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class,
+                                                     "isWPS", "(Z)I");
+        if (android_is_wps_method == NULL) {
+            return -1; /* Error on method not found */
+        }
+    }
+    
+    /* Call the Java method */
+    jint result = (*env_ptr)->CallIntMethod(env_ptr, RockboxService_instance, 
+                                        android_is_wps_method, (jboolean)wps);
+    
+    /* Check for exceptions */
+    if ((*env_ptr)->ExceptionCheck(env_ptr)) {
+        (*env_ptr)->ExceptionClear(env_ptr);
+        return -1; /* Error on exception */
+    }
+    
+    return (int)result;
+}
+
 static void gwps_leave_wps(bool theme_enabled)
 {
     FOR_NB_SCREENS(i)
@@ -565,6 +605,7 @@ static void gwps_leave_wps(bool theme_enabled)
 #ifdef HAVE_TOUCHSCREEN
     touchscreen_set_mode(global_settings.touch_mode);
 #endif
+    android_is_wps(false);
 }
 
 static void restore_theme(void)
@@ -582,6 +623,7 @@ static void restore_theme(void)
  * display the wps on entering or restoring */
 static void gwps_enter_wps(bool theme_enabled)
 {
+    android_is_wps(true);
     struct gui_wps *gwps;
     struct screen *display;
     if (theme_enabled)

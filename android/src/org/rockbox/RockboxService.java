@@ -432,6 +432,22 @@ public class RockboxService extends Service
     }
 
     /**
+     * Tell RockboxFramebuffer we are in WPS
+     * Called from native code via JNI
+     */
+    public int isWPS(boolean wps)
+    {
+        if (wps) {
+            //Log.d("RockboxButton", "We are in WPS (RockboxService)"); 
+            RockboxFramebuffer.isWPS = true;
+        } else {
+            //Log.d("RockboxButton", "We are NOT in WPS (RockboxService)"); 
+            RockboxFramebuffer.isWPS = false;
+        }
+        return 1;
+    }
+
+    /**
      * Get current Android brightness as percentage
      * Called from native code via JNI
      * @return Current brightness percentage (0-100)
