@@ -134,7 +134,11 @@ static const struct button_mapping button_context_bmark[]  = {
 }; /* button_context_bmark */
 
 static const struct button_mapping button_context_time[]  = {
-    LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_SETTINGS),
+    { ACTION_SETTINGS_INC,          BUTTON_DPAD_DOWN|BUTTON_REL,    BUTTON_NONE },
+    { ACTION_SETTINGS_DEC,          BUTTON_DPAD_UP|BUTTON_REL,      BUTTON_NONE },
+    { ACTION_STD_OK,                BUTTON_DPAD_CENTER|BUTTON_REL,  BUTTON_DPAD_CENTER },
+    { ACTION_STD_CANCEL,            BUTTON_BACK|BUTTON_REL,         BUTTON_BACK },
+    LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_STD),
 }; /* button_context_time */
 
 static const struct button_mapping button_context_quickscreen[]  = {
