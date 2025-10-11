@@ -59,6 +59,45 @@
 /* gui api */
 #include "list.h"
 
+#include <jni.h>
+/* External references to JNI environment and service */
+extern JNIEnv *env_ptr;
+extern jclass RockboxService_class;
+extern jobject RockboxService_instance;
+
+/* Method IDs for Java methods */
+static jmethodID android_is_not_root_method = NULL;
+int android_is_not_menu(bool);
+
+/* Tell java side we are not in a menu we need to handle differently */
+int android_is_not_menu(bool wps)
+{
+    /* Check if JNI environment and service are available */
+    if (env_ptr == NULL || RockboxService_instance == NULL) {
+        return -1; /* Error if not ready */
+    }
+        
+    /* Get method ID if not already cached */
+    if (android_is_not_root_method == NULL) {
+        android_is_not_root_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class,
+                                                     "isNotRoot", "(Z)I");
+        if (android_is_not_root_method == NULL) {
+            return -1; /* Error on method not found */
+        }
+    }
+    
+    /* Call the Java method */
+    jint result = (*env_ptr)->CallIntMethod(env_ptr, RockboxService_instance, 
+                                        android_is_not_root_method, (jboolean)wps);
+    
+    /* Check for exceptions */
+    if ((*env_ptr)->ExceptionCheck(env_ptr)) {
+        (*env_ptr)->ExceptionClear(env_ptr);
+        return -1; /* Error on exception */
+    }
+    
+    return (int)result;
+}
 #define MAX_MENUS 8
 /* used to allow for dynamic menus */
 #define MAX_MENU_SUBITEMS 64
@@ -502,6 +541,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
             }
             else if (!in_stringlist)
             {
+                android_is_not_menu(false);
                 int type = (menu->flags&MENU_TYPE_MASK);
                 selected = get_menu_selection(gui_synclist_get_sel_pos(&lists),menu);
                 if (type == MT_MENU)

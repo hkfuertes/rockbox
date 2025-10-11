@@ -154,8 +154,7 @@ static const struct button_mapping button_context_quickscreen[]  = {
     { ACTION_QS_VOLDOWN,    BUTTON_DPAD_UP|BUTTON_REPEAT,       BUTTON_NONE },
     { ACTION_QS_VOLUP,      BUTTON_DPAD_DOWN,                   BUTTON_NONE },
     { ACTION_QS_VOLUP,      BUTTON_DPAD_DOWN|BUTTON_REPEAT,     BUTTON_NONE },
-
-    LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_STD)
+    LAST_ITEM_IN_LIST
 }; /* button_context_quickscreen */
 
 

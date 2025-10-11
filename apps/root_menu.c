@@ -83,7 +83,7 @@ extern jobject RockboxService_instance;
 /* Method IDs for Java methods */
 static jmethodID android_is_not_root_method = NULL;
 
-/* Tell java side we are in WPS */
+/* Tell java side we are not in a menu we need to handle differently */
 int android_is_not_root(bool wps)
 {
     /* Check if JNI environment and service are available */
