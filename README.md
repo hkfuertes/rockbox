@@ -105,9 +105,7 @@ There are likely more but these are tested.
 
 1. Download the latest Rockbox included firmware (rom.zip) here: https://github.com/rockbox-y1/rockbox/releases
 2. Unpack the archive
-3. Install SP Flash Tool v5.1904:
-  - Windows: https://spflashtools.com/windows/sp-flash-tool-v5-1904
-  - Linux: https://spflashtools.com/linux/sp-flash-tool-v5-1904-for-linux
+3. Install SP Flash Tool v5.1904: https://spflashtool.com/download/
 4. Start SP Flash Tool
 5. Follow the [official firmware flashing instructions](https://support.innioasis.com/download/flashing_tutorial/Flashing_tutorial-Y1_EN%20v2.0.7-20241021.pdf) but use the MT6572_Android_scatter.txt from the rom.zip file
 
