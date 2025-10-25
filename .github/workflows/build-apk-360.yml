@@ -95,6 +95,17 @@ jobs:
         sudo cp ../android/scripts/Stock.kl mount_sys/usr/keylayout/Stock.kl
         sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Generic.kl
 
+        # Remove unneeded apps and services to save battery
+        sudo rm mount_sys/app/YGPS.*
+        sudo rm mount_sys/app/SmsReg.*
+        sudo rm mount_sys/app/Phone.*
+        sudo rm mount_sys/app/Nfc.*
+        sudo rm mount_sys/app/CellConnService.*
+        sudo rm mount_sys/app/MediaProvider.*
+        sudo rm mount_sys/app/EngineerCode.*
+        sudo rm mount_sys/app/EngineerMode.*
+        sudo rm mount_sys/app/EngineerModeSim.*
+
         sudo umount mount_sys
         sudo umount mount_user
         rm rom.zip
