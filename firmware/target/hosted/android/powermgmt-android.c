@@ -23,12 +23,15 @@
 #include <jni.h>
 #include <stdbool.h>
 #include "config.h"
+#include "power.h"
 
 extern JNIEnv *env_ptr;
 extern jclass  RockboxService_class;
 extern jobject RockboxService_instance;
 
 static jfieldID __battery_level;
+static jfieldID __plugged_status;
+static jfieldID __is_charging;
 static jobject BatteryMonitor_instance;
 
 static void new_battery_monitor(void)
@@ -46,6 +49,14 @@ static void new_battery_monitor(void)
     __battery_level = (*env_ptr)->GetFieldID(env_ptr,
                                             class,
                                             "mBattLevel", "I");
+    /* cache the charging type field id */
+    __plugged_status = (*env_ptr)->GetFieldID(env_ptr,
+                                            class,
+                                            "mPlugged", "I");
+    /* cache the charging status field id */
+    __is_charging = (*env_ptr)->GetFieldID(env_ptr,
+                                            class,
+                                            "mCharging", "I");
 }
 
 int _battery_level(void)
@@ -55,3 +66,27 @@ int _battery_level(void)
     return (*env_ptr)->GetIntField(env_ptr, BatteryMonitor_instance, __battery_level);
 }
 
+unsigned int power_input_status(void)
+{
+    if (!BatteryMonitor_instance)
+        new_battery_monitor();
+
+    int plugged_status = (*env_ptr)->GetIntField(env_ptr, BatteryMonitor_instance, __plugged_status);
+    if (plugged_status == 1){
+        return POWER_INPUT_USB_CHARGER;
+    } else if (plugged_status == 2){
+        return POWER_INPUT_MAIN_CHARGER;
+    } else {
+        return POWER_INPUT_NONE;
+    }
+}
+
+bool charging_state(void)
+{
+    if (!BatteryMonitor_instance)
+        new_battery_monitor();
+
+    int is_charging = (*env_ptr)->GetIntField(env_ptr, BatteryMonitor_instance, __is_charging);
+
+    return is_charging == 1;
+}
