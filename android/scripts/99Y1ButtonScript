@@ -30,6 +30,8 @@ play_down=0
 press_start_sec=0
 press_start_sec_dual_boot=0
 
+package_rb="org.rockbox"
+
 # Function to restart Rockbox
 restart_rockbox() {
     am force-stop org.rockbox
@@ -37,7 +39,6 @@ restart_rockbox() {
 }
 
 dual_boot() {
-    package_rb="org.rockbox"
     keymap_rb="/system/usr/keylayout/Rockbox.kl"
     keymap="/system/usr/keylayout/Generic.kl"
 
@@ -124,7 +125,7 @@ while true; do
         # Check if either key is released (left/right)
         if [ "$press_start_sec" -ne 0 ] && { [ "$left_down" -eq 0 ] || [ "$right_down" -eq 0 ]; }; then
             hold_time=$((sec - press_start_sec))
-            if [ "$hold_time" -ge "$MAX_HOLD" ]; then
+            if [ "$hold_time" -ge "$MAX_HOLD" ] && [ pm list packages -d | grep -q  "$package_rb" ]; then
                 restart_rockbox
             fi
             press_start_sec=0
