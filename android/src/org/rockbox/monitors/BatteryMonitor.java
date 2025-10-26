@@ -28,6 +28,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.os.PowerManager;
+import android.util.Log;
 
 public class BatteryMonitor extends BroadcastReceiver
 {
@@ -37,25 +39,46 @@ public class BatteryMonitor extends BroadcastReceiver
     private int mBattLevel; /* read by native code */
     private int mPlugged;
     private int mCharging;
+    private Timer mTimer;
+    private TimerTask mTask;
+    private PowerManager pm;
     
-    /*
-     * We get literally spammed with battery status updates
-     * Therefore we actually unregister after each onReceive() and
-     * setup a timer to re-register in 2s */
-    public BatteryMonitor(Context c)
-    {
-        mBattFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        mContext = c;
-        Timer t = new Timer();
-        TimerTask task = new TimerTask()
-        {
-            public void run()
-            {
-                attach();
+    void startTimer() {
+        /*
+        * We get literally spammed with battery status updates
+        * Therefore we actually unregister after each onReceive() and
+        * setup a timer to re-register in 2s */
+        stopTimer();
+        mTimer = new Timer();
+        mTask = new TimerTask() {
+            public void run() {
+                if (pm.isScreenOn()){
+                    attach();
+                }
             }
         };
-        t.schedule(task, 5000, 2000);
-        attach();
+        mTimer.schedule(mTask, 5000, 2000);
+    }
+
+    void stopTimer() {
+        if (mTimer != null) {
+            mTimer.cancel();
+            mTimer = null;
+        }
+        if (mTask != null) {
+            mTask.cancel();
+            mTask = null;
+        }
+    }
+
+    public BatteryMonitor(Context c)
+    {
+        Log.d("RockboxBattery", "New BatteryMonitor.");
+        pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
+        mBattFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        mContext = c;
+
+        startTimer();
     }
 
     @Override

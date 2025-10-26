@@ -40,6 +40,7 @@ import org.rockbox.Helper.ExternalAppsManager;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Service;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -76,7 +77,7 @@ public class RockboxService extends Service
     /* Regular checks */
     private Handler mSDCheckHandler;
     private Runnable mSDCheckRunnable;
-    private static final int SD_CHECK_INTERVAL_MS = 500; // Check every half second
+    private static final int SD_CHECK_INTERVAL_MS = 2000; // Check every 2 second
     private Handler mMTPHandler;
     private Runnable mMTPRunnable;
     private static final int MTP_CHECK_INTERVAL_MS = 500; // Check every half second
@@ -84,7 +85,7 @@ public class RockboxService extends Service
     private static final long RESTART_COOLDOWN_MS = 500; // Minimum 1 seconds between restarts
     private boolean mSdWasUnavailable = false; // Track if SD was initially unavailable
     private boolean mInitialCheckDone = false; // Track if initial check has been performed
-
+    private PowerManager pm;
     /* possible result values for intent handling */ 
     public static final int RESULT_INVOKING_MAIN = 0;
     public static final int RESULT_LIB_LOAD_PROGRESS = 1;
@@ -97,6 +98,7 @@ public class RockboxService extends Service
     public void onCreate()
     {      
         instance = this;
+        pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         mtpEnable = 1;
         mMediaButtonReceiver = new MediaButtonReceiver(this);
         mFgRunner = new RunForegroundManager(this);
@@ -106,7 +108,9 @@ public class RockboxService extends Service
         mSDCheckRunnable = new Runnable() {
             @Override
             public void run() {
-                checkSD();
+                if (pm.isScreenOn()){
+                    checkSD();
+                } 
                 // Schedule next check
                 mSDCheckHandler.postDelayed(this, SD_CHECK_INTERVAL_MS);
             }
