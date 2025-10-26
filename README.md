@@ -50,57 +50,28 @@ To install the Rockbox ROM, choose one of the releases, download `rom.zip`, extr
 ### List of 360p Themes
 
 - Theme Pack with included Fonts: https://github.com/rockbox-y1/themes/releases/latest
-  - BONES: CHUCK\_LARDO
-  - die-bahn: Jihoon Kim
-  - FreshOS-Y1\_Dark: u/elinks59
-  - FreshOS-Y1\_Light: u/elinks59
-  - Horizon: Jihoon Kim
-  - iClassic\_v1.2: Humberto Santana
-  - iClassic\_Dark-MOD: u/CarlosPixel\_
-  - iClassic\_Square\_Reworked: u/CarlosPixel\_
-  - iLike: u/elinks59
-  - iMMXX: FCorp
-  - InfoMatrix: yuuiko
-  - Interpod: Christian Soffke
-  - MacClassic: Billy Blair
-  - OneBit\_OLED: Jihoon Kim
-  - Orbit: Chris Soffke
-  - PodOne: Guillaume Cocatre-Zilgien
-  - PodTwo: Guillaume Cocatre-Zilgien
-  - SNAZZ: Jihoon Kim
-  - SNAZZ2: Jihoon Kim
-  - SNAZZ3: Vera B
-  - SNAZZx90: DillMillz
-  - SPAZZ: CHUCK\_LARDO
-  - Widepod: Christian Soffke
-
 - ipodmod3blk-y1: https://github.com/AkikoKumagara/ipodmod3blk-y1
 
-### List of working Themes (240p)
-
-There are likely more but these are tested.
-
-- CenterArt
-- FreshOSInstall (needs manual steps)
-- Horizon
-- iLike
-- OneBit_OLED
-- OneBit_Mono
-- OneBit_VFD_ALT
-- OP_1
-- Orbit
-- SKIDMARK (artefacting in menus)
-- SNAZZ2 (artefacting in menus)
-- SNAZZ3 (artefacting in menus)
-- InfoMatrix
-- naranjada
-- PodOne
-- Redux
-- Themify
-- Win95
-- xplorr
-
 ## Installation
+### MTKClient
+
+1. Install MTKClient: https://github.com/bkerler/mtkclient
+2. Download the latest Rockbox included firmware (rom.zip) here: https://github.com/rockbox-y1/rockbox/releases 
+3. Unpack the archive:
+```
+mkdir rom && cd rom
+unzip ../rom.zip
+```
+4. Turn of the device, disconnect from the PC
+5. Start the flashing process:
+```
+cd rom
+python ../mtk.py w uboot,bootimg,recovery,android,usrdata lk.bin,boot.img,recovery.img,system.img,userdata.img
+```
+6. Connect the device via USB
+7. Unplug the device when the process has finished
+8. Power on the device
+
 ### SPFlash Tool
 
 1. Download the latest Rockbox included firmware (rom.zip) here: https://github.com/rockbox-y1/rockbox/releases
@@ -199,7 +170,7 @@ adb shell monkey -p org.rockbox -c android.intent.category.LAUNCHER 1
 
 This feature is not pre-built because it relies on ignoring SSL verification when downloading files specified by RSS feeds. This is a security risk.
 
-If you want to use it, follow the instructions (here)[android/scripts/podcast\_downloader/HOWTO.md].
+If you want to use it, follow the instructions [here](android/scripts/podcast\_downloader/HOWTO.md).
 
 Afterwards follow the android build instructions and install the modified version.
 
