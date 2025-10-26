@@ -609,7 +609,7 @@ public class RockboxService extends Service
                     .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            // Run shutdown in background thread
+                            // Run in background thread
                             new Thread(new Runnable() {
                                 public void run() {
                                     try {
@@ -641,7 +641,7 @@ public class RockboxService extends Service
                     .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            // Run shutdown in background thread
+                            // Run in background thread
                             new Thread(new Runnable() {
                                 public void run() {
                                     try {
