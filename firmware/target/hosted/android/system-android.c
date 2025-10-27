@@ -64,7 +64,7 @@ void power_off(void)
 void system_init(void)
 {
     /* no better place yet */
-    telephony_init_device();
+    //telephony_init_device();
 }
 
 int hostfs_init(void)

@@ -2017,7 +2017,6 @@ target/hosted/android/debug-android.c
 target/hosted/android/pcm-android.c
 target/hosted/android/powermgmt-android.c
 target/hosted/android/system-android.c
-target/hosted/android/telephony-android.c
 target/hosted/android/brightness-android.c
 target/hosted/android/screen-timeout-android.c
 target/hosted/android/external-apps-android.c
