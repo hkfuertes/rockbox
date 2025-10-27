@@ -60,84 +60,90 @@ dual_boot() {
 
 # Main loop: read raw input events
 while true; do
-    event_bytes=$(dd if="$DEVICE" bs=16 count=1 2>/dev/null | xxd -p)
-    [ -z "$event_bytes" ] && break
+    # Only check buttons if the screen is on
+    if dumpsys power | grep -q "mScreenOn=true"; then
+        event_bytes=$(dd if="$DEVICE" bs=16 count=1 2>/dev/null | xxd -p)
+        [ -z "$event_bytes" ] && break
 
-    # Extract timestamp (seconds only)
-    sec_hex=$(reverse_bytes ${event_bytes:0:8})
-    sec=$((0x$sec_hex))
+        # Extract timestamp (seconds only)
+        sec_hex=$(reverse_bytes ${event_bytes:0:8})
+        sec=$((0x$sec_hex))
 
-    # Extract event type, code, and value
-    type_hex=$(reverse_bytes ${event_bytes:16:4})
-    value_hex=$(reverse_bytes ${event_bytes:24:8})
-    code_hex=$(reverse_bytes ${event_bytes:20:4})
+        # Extract event type, code, and value
+        type_hex=$(reverse_bytes ${event_bytes:16:4})
+        value_hex=$(reverse_bytes ${event_bytes:24:8})
+        code_hex=$(reverse_bytes ${event_bytes:20:4})
 
-    type=$((0x$type_hex))
-    value=$((0x$value_hex))
-    code=$((0x$code_hex))
+        type=$((0x$type_hex))
+        value=$((0x$value_hex))
+        code=$((0x$code_hex))
 
-    # Only process key events
-    if [ "$type" -eq 1 ]; then
-        echo $code
-        case "$code" in
-            164) # (play/pause button triggers keyboard in text fields)
-                play_down=$value
-                input trackball press
-                # reset other keys, combination is interrupted
-                left_down=0
-                right_down=0
-                ;;
-            158) # Back/Menu
-                menu_down=$value
-                # reset other keys, combination is interrupted
-                left_down=0
-                right_down=0
-                ;;
-            105) # KEY_LEFT / previous track
-                left_down=$value
-                # reset other keys, combination is interrupted
-                play_down=0
-                menu_down=0
-                ;;
-            106) # KEY_RIGHT / next track
-                right_down=$value
-                # reset other keys, combination is interrupted
-                play_down=0
-                menu_down=0
-                ;;
-	    *) # reset keys if any other is pressed
-                play_down=0
-                menu_down=0
-                left_down=0
-                right_down=0
-        esac
+        # Only process key events
+        if [ "$type" -eq 1 ]; then
+            echo $code
+            case "$code" in
+                164) # (play/pause button triggers keyboard in text fields)
+                    play_down=$value
+                    input trackball press
+                    # reset other keys, combination is interrupted
+                    left_down=0
+                    right_down=0
+                    ;;
+                158) # Back/Menu
+                    menu_down=$value
+                    # reset other keys, combination is interrupted
+                    left_down=0
+                    right_down=0
+                    ;;
+                105) # KEY_LEFT / previous track
+                    left_down=$value
+                    # reset other keys, combination is interrupted
+                    play_down=0
+                    menu_down=0
+                    ;;
+                106) # KEY_RIGHT / next track
+                    right_down=$value
+                    # reset other keys, combination is interrupted
+                    play_down=0
+                    menu_down=0
+                    ;;
+            *) # reset keys if any other is pressed
+                    play_down=0
+                    menu_down=0
+                    left_down=0
+                    right_down=0
+            esac
 
-        # Record start of the combination
-        if [ "$left_down" -eq 1 ] && [ "$right_down" -eq 1 ] && [ "$press_start_sec" -eq 0 ]; then
-            press_start_sec=$sec
-        fi
-
-        if [ "$menu_down" -eq 1 ] && [ "$play_down" -eq 1 ] && [ "$press_start_sec_dual_boot" -eq 0 ]; then
-            press_start_sec_dual_boot=$sec
-        fi
-
-
-        # Check if either key is released (left/right)
-        if [ "$press_start_sec" -ne 0 ] && { [ "$left_down" -eq 0 ] || [ "$right_down" -eq 0 ]; }; then
-            hold_time=$((sec - press_start_sec))
-            if [ "$hold_time" -ge "$MAX_HOLD" ] && [ pm list packages -d | grep -q  "$package_rb" ]; then
-                restart_rockbox
+            # Record start of the combination
+            if [ "$left_down" -eq 1 ] && [ "$right_down" -eq 1 ] && [ "$press_start_sec" -eq 0 ]; then
+                press_start_sec=$sec
             fi
-            press_start_sec=0
-        fi
 
-        # Check if either key is released (menu/play)
-        if [ "$press_start_sec_dual_boot" -ne 0 ] && { [ "$menu_down" -eq 0 ] || [ "$play_down" -eq 0 ]; }; then
-            hold_time=$((sec - press_start_sec_dual_boot))
-            if [ "$hold_time" -ge "$MAX_HOLD_DUAL_BOOT" ]; then
-                dual_boot
+            if [ "$menu_down" -eq 1 ] && [ "$play_down" -eq 1 ] && [ "$press_start_sec_dual_boot" -eq 0 ]; then
+                press_start_sec_dual_boot=$sec
             fi
-            press_start_sec_dual_boot=0
+
+
+            # Check if either key is released (left/right)
+            if [ "$press_start_sec" -ne 0 ]; then
+                if [ "$left_down" -eq 0 ] || [ "$right_down" -eq 0 ]; then
+                    hold_time=$((sec - press_start_sec))
+                    if [ "$hold_time" -ge "$MAX_HOLD" ] && pm list packages -e | grep -q "$package_rb"; then
+                        restart_rockbox
+                    fi
+                    press_start_sec=0
+                fi
+            fi
+            # Check if either key is released (menu/play)
+            if [ "$press_start_sec_dual_boot" -ne 0 ]; then
+                if [ "$menu_down" -eq 0 ] || [ "$play_down" -eq 0 ]; then
+                    hold_time=$((sec - press_start_sec_dual_boot))
+                    if [ "$hold_time" -ge "$MAX_HOLD_DUAL_BOOT" ]; then
+                        dual_boot
+                    fi
+                    press_start_sec_dual_boot=0
+                fi
+            fi
         fi
     fi
 done
