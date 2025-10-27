@@ -22,8 +22,10 @@
 
 #include <jni.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "config.h"
 #include "power.h"
+#include "kernel.h"
 
 extern JNIEnv *env_ptr;
 extern jclass  RockboxService_class;
@@ -89,4 +91,10 @@ bool charging_state(void)
     int is_charging = (*env_ptr)->GetIntField(env_ptr, BatteryMonitor_instance, __is_charging);
 
     return is_charging == 1;
+}
+
+void sys_poweroff(void)
+{
+    system("su -c reboot -p");
+    queue_broadcast(SYS_POWEROFF, 0);
 }

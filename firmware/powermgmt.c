@@ -1112,6 +1112,7 @@ static void sys_shutdown_common(void)
 }
 #endif /* BOOTLOADER */
 
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 void sys_poweroff(void)
 {
 #ifndef BOOTLOADER
@@ -1120,6 +1121,7 @@ void sys_poweroff(void)
     queue_broadcast(SYS_POWEROFF, 0);
 #endif
 }
+#endif
 
 /* not to be confused with system_reboot... :( */
 void sys_reboot(void)
