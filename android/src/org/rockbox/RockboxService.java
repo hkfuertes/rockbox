@@ -33,6 +33,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.rockbox.Helper.Logger;
 import org.rockbox.Helper.MediaButtonReceiver;
+import org.rockbox.Helper.SDReceiver;
 import org.rockbox.Helper.RunForegroundManager;
 import org.rockbox.Helper.BrightnessController;
 import org.rockbox.Helper.ScreenTimeoutController;
@@ -70,16 +71,12 @@ public class RockboxService extends Service
     private Activity mCurrentActivity = null;
     private RunForegroundManager mFgRunner;
     private MediaButtonReceiver mMediaButtonReceiver;
+    private SDReceiver mSDReceiver;
     private ResultReceiver mResultReceiver;
     
     /* Regular checks */
-    private Handler mSDCheckHandler;
-    private Runnable mSDCheckRunnable;
-    private static final int SD_CHECK_INTERVAL_MS = 2000; // Check every 2 second
     private long mLastRestartTime = 0; // Timestamp of last restart attempt
     private static final long RESTART_COOLDOWN_MS = 500; // Minimum 1 seconds between restarts
-    private boolean mSdWasUnavailable = false; // Track if SD was initially unavailable
-    private boolean mInitialCheckDone = false; // Track if initial check has been performed
     private PowerManager pm;
     /* possible result values for intent handling */ 
     public static final int RESULT_INVOKING_MAIN = 0;
@@ -95,20 +92,8 @@ public class RockboxService extends Service
         instance = this;
         pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         mMediaButtonReceiver = new MediaButtonReceiver(this);
+        mSDReceiver = new SDReceiver(this);
         mFgRunner = new RunForegroundManager(this);
-        
-        // Initialize SD mount check mechanism
-        mSDCheckHandler = new Handler(Looper.getMainLooper());
-        mSDCheckRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (pm.isScreenOn()){
-                    checkSD();
-                } 
-                // Schedule next check
-                mSDCheckHandler.postDelayed(this, SD_CHECK_INTERVAL_MS);
-            }
-        };
     }
 
     public static RockboxService getInstance()
@@ -178,8 +163,6 @@ public class RockboxService extends Service
         putResult(RESULT_SERVICE_RUNNING);
 
         rockbox_running = true;
-        
-        // Note: SD mount check will be started after config file initialization in startService()
     }
 
     public void onStart(Intent intent, int startId) {
@@ -326,9 +309,6 @@ public class RockboxService extends Service
                     }
                 }
 
-                // Start the SD mount check after config file has been initialized
-                startSDCheck();
-
                 /* Start native code */
                 putResult(RESULT_INVOKING_MAIN);
 
@@ -384,14 +364,9 @@ public class RockboxService extends Service
          * garbage collected.
          *  mMediaButtonReceiver.unregister(); */
         mMediaButtonReceiver = null;
+        mSDReceiver = null;
         /* Make sure our notification is gone. */
         stopForeground();
-        
-        // Stop the SD mount check and reset restart timestamp
-        stopSDCheck();
-        mLastRestartTime = 0;
-        mSdWasUnavailable = false; // Reset the flag on service destruction
-        mInitialCheckDone = false; // Reset the initial check flag
         
         instance = null;
         rockbox_running = false;
@@ -676,56 +651,11 @@ public class RockboxService extends Service
             }
         }).start();
     }
-
-    /**
-     * Check if the SD card is mounted and automatically restart if not
-     */
-    private void checkSD() {
-        int resultCode;
-        try {
-            java.lang.Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", "df | grep '/storage/sdcard0'"});
-            resultCode = process.waitFor();
-
-        } catch (Exception e){
-            Log.d("RockboxService", "Executing SD card mount check command failed. Assuming SD is unavailable.");
-            resultCode = 1;
-        }
-
-        // Check if SD card is mounted
-        boolean isAccessible = resultCode == 0;
-
-        if (!mInitialCheckDone) {
-            // Initial check - just remember the state, don't restart
-            mSdWasUnavailable = !isAccessible;
-            mInitialCheckDone = true;
-            if (isAccessible) {
-                Log.d("RockboxService", "Initial check: SD card is available");
-            } else {
-                Log.w("RockboxService", "Initial check: SD card is not available, will restart when it becomes available");
-            }
-        } else {
-            // Subsequent checks - only restart if SD becomes available after being initially unavailable
-            if (!isAccessible) {
-                Log.w("RockboxService", "SD card is not accessible.");
-            } else {
-                // SD card is accessible
-                if (mSdWasUnavailable) {
-                    // SD card was initially unavailable but is now available
-                    // This means Rockbox was using fallback config and should switch to SD card config
-                    Log.w("RockboxService", "SD card is now available, restarting to switch from fallback config");
-                    restartApp();
-                    mSdWasUnavailable = false; // Reset the flag
-                } else {
-                    Log.d("RockboxService", "SD mount check passed.");
-                }
-            }
-        }
-    }
     
     /**
      * Restart the app using system call
      */
-    private void restartApp() {
+    public void restartApp() {
         long currentTime = SystemClock.elapsedRealtime();
         if (currentTime - mLastRestartTime < RESTART_COOLDOWN_MS) {
             Log.w("RockboxService", "Restart cooldown active. Skipping restart.");
@@ -747,26 +677,5 @@ public class RockboxService extends Service
             }
         }).start();
     }
-    
-    /**
-     * Start the periodic SD mount check
-     */
-    private void startSDCheck() {
-        if (mSDCheckHandler != null && mSDCheckRunnable != null) {
-            Log.d("RockboxService", "Starting SD mount check (interval: " + SD_CHECK_INTERVAL_MS + "ms)");
-            mSDCheckHandler.postDelayed(mSDCheckRunnable, SD_CHECK_INTERVAL_MS);
-        } else {
-            Log.w("RockboxService", "Cannot start SD mount check - handler or runnable is null");
-        }
-    }
-    
-    /**
-     * Stop the periodic SD mount file check
-     */
-    private void stopSDCheck() {
-        if (mSDCheckHandler != null && mSDCheckRunnable != null) {
-            Log.d("RockboxService", "Stopping SD mount check");
-            mSDCheckHandler.removeCallbacks(mSDCheckRunnable);
-        }
-    }
+
 }
