@@ -303,17 +303,19 @@ static void pitchscreen_draw(struct screen *display, int max_lines,
         last_vp = display->set_viewport(vp);
         display->clear_viewport();
 #ifdef HAVE_TOUCHSCREEN
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         /* two arrows in the top row, left and right column */
         char *arrows[] = { "<", ">"};
         display->getstringsize(arrows[0], &w, &h);
         display->putsxy(0, vp->height/2 - h/2, arrows[0]);
         display->putsxy(vp->width - w, vp->height/2 - h/2, arrows[1]);
 #endif
+#endif
         /* UP: Pitch Up */
         if (rb->global_settings->pitch_mode_semitone)
             ptr = rb->str(LANG_PITCH_UP_SEMITONE);
         else
-            ptr = rb->str(LANG_PITCH_UP);
+            ptr = rb->str(LANG_SPEED);
 
         display->getstringsize(ptr, &w, NULL);
         /* draw text */
@@ -326,6 +328,7 @@ static void pitchscreen_draw(struct screen *display, int max_lines,
         display->clear_viewport();
 
 #ifdef HAVE_TOUCHSCREEN
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         ptr = rb->str(LANG_KBD_OK);
         display->getstringsize(ptr, &w, &h);
         /* one OK in the middle first column of the vp (at half height) */
@@ -333,10 +336,11 @@ static void pitchscreen_draw(struct screen *display, int max_lines,
         /* one OK in the middle of the last column of the vp (at half height) */
         display->putsxy(5*vp->width/6 - w/2, vp->height/2 - h/2, ptr);
 #endif
+#endif
         if (rb->global_settings->pitch_mode_semitone)
             ptr = rb->str(LANG_PITCH_DOWN_SEMITONE);
         else
-            ptr = rb->str(LANG_PITCH_DOWN);
+            ptr = rb->str(LANG_SPEED);
         display->getstringsize(ptr, &w, &h);
         /* draw text */
         display->putsxy(vp->width/2 - w/2, vp->height - h, ptr);
@@ -437,8 +441,8 @@ static void pitchscreen_draw(struct screen *display, int max_lines,
     const char *rightlabel = "+2%";
     if (rb->global_settings->pitch_mode_timestretch)
     {
-        leftlabel = "<<";
-        rightlabel = ">>";
+        leftlabel = rb->str(LANG_PITCH);
+        rightlabel = rb->str(LANG_PITCH);
     }
 
     /* Only display if they fit */
@@ -666,6 +670,7 @@ static int32_t pitch_increase_semitone(int32_t pitch,
 }
 
 #ifdef HAVE_TOUCHSCREEN
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 /*
  * Check for touchscreen presses as per sketch above in this file
  *
@@ -765,6 +770,7 @@ static int pitchscreen_do_touchscreen(struct viewport vps[])
     return ACTION_NONE;
 }
 
+#endif
 #endif
 /*
     returns:
@@ -875,11 +881,13 @@ int gui_syncpitchscreen_run(void)
         button = rb->get_action(CONTEXT_PITCHSCREEN, HZ);
 
 #ifdef HAVE_TOUCHSCREEN
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         if (button == ACTION_TOUCHSCREEN)
         {
             FOR_NB_SCREENS(i)
                 button = pitchscreen_do_touchscreen(pitch_viewports[i]);
         }
+#endif
 #endif
         switch (button)
         {
@@ -1217,6 +1225,9 @@ enum plugin_status plugin_start(const void* parameter)
 */
     bool gui = false;
     rb->pcmbuf_set_low_latency(true);
+
+    rb->global_settings->pitch_mode_timestretch = true;
+    rb->settings_save();
 
     /* Figure out whether to be in timestretch mode */
     if (parameter == NULL) /* gui mode */

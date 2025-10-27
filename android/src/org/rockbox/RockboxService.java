@@ -316,7 +316,10 @@ public class RockboxService extends Service
                         strm.write("lang: /sdcard/.rockbox/langs/" + getString(R.string.rockbox_language_file) + "\n");
                         strm.write("wheel vibration intensity: 15\n");
                         strm.write("idle poweroff: 0\n");
-                        strm.write("font: /.rockbox/fonts/24-Terminus-Bold.fnt");
+                        strm.write("font: /.rockbox/fonts/24-Terminus-Bold.fnt\n");
+                        strm.write("timestretch enabled: on\n");
+                        strm.write("Timestretch mode: on\n");
+                        strm.write("volume adjustment mode: perceptual\n");
                         strm.close();
                     } catch(Exception e) {
                         Logger.d("Exception when writing default config", e);
