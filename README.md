@@ -166,13 +166,3 @@ When you initialize the database Rockbox will ask you to restart. You can do thi
 ```
 adb shell monkey -p org.rockbox -c android.intent.category.LAUNCHER 1
 ```
-
-## Experimental Podcast Downloader 
-
-This feature is not pre-built because it relies on ignoring SSL verification when downloading files specified by RSS feeds. This is a security risk.
-
-If you want to use it, follow the instructions [here](android/scripts/podcast\_downloader/HOWTO.md).
-
-Afterwards follow the android build instructions and install the modified version.
-
-Then run Main Menu > System > Sync Podcasts to download the specified podcasts. You will need an active wifi connection.
