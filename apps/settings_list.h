@@ -190,7 +190,6 @@ const struct settings_list* get_settings_list(int*count);
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 void android_screen_timeout_callback(int timeout);
-void android_enable_mtp_callback(int mtp_enable);
 #endif
 #ifndef PLUGIN
 /* not needed for plugins and just causes compile error,

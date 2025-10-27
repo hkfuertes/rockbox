@@ -216,6 +216,9 @@ MENUITEM_SETTING(volume_type, &global_settings.volume_type, NULL);
 #if (CONFIG_BATTERY_MEASURE != 0)
 MENUITEM_SETTING(battery_display, &global_settings.battery_display, NULL);
 #endif
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+MENUITEM_SETTING(display_resolution_mode, &global_settings.display_resolution_mode, NULL);
+#endif
 MAKE_MENU(bars_menu, ID2P(LANG_BARS_MENU), 0, Icon_NOICON,
           &scrollbar_item, &scrollbar_width, &statusbar,
 #ifdef HAVE_REMOTE_LCD

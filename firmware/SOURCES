@@ -2020,7 +2020,6 @@ target/hosted/android/system-android.c
 target/hosted/android/telephony-android.c
 target/hosted/android/brightness-android.c
 target/hosted/android/screen-timeout-android.c
-target/hosted/android/enable-mtp-android.c
 target/hosted/android/external-apps-android.c
 target/hosted/android/shutdown-android.c
 target/hosted/android/update-android.c

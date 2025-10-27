@@ -77,7 +77,6 @@
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 #include "../firmware/target/hosted/android/screen-timeout-android.h"
-#include "../firmware/target/hosted/android/enable-mtp-android.h"
 #include <jni.h>
 extern JNIEnv *env_ptr;
 extern jobject RockboxFramebuffer_instance;
@@ -896,11 +895,6 @@ void android_screen_timeout_callback(int timeout)
             DEBUGF("Failed to set Android screen timeout: %d\n", result);
         }
     }
-}
-
-void android_enable_mtp_callback(int mtp_enable)
-{
-    android_enable_mtp(mtp_enable);
 }
 #endif
 
@@ -2417,8 +2411,6 @@ const struct settings_list settings[] = {
     CHOICE_SETTING(0, android_screen_timeout, LANG_ANDROID_SCREEN_TIMEOUT, -1,
                    "android screen timeout", "15,30,60,120,300,600,1800", android_screen_timeout_callback, 7,
                    "15 seconds", "30 seconds", "1 minute", "2 minutes", "5 minutes", "10 minutes", "30 minutes"),
-    CHOICE_SETTING(0, android_enable_mtp, LANG_ENABLE_MTP, 1,
-                   "enable mtp", "0,1", android_enable_mtp_callback, 2, "On", "Off"),
 #endif
 };
 

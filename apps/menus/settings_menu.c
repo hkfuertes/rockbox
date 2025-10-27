@@ -425,7 +425,6 @@ MAKE_MENU(sel_softlock, ID2P(LANG_SOFTLOCK_SELECTIVE),
 MENUITEM_SETTING(governor, &global_settings.governor, NULL);
 #endif
 
-MENUITEM_SETTING(android_enable_mtp, &global_settings.android_enable_mtp, NULL);
 
 MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
           0, Icon_System_menu,
@@ -437,10 +436,6 @@ MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
             &disk_menu,
 #endif
             &limits_menu,
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-            &android_enable_mtp,
-#endif
-
 #ifdef HAVE_PERCEPTUAL_VOLUME
             &volume_adjust_mode,
             &volume_adjust_norm_steps,

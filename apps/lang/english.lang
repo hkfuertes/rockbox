@@ -17069,20 +17069,6 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_ENABLE_MTP
-  desc: Automatically enable MTP
-  user: core
-  <source>
-    *: "Enable MTP"
-  </source>
-  <dest>
-    *: "Enable MTP"
-  </dest>
-  <voice>
-    *: "Enable MTP"
-  </voice>
-</phrase>
-<phrase>
   id: LANG_UPDATE_ROCKBOX
   desc: Main menu item to update Rockbox on Android
   user: core

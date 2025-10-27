@@ -43,7 +43,6 @@ import android.app.Service;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
@@ -72,15 +71,11 @@ public class RockboxService extends Service
     private RunForegroundManager mFgRunner;
     private MediaButtonReceiver mMediaButtonReceiver;
     private ResultReceiver mResultReceiver;
-    private int mtpEnable = 1; // default disable MTP
     
     /* Regular checks */
     private Handler mSDCheckHandler;
     private Runnable mSDCheckRunnable;
     private static final int SD_CHECK_INTERVAL_MS = 2000; // Check every 2 second
-    private Handler mMTPHandler;
-    private Runnable mMTPRunnable;
-    private static final int MTP_CHECK_INTERVAL_MS = 500; // Check every half second
     private long mLastRestartTime = 0; // Timestamp of last restart attempt
     private static final long RESTART_COOLDOWN_MS = 500; // Minimum 1 seconds between restarts
     private boolean mSdWasUnavailable = false; // Track if SD was initially unavailable
@@ -96,10 +91,9 @@ public class RockboxService extends Service
 
     @Override
     public void onCreate()
-    {      
+    {
         instance = this;
         pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
-        mtpEnable = 1;
         mMediaButtonReceiver = new MediaButtonReceiver(this);
         mFgRunner = new RunForegroundManager(this);
         
@@ -113,19 +107,6 @@ public class RockboxService extends Service
                 } 
                 // Schedule next check
                 mSDCheckHandler.postDelayed(this, SD_CHECK_INTERVAL_MS);
-            }
-        };
-
-        // Initialize mtp check mechanism
-        mMTPHandler = new Handler(Looper.getMainLooper());
-        mMTPRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (mtpEnable == 1){
-                    enableMTP(mtpEnable);
-                }
-                // Schedule next check
-                mMTPHandler.postDelayed(this, MTP_CHECK_INTERVAL_MS);
             }
         };
     }
@@ -763,33 +744,7 @@ public class RockboxService extends Service
             }
         }).start();
     }
-
-    /**
-     * Enable MTP using system call
-     */
-    public int enableMTP(int config) {
-        Log.d("RockboxService", "Check if MTP should be enabled");
-        mtpEnable = config;
-        if (mtpEnable == 0){
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Log.d("RockboxService", "Starting MTP");
-                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"svc", "usb", "setFunction", "mtp"});
-                        proc.waitFor();
-                    } catch (Exception e) {
-                        Log.e("RockboxService", "Failed to start MTP: " + e.getMessage());
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
-        } else {
-            Log.d("RockboxService", "Not enabling.");
-        }
-        return 1;
-    }
-
+    
     /**
      * Start the periodic SD mount check
      */

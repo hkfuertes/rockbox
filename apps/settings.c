@@ -109,7 +109,6 @@ static long lasttime = 0;
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 #include "../firmware/target/hosted/android/brightness-android.h"
 #include "../firmware/target/hosted/android/screen-timeout-android.h"
-#include "../firmware/target/hosted/android/enable-mtp-android.h"
 #endif
 
 #ifdef ROCKBOX_NO_TEMP_SETTINGS_FILE /* Overwrites same file each time */
@@ -897,11 +896,9 @@ void settings_apply(bool read_disk)
         }
     }
     android_brightness_set_percent(brightness);
-
+    
     /* Note: Android screen timeout is applied when the user changes the setting,
        not during initialization to avoid JNI environment issues */
-    
-    android_enable_mtp(global_settings.android_enable_mtp);
 #endif
 #ifdef HAVE_BACKLIGHT
     backlight_set_timeout(global_settings.backlight_timeout);
