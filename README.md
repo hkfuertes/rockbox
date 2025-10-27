@@ -27,7 +27,8 @@ To install the Rockbox ROM, choose one of the releases, download `rom.zip`, extr
 - Menu/Back (Long): Open Quick Screen / Open Menu (Pictureflow)
 - Play/Pause (Long) (Most Screens): Open While Playing Screen
 - Play/Pause (Long) (Now Playing screen): WPS Hotkey
-- Play/Pause (Short) (Text Input): Open Keyboard
+- Play/Pause (Press 3x): Stop Playback
+- Play/Pause (Press 3x) (Text Input): Open Keyboard
 - Media Buttons: Play/Pause/Next/Previous/Seek
 - Holding Next + Previous (>5 seconds): Restart Rockbox (Thanks, u/thinkVHS!)
 
