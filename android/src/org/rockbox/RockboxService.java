@@ -544,7 +544,9 @@ public class RockboxService extends Service
                                 public void run() {
                                     try {
                                         Log.d("RockboxService", "Attempting device shutdown...");
-                                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});
+                                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
+                                        proc.waitFor();
+                                        proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});
                                         proc.waitFor();
                                     } catch (Exception e) {
                                         Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
@@ -581,10 +583,12 @@ public class RockboxService extends Service
                                 public void run() {
                                     try {
                                         Log.d("RockboxService", "Switching to stock firmware...");
-                                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "sh", "/data/data/switch-to-stock.sh"});
+                                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
+                                        proc.waitFor();
+                                        proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "sh", "/data/data/switch-to-stock.sh"});
                                         proc.waitFor();
                                     } catch (Exception e) {
-                                        Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
+                                        Log.e("RockboxService", "Failed to switch to stock firmware: " + e.getMessage());
                                         e.printStackTrace();
                                     }
                                 }
