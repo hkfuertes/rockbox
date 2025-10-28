@@ -26,6 +26,10 @@
 #include "config.h"
 #include "power.h"
 #include "kernel.h"
+#include "misc.h"
+#include "splash.h"
+#include "lang.h"
+#include "settings.h"
 
 extern JNIEnv *env_ptr;
 extern jclass  RockboxService_class;
@@ -95,6 +99,8 @@ bool charging_state(void)
 
 void sys_poweroff(void)
 {
+    list_stop_handler();
+    splash(2*HZ, ID2P(LANG_SHUTTINGDOWN));
+    sleep(1);
     system("su -c reboot -p");
-    queue_broadcast(SYS_POWEROFF, 0);
 }
