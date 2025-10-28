@@ -33,7 +33,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.rockbox.Helper.Logger;
 import org.rockbox.Helper.MediaButtonReceiver;
-import org.rockbox.Helper.SDReceiver;
 import org.rockbox.Helper.RunForegroundManager;
 import org.rockbox.Helper.BrightnessController;
 import org.rockbox.Helper.ScreenTimeoutController;
@@ -71,7 +70,6 @@ public class RockboxService extends Service
     private Activity mCurrentActivity = null;
     private RunForegroundManager mFgRunner;
     private MediaButtonReceiver mMediaButtonReceiver;
-    private SDReceiver mSDReceiver;
     private ResultReceiver mResultReceiver;
     
     /* Regular checks */
@@ -92,7 +90,6 @@ public class RockboxService extends Service
         instance = this;
         pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         mMediaButtonReceiver = new MediaButtonReceiver(this);
-        mSDReceiver = new SDReceiver(this);
         mFgRunner = new RunForegroundManager(this);
     }
 
@@ -372,7 +369,6 @@ public class RockboxService extends Service
          * garbage collected.
          *  mMediaButtonReceiver.unregister(); */
         mMediaButtonReceiver = null;
-        mSDReceiver = null;
         /* Make sure our notification is gone. */
         stopForeground();
         
@@ -661,33 +657,4 @@ public class RockboxService extends Service
             }
         }).start();
     }
-    
-    /**
-     * Restart the app using system call
-     */
-    public void restartApp() {
-        long currentTime = SystemClock.elapsedRealtime();
-        if (currentTime - mLastRestartTime < RESTART_COOLDOWN_MS) {
-            Log.w("RockboxService", "Restart cooldown active. Skipping restart.");
-            return;
-        }
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Log.d("RockboxService", "Restarting app via system call...");  
-                    java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
-                    proc.waitFor();
-                    proc = Runtime.getRuntime().exec(new String[]{"am", "force-stop", "org.rockbox"});
-                    proc.waitFor();
-                    mLastRestartTime = SystemClock.elapsedRealtime(); // Update timestamp after successful restart
-                } catch (Exception e) {
-                    Log.e("RockboxService", "Failed to restart app: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-    }
-
 }
