@@ -127,6 +127,8 @@ static void tagcache_rebuild_with_splash(void)
     splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     splash(HZ, "Restarting Rockbox to apply...");
+    list_stop_handler();
+    sleep(1);
     system("am force-stop org.rockbox");
     system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
 #endif
@@ -307,6 +309,8 @@ static int dircache_callback(int action,
                 if (dircache_enable() < 0)
             #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
                     splash(HZ, "Restarting Rockbox to apply...");
+                    list_stop_handler();
+                    sleep(1);
                     system("am force-stop org.rockbox");
                     system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
             #else

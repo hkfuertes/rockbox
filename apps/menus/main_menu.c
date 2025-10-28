@@ -555,6 +555,8 @@ MENUITEM_FUNCTION(show_legal_item, 0, ID2P(LANG_LEGAL_NOTICES),
 
 static int android_restart_func(void)
 {
+    list_stop_handler();
+    sleep(1);
     system("am force-stop org.rockbox");
     system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
 

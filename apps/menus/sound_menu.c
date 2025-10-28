@@ -169,6 +169,8 @@ static int timestretch_callback(int action,
             if (global_settings.timestretch_enabled && !dsp_timestretch_available())
                 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
                         splash(HZ, "Restarting Rockbox...");
+                        list_stop_handler();
+                        sleep(1);
                         system("am force-stop org.rockbox");
                         system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
                 #else

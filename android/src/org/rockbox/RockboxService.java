@@ -181,6 +181,14 @@ public class RockboxService extends Service
 
     private void startService()
     {
+        while (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+            try {
+                Log.d("RockboxService", "SD not ready yet, postponing start.");
+                Thread.sleep(100); // wait a little bit before checkign again if the SD is mounted
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         final Object lock = new Object();
         Thread rb = new Thread(new Runnable()
         {
@@ -643,7 +651,9 @@ public class RockboxService extends Service
                     Log.d("RockboxTime", "Setting system time to: " + dateString + " (Unix: " + unixTimestamp + ")");
                     String dateCmd = "date " + unixTimestamp + " & am force-stop org.rockbox";
                     Log.d("RockboxTime", "Executing command: " + dateCmd);
-                    java.lang.Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", dateCmd});
+                    java.lang.Process process = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
+                    process.waitFor();
+                    process = Runtime.getRuntime().exec(new String[]{"sh", "-c", dateCmd});
                     process.waitFor();
                 } catch (Exception e) {
                     Log.e("RockboxTime", "Failed to set system time: " + e.getMessage());
@@ -666,8 +676,10 @@ public class RockboxService extends Service
             @Override
             public void run() {
                 try {
-                    Log.d("RockboxService", "Restarting app via system call...");
-                    java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"am", "force-stop", "org.rockbox"});
+                    Log.d("RockboxService", "Restarting app via system call...");  
+                    java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
+                    proc.waitFor();
+                    proc = Runtime.getRuntime().exec(new String[]{"am", "force-stop", "org.rockbox"});
                     proc.waitFor();
                     mLastRestartTime = SystemClock.elapsedRealtime(); // Update timestamp after successful restart
                 } catch (Exception e) {

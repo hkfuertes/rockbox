@@ -995,6 +995,8 @@ static bool set_databasedir(void)
     {
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
         splash(HZ, "Restarting Rockbox to apply...");
+        list_stop_handler();
+        sleep(1);
         system("am force-stop org.rockbox");
         system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
 #else
