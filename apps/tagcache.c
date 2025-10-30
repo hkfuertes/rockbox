@@ -1008,9 +1008,11 @@ static long find_entry_disk(const char *filename_raw, bool localfd)
     const char *filename = filename_raw;
 
 #ifdef APPLICATION
-    char pathbuf[PATH_MAX]; /* Note: Don't use MAX_PATH here, it's too small */
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
+    char pathbuf[PATH_MAX];
     if (realpath(filename, pathbuf) == pathbuf)
         filename = pathbuf;
+#endif
 #endif /* APPLICATION */
 
     if (!tc_stat.ready)
@@ -1033,49 +1035,43 @@ static long find_entry_disk(const char *filename_raw, bool localfd)
 
     long tag_length = strlen(filename) + 1; /* include NULL */
 
-    if (tag_length < bufsz)
+    if (tag_length >= bufsz)
     {
-        while (true)
+        idx = -5;
+        goto cleanup;
+    }
+    while (true)
+    {
+        for (i = pos_history_idx-1; i < pos_history_idx; i--)
+            pos_history[i+1] = pos_history[i];
+        pos_history[0] = pos;
+        if (read_tagfile_entry(fd, &tfe) != sizeof(struct tagfile_entry))
         {
-            for (i = pos_history_idx-1; i < pos_history_idx; i--)
-                pos_history[i+1] = pos_history[i];
-            pos_history[0] = pos;
-
-            if (read_tagfile_entry(fd, &tfe) != sizeof(struct tagfile_entry))
+            idx = -3;
+            break;
+        }
+        else
+        {
+            pos += sizeof(struct tagfile_entry) + tfe.tag_length;
+            /* don't read the entry unless the length matches */
+            if (tfe.tag_length == tag_length)
             {
-                logf("size mismatch find entry");
-                break;
+                if(read(fd, buf, tfe.tag_length) != tag_length)
+                {
+                    idx = -3;
+                    break;
+                }
+                if (!strncmp(filename, buf, tag_length))
+                {
+                    last_pos = pos_history[pos_history_idx];
+                    found = true;
+                    idx = tfe.idx_id;
+                    break;
+                }
             }
             else
-            {
-                pos += sizeof(struct tagfile_entry) + tfe.tag_length;
-                /* don't read the entry unless the length matches */
-                if (tfe.tag_length == tag_length)
-                {
-                    if(read(fd, buf, tfe.tag_length) != tag_length)
-                    {
-                        logf("read error #2");
-                        close(fd);
-                        if (!localfd)
-                            filenametag_fd = -1;
-                        last_pos = -1;
-                        return -3;
-                    }
-                    if (!strncmp(filename, buf, tag_length))
-                    {
-                        last_pos = pos_history[pos_history_idx];
-                        found = true;
-                        idx = tfe.idx_id;
-                        break ;
-                    }
-                }
-                else
-                    lseek(fd, pos, SEEK_SET);
-
-            }
+                lseek(fd, pos, SEEK_SET);
         }
-        if (pos_history_idx < POS_HISTORY_COUNT - 1)
-            pos_history_idx++;
     }
 
     /* Not found? */
@@ -1087,10 +1083,10 @@ static long find_entry_disk(const char *filename_raw, bool localfd)
             logf("seek again");
             goto check_again;
         }
-
         idx = -4;
     }
 
+cleanup:
     if (fd != filenametag_fd || localfd)
         close(fd);
 
