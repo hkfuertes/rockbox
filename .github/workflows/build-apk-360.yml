@@ -105,6 +105,9 @@ jobs:
         sudo rm mount_sys/app/EngineerCode.*
         sudo rm mount_sys/app/EngineerMode.*
         sudo rm mount_sys/app/EngineerModeSim.*
+        sudo rm mount_sys/lib/modules/ccci.ko
+        sudo rm mount_sys/lib/modules/ccci_plat.ko
+        sudo rm mount_sys/lib/modules/mtk_stp_gps.ko
 
         sudo umount mount_sys
         sudo umount mount_user
