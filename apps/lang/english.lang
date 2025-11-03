@@ -17070,16 +17070,30 @@
 </phrase>
 <phrase>
   id: LANG_UPDATE_ROCKBOX
-  desc: Main menu item to update Rockbox on Android
+  desc: Main menu item to update the firmware on Android
   user: core
   <source>
-    *: "Update Rockbox"
+    *: "Firmware Update"
   </source>
   <dest>
-    *: "Update Rockbox"
+    *: "Firmware Update"
   </dest>
   <voice>
-    *: "Update Rockbox"
+    *: "Firmware Update"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_UPDATE_NOT_FOUND
+  desc: Update.zip could not be found
+  user: core
+  <source>
+    *: "ERROR: update.zip could not be found"
+  </source>
+  <dest>
+    *: "ERROR: update.zip could not be found"
+  </dest>
+  <voice>
+    *: "ERROR: update.zip could not be found"
   </voice>
 </phrase>
 <phrase>

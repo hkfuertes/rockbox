@@ -63,6 +63,21 @@ jobs:
       run: |
         cd android/build
         tar -czvf libs.tar.gz libs/
+    - name: bundle update.zip
+      run: |
+        cd android/build
+        wget https://github.com/rockbox-y1/rockbox/releases/download/stock-menu/com.innioasis.y1_2.7.2.apk
+        mkdir update
+        cp -r libs update
+        cp com.innioasis*.apk update/.
+        cp rockbox.apk update/.
+        cp ../scripts/install-recovery.sh update/.
+        cp ../scripts/99Y1ButtonScript update/.
+        cp ../scripts/switch-to-stock.sh update/.
+        cp ../scripts/Rockbox.kl update/.
+        cp ../scripts/Stock.kl update/.
+        cp ../scripts/Rockbox.kl update/.
+        zip -r update.zip update/*
     - name: bundle image
       run: |
         mkdir base
@@ -96,6 +111,9 @@ jobs:
         sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Rockbox.kl
         sudo cp ../android/scripts/Stock.kl mount_sys/usr/keylayout/Stock.kl
         sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Generic.kl
+
+        sudo mkdir -p mount_user/data/update
+        sudo cp ../android/scripts/update.sh mount_user/data/update/update.sh
 
         # Remove unneeded apps and services to save battery
         sudo rm mount_sys/app/YGPS.*
@@ -144,6 +162,13 @@ jobs:
         asset_path: ./android/build/libs.tar.gz
         asset_name: libs.tar.gz
         asset_content_type: application/gzip
+    - name: upload update.zip
+      uses: shogo82148/actions-upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./android/build/update.zip
+        asset_name: update.zip
+        asset_content_type: application/zip
     - name: upload rom 
       uses: shogo82148/actions-upload-release-asset@v1
       with:

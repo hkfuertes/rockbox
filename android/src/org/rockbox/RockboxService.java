@@ -607,8 +607,8 @@ public class RockboxService extends Service
             @Override
             public void run() {
                 new AlertDialog.Builder(activity)
-                    .setTitle("Update Rockbox")
-                    .setMessage("Do you want to update Rockbox? \n\nThe device will restart automatically afterwards.")
+                    .setTitle("Firmware Update")
+                    .setMessage("Do you want to update the system? \n\nThe update will run in the background and restart the device automatically afterwards.")
                     .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
@@ -619,7 +619,7 @@ public class RockboxService extends Service
                                         Log.d("RockboxService", "Attempting Rockbox Update...");
                                         String[] cmdArray = new String[] {
                                             "su", "-u", "root", "-c",
-                                            "nohup sh /sdcard/.rockbox/update/update.sh > /sdcard/.rockbox/update/nohup.out 2>&1 &"
+                                            "nohup sh /data/data/update/update.sh > /sdcard/.rockbox/update.log 2>&1 &"
                                             };
                                         java.lang.Process proc = Runtime.getRuntime().exec(cmdArray);
                                         proc.waitFor();

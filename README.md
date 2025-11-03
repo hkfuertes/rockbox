@@ -54,6 +54,15 @@ To install the Rockbox ROM, choose one of the releases, download `rom.zip`, extr
 - ipodmod3blk-y1: https://github.com/AkikoKumagara/ipodmod3blk-y1
 
 ## Installation
+1. Download the latest Rockbox `update.zip` here: https://github.com/rockbox-y1/rockbox/releases
+2. Connect your Y1 and copy `update.zip` to `.rockbox/update.zip`
+3. Safely disconnect your Y1
+4. Go to `Main Menu > System` and click `Firmware Update`
+5. The update process will now run in the background and automatically restart the device once it is done
+
+**Note:** If this is the first time you install Rockbox on your Y1, if you don't see the `Firmware Update` option in `Main Menu > System`, or if just want to have a fresh install follow the steps for `Initial Installation` below.
+
+## Initial Installation
 ### MTKClient
 
 1. Install MTKClient: https://github.com/bkerler/mtkclient
