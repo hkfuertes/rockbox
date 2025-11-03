@@ -76,7 +76,6 @@ jobs:
         cp ../scripts/switch-to-stock.sh update/.
         cp ../scripts/Rockbox.kl update/.
         cp ../scripts/Stock.kl update/.
-        cp ../scripts/Rockbox.kl update/.
         zip -r update.zip update/*
     - name: bundle image
       run: |
