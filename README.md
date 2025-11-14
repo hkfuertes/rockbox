@@ -59,6 +59,7 @@ To install the Rockbox ROM, choose one of the releases, download `rom.zip`, extr
 
 - Theme Pack with included Fonts: https://github.com/rockbox-y1/themes/releases/latest
 - ipodmod3blk-y1: https://github.com/AkikoKumagara/ipodmod3blk-y1
+- AdwaitaPod-Arcticons (AdwaitaPod Dark Simplified): https://codeberg.org/joelchrono/AdwaitaPod-Arcticons-rockbox-360p/releases/
 
 ## Installation
 1. Download the latest Rockbox `update.zip` here: https://github.com/rockbox-y1/rockbox/releases
