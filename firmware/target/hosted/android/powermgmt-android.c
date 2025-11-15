@@ -30,6 +30,7 @@
 #include "splash.h"
 #include "lang.h"
 #include "settings.h"
+#include "../firmware/target/hosted/android/shutdown-android.h"
 
 extern JNIEnv *env_ptr;
 extern jclass  RockboxService_class;
@@ -102,5 +103,5 @@ void sys_poweroff(void)
     list_stop_handler();
     splash(2*HZ, ID2P(LANG_SHUTTINGDOWN));
     sleep(1);
-    system("su -c reboot -p");
+    android_shutdown_device(0);
 }

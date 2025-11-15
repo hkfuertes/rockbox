@@ -7,19 +7,19 @@ extern JNIEnv *env_ptr;
 extern jclass RockboxService_class;
 extern jobject RockboxService_instance;
 
-int android_shutdown_device(void)
+int android_shutdown_device(int show_dialog)
 {
     if (env_ptr == NULL || RockboxService_instance == NULL) {
         return -1;
     }
     static jmethodID shutdown_method = NULL;
     if (shutdown_method == NULL) {
-        shutdown_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class, "shutdownDevice", "()V");
+        shutdown_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class, "shutdownDevice", "(I)V");
         if (shutdown_method == NULL) {
             return -1;
         }
     }
-    (*env_ptr)->CallVoidMethod(env_ptr, RockboxService_instance, shutdown_method);
+    (*env_ptr)->CallVoidMethod(env_ptr, RockboxService_instance, shutdown_method, show_dialog);
     if ((*env_ptr)->ExceptionCheck(env_ptr)) {
         (*env_ptr)->ExceptionClear(env_ptr);
         return -1;

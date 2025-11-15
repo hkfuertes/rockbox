@@ -592,7 +592,7 @@ static int bluetooth_settings_func(void)
 
 static int android_shutdown_func(void)
 {
-    android_shutdown_device();
+    android_shutdown_device(1);
     return 0;
 }
 

@@ -528,36 +528,52 @@ public class RockboxService extends Service
         return false;
     }
 
-    public void shutdownDevice() {
+    public void shutdownDevice(int show) {
+        final int showDialog = show;
         final Activity activity = getActivity();
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                new AlertDialog.Builder(activity)
-                    .setTitle("Shutdown Device")
-                    .setMessage("Are you sure you want to shut down the device?")
-                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            // Run shutdown in background thread
-                            new Thread(new Runnable() {
-                                public void run() {
-                                    try {
-                                        Log.d("RockboxService", "Attempting device shutdown...");
-                                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
-                                        proc.waitFor();
-                                        proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});
-                                        proc.waitFor();
-                                    } catch (Exception e) {
-                                        Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
-                                        e.printStackTrace();
+                if (showDialog == 1){
+                    new AlertDialog.Builder(activity)
+                        .setTitle("Shutdown Device")
+                        .setMessage("Are you sure you want to shut down the device?")
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                // Run shutdown in background thread
+                                new Thread(new Runnable() {
+                                    public void run() {
+                                        try {
+                                            Log.d("RockboxService", "Attempting device shutdown...");
+                                            java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
+                                            Intent intent = new Intent("android.intent.action.ACTION_REQUEST_SHUTDOWN");
+                                            intent.putExtra("android.intent.extra.KEY_CONFIRM", false);
+                                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                            startActivity(intent);
+                                        } catch (Exception e) {
+                                            Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
                                     }
-                                }
-                            }).start();
-                        }
-                    })
-                    .setNegativeButton("No", null)
-                    .show();
+                                }).start();
+                            }
+                        })
+                        .setNegativeButton("No", null)
+                        .show();
+                } else {
+                    try {
+                        Log.d("RockboxService", "Attempting device shutdown...");
+                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
+                        Intent intent = new Intent("android.intent.action.ACTION_REQUEST_SHUTDOWN");
+                        intent.putExtra("android.intent.extra.KEY_CONFIRM", false);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Log.e("RockboxService", "Failed to shutdown device: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
             }
         });
     }
