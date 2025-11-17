@@ -23,6 +23,9 @@ settings put system sound_effects_enabled 0
 if [ ! -f /data/data/initialized ]; then
     pm install /data/data/com.innioasis.y1.apk
     pm disable com.innioasis.y1
+    pm install /data/data/LeanKeyKeyboardPro_v5.2.15_r.apk
+    ime enable org.liskovsoft.androidtv.rukeyboard/com.liskovsoft.leankeyboard.keyboard.leanback.ime.LeanbackImeService
+    ime set org.liskovsoft.androidtv.rukeyboard/com.liskovsoft.leankeyboard.keyboard.leanback.ime.LeanbackImeService
     touch /data/data/initialized
 fi
 

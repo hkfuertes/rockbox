@@ -87,6 +87,7 @@ jobs:
         sudo mount -t ext4 -o loop system.img mount_sys
         sudo mount -t ext4 -o loop userdata.img mount_user
         sudo cp com.innioasis.y1_2.7.2.apk mount_user/data/com.innioasis.y1.apk
+        sudo cp ../android/scripts/LeanKeyKeyboardPro_v5.2.15_r.apk mount_user/data/LeanKeyKeyboardPro_v5.2.15_r.apk
         sudo cp ../android/build/rockbox.apk mount_sys/app/org.rockbox.apk
         sudo chmod 644 mount_sys/app/org.rockbox.apk
         sudo chown root:root mount_sys/app/org.rockbox.apk
@@ -97,6 +98,9 @@ jobs:
         sudo rm -rf mount_user/data/org.rockbox/lib
         sudo mkdir -p mount_user/data/org.rockbox/lib
         sudo cp ../android/build/libs/armeabi/* mount_user/data/org.rockbox/lib/.
+        sudo mkdir -p mount_user/data/org.rockbox/app_rockbox/rockbox/docs
+        sudo cp ../docs/COPYING mount_user/data/org.rockbox/app_rockbox/rockbox/docs/COPYING.txt
+        sudo cp ../docs/LICENSES mount_user/data/org.rockbox/app_rockbox/rockbox/docs/LICENSES.txt
 
         sudo cp ../android/scripts/install-recovery.sh mount_sys/etc/install-recovery.sh
         sudo chmod 755 mount_sys/etc/install-recovery.sh
