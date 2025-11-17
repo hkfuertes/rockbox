@@ -4,24 +4,22 @@
 |:--:|:--:|
 | Rockbox Menu | Rockbox WPS |
 
-## Donations
+## General Information
+
+This is an experimental build of Rockbox that is not in any way associated with or developed by Innioasis/Timmkoo.
+
+Most of the work was already done by the original Rockbox team - all credits to them. 
+
+Additionally, I want to thank Mitxela for allowing me to use the intro from his beautiful ["Ode to Rockbox" Video](https://www.youtube.com/watch?v=Qw-VvGsYpSU) as the boot animation of this ROM. You can support him on [Patreon](https://www.patreon.com/mitxela) or via [Paypal](https://paypal.me/mitxela).
+
+Do NOT run this if you don't know what you are doing. You might brick your device in the process of installing this app. You have been warned.
+
+### Donations
 
 If you would like to support the development of Rockbox for the Y1 financially, consider donating to one of the following causes:
 - The hungarian prime minister is trying to criminalize every queer person in Hungary and by extension Europe. To support the people standing up against this human rights violation (10000 HUF = 25€): https://budapestpride.hu/en/one-time-donation-paypal/
 - Partners in Health: https://www.pih.org/maternal-center-excellence
 - The maintainers of the original Rockbox project: https://www.rockbox.org/
-
-## General Information
-
-This is an experimental build of Rockbox that is not in any way associated with or developed by Innioasis/Timmkoo.
-
-Most of the work was already done by the original Rockbox team - all credits to them.
-
-I mostly added quick hacks to make this usable on a device without any touch inputs.
-
-Do NOT run this if you don't know what you are doing. You might brick your device in the process of installing this app. You have been warned.
-
-To install the Rockbox ROM, choose one of the releases, download `rom.zip`, extract it and follow this guide (but use the downloaded rom.zip instead of `Y1-English v2.0.7-20241021.rar`): https://support.innioasis.com/download/flashing_tutorial/Flashing_tutorial-Y1_EN%20v2.0.7-20241021.pdf
 
 ## Controls
 
@@ -84,7 +82,7 @@ unzip ../rom.zip
 5. Start the flashing process:
 ```
 cd rom
-python ../mtk.py w uboot,bootimg,recovery,android,usrdata lk.bin,boot.img,recovery.img,system.img,userdata.img
+python ../mtk.py w logo,uboot,bootimg,recovery,android,usrdata logo.bin,lk.bin,boot.img,recovery.img,system.img,userdata.img
 ```
 6. Connect the device via USB
 7. Unplug the device when the process has finished
@@ -171,15 +169,3 @@ adb reboot
 ```
 - (optional) Download the voice pack from the releases, extract it, drag the .rockbox folder onto your device
 - **If rockbox gets stuck at the Rockbox logo and doesn't load your theme please delete .rockbox/config.cfg on your SD card**
-
-## How to restart the app
-
-When you initialize the database Rockbox will ask you to restart. You can do this via `Main Menu > System > Restart Rockbox (last option in list)`.
-
-## Known issues
-
-- Setting different theme might need a restart of Rockbox (Main Menu > System > Restart Rockbox) or clearing the backdrop (Theme Settings)
-- Rockbox might randomly crash (usually recovers on its own now) - restart your device or Rockbox via:
-```
-adb shell monkey -p org.rockbox -c android.intent.category.LAUNCHER 1
-```

@@ -8,6 +8,23 @@
 # 2. Trigger Keyboard when Play/Pause is pressed 3x in a text input prompt
 # 3. Send "KEYCODE_MEDIA_STOP" when Play/Pause is pressed 3x
 # 4. Switch to Rockbox when Back + Play are pressed for 10 seconds in Stock app.
+# 5. Initial setup of apps and settings on first boot
+
+# wait for boot completion before proceeding
+BOOT_COMPLETED=0
+while [ "$BOOT_COMPLETED" -ne 1 ]; do
+    BOOT_COMPLETED=$(getprop sys.boot_completed)
+    sleep 1
+done
+# make button presses silent
+settings put system sound_effects_enabled 0
+
+# setup apps on first boot
+if [ ! -f /data/data/initialized ]; then
+    pm install /data/data/com.innioasis.y1.apk
+    pm disable com.innioasis.y1
+    touch /data/data/initialized
+fi
 
 DEVICE="/dev/input/event2"
 MAX_HOLD=5  # seconds to trigger restart

@@ -88,7 +88,7 @@ jobs:
         mkdir mount_user
         sudo mount -t ext4 -o loop system.img mount_sys
         sudo mount -t ext4 -o loop userdata.img mount_user
-        sudo cp com.innioasis.y1_2.7.2.apk mount_user/app/com.innioasis.y1-1.apk
+        sudo cp com.innioasis.y1_2.7.2.apk mount_user/data/com.innioasis.y1.apk
         sudo cp ../android/build/rockbox.apk mount_sys/app/org.rockbox.apk
         sudo chmod 644 mount_sys/app/org.rockbox.apk
         sudo chown root:root mount_sys/app/org.rockbox.apk
@@ -113,6 +113,8 @@ jobs:
 
         sudo mkdir -p mount_user/data/update
         sudo cp ../android/scripts/update.sh mount_user/data/update/update.sh
+
+        sudo cp ../android/scripts/bootanimation.zip mount_sys/media/bootanimation.zip
 
         # Remove unneeded apps and services to save battery
         sudo rm mount_sys/app/YGPS.*
