@@ -55,6 +55,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.text.Html;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import java.lang.reflect.Method;
+import java.util.Set;
 
 /* This class is used as the main glue between java and c.
  * All access should be done through RockboxService.get_instance() for safety.
@@ -609,6 +613,38 @@ public class RockboxService extends Service
                                     }
                                 }
                             }).start();
+                        }
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
+            }
+        });
+    }
+
+    public void resetBluetooth() {
+        final Activity activity = getActivity();
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new AlertDialog.Builder(activity)
+                    .setTitle("Reset Bluetooth")
+                    .setMessage("Are you sure you want to completely reset your bluetooth settings? This will remove all paired devices.")
+                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                            if (bluetoothAdapter != null) {
+                                Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
+                                for (BluetoothDevice device : pairedDevices) {
+                                    try {
+                                        Log.d("RockboxService", "Resetting Bluetooth...");
+                                        Method removeBondMethod = device.getClass().getMethod("removeBond");
+                                        removeBondMethod.invoke(device);
+                                    } catch (Exception e) {
+                                        Log.e("RockboxService", "Failed to reset Bluetooth: " + e.getMessage());
+                                    }
+                                }
+                            }
                         }
                     })
                     .setNegativeButton("No", null)

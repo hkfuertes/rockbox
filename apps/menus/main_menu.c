@@ -53,6 +53,7 @@
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 #include "../firmware/target/hosted/android/brightness-android.h"
 #include "../firmware/target/hosted/android/shutdown-android.h"
+#include "../firmware/target/hosted/android/reset-bluetooth-android.h"
 #include "../firmware/target/hosted/android/update-android.h"
 #include "../gui/brightness_picker.h"
 #endif
@@ -118,6 +119,29 @@ MAKE_MENU(manage_settings, ID2P(LANG_MANAGE_MENU), NULL, Icon_Config,
           &browse_configs, &reset_settings_item,
           &save_settings_item, &save_sound_item, &save_theme_item);
 /*    MANAGE SETTINGS MENU        */
+/**********************************/
+
+/***********************************/
+/*    BlUETOOTH SETTINGS MENU      */
+static int bluetooth_settings_func(void)
+{
+    system("am start -a android.settings.BLUETOOTH_SETTINGS");
+    return 0;
+}
+
+static int android_reset_bluetooth_func(void)
+{
+    android_reset_bluetooth();
+    return 0;
+}
+
+MENUITEM_FUNCTION(bluetooth_settings_item, 0, ID2P(LANG_BLUETOOTH_SETTINGS),
+                  bluetooth_settings_func, NULL, Icon_Config);
+MENUITEM_FUNCTION(android_reset_bluetooth_item, 0, ID2P(LANG_BLUETOOTH_RESET),
+                  android_reset_bluetooth_func, NULL, Icon_NOICON);
+MAKE_MENU(bluetooth_menu, ID2P(LANG_BLUETOOTH_SETTINGS), NULL, Icon_Config,
+          &bluetooth_settings_item, &android_reset_bluetooth_item);
+/*    BlUETOOTH SETTINGS MENU     */
 /**********************************/
 
 /***********************************/
@@ -584,12 +608,6 @@ static int system_menu_func(void)
     return 0;
 }
 
-static int bluetooth_settings_func(void)
-{
-    system("am start -a android.settings.BLUETOOTH_SETTINGS");
-    return 0;
-}
-
 static int android_shutdown_func(void)
 {
     android_shutdown_device(1);
@@ -610,8 +628,6 @@ MENUITEM_FUNCTION(android_debug_item, 0, ID2P(LANG_DEBUG_SYSCALL),
                   android_debug_func, NULL, Icon_NOICON);
 MENUITEM_FUNCTION(system_menu_item, 0, ID2P(LANG_SYSTEM_SETTINGS),
                   system_menu_func, NULL, Icon_NOICON);
-MENUITEM_FUNCTION(bluetooth_settings_item_item, 0, ID2P(LANG_BLUETOOTH_SETTINGS),
-                  bluetooth_settings_func, NULL, Icon_NOICON);
 MENUITEM_FUNCTION(android_shutdown_item, 0, ID2P(LANG_SHUTDOWN),
                   android_shutdown_func, NULL, Icon_NOICON);
 MENUITEM_FUNCTION(android_switch_firmware_item, 0, ID2P(LANG_SWITCH_FIRMWARE),
@@ -670,7 +686,7 @@ MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
         &android_brightness_slider_item,
         &wheel_vibrations,
-        &bluetooth_settings_item_item,
+        &bluetooth_menu,
         &system_menu_item,
 #endif
         &sound_settings,

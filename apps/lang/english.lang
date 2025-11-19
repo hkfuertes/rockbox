@@ -17126,16 +17126,30 @@
 </phrase>
 <phrase>
   id: LANG_BLUETOOTH_SETTINGS
-  desc: Menu item to launch bluetooth settings
+  desc: Bluetooth menu item
   user: core
   <source>
-    *: "Bluetooth"
+    *: "Bluetooth Settings"
   </source>
   <dest>
-    *: "Bluetooth"
+    *: "Bluetooth Settings"
   </dest>
   <voice>
-    *: "Bluetooth"
+    *: "Bluetooth Settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_BLUETOOTH_RESET
+  desc: Reset Bluetooth menu item
+  user: core
+  <source>
+    *: "Reset Bluetooth Devices"
+  </source>
+  <dest>
+    *: "Reset Bluetooth Devices"
+  </dest>
+  <voice>
+    *: "Reset Bluetooth Devices"
   </voice>
 </phrase>
 <phrase>
