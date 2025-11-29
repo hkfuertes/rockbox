@@ -5776,13 +5776,13 @@
   desc: Setting to enable copying playlist files during database scan
   user: core
   <source>
-    *: "Copy Playlists on Scan (takes longer)"
+    *: "Copy Playlists on Scan"
   </source>
   <dest>
-    *: "Copy Playlists on Scan (takes longer)"
+    *: "Copy Playlists on Scan"
   </dest>
   <voice>
-    *: "Copy Playlists on Scan (takes longer)"
+    *: "Copy Playlists on Scan"
   </voice>
 </phrase>
 <phrase>
