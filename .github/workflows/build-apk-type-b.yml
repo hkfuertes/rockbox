@@ -100,6 +100,7 @@ jobs:
         sudo rm -rf mount_user/data/org.rockbox/lib
         sudo mkdir -p mount_user/data/org.rockbox/lib
         sudo cp ../android/build/libs/armeabi/* mount_user/data/org.rockbox/lib/.
+        sudo chmod 777 mount_user/data/org.rockbox/lib/*
         sudo mkdir -p mount_user/data/org.rockbox/app_rockbox/rockbox/docs
         sudo cp ../docs/COPYING mount_user/data/org.rockbox/app_rockbox/rockbox/docs/COPYING.txt
         sudo cp ../docs/LICENSES mount_user/data/org.rockbox/app_rockbox/rockbox/docs/LICENSES.txt
