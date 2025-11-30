@@ -19,6 +19,7 @@ jobs:
     # 240p Build Process
     - name: prepare build environment (240p)
       run: |
+        sudo apt update
         sudo apt install lib32z1
         sudo apt install openjdk-17-jdk
         java --version
