@@ -16,7 +16,7 @@ Do NOT run this if you don't know what you are doing. You might brick your devic
 
 ### Donations
 
-If you would like to support the development of Rockbox for the Y1 financially, consider donating to one of the following causes:
+If you would like to support the development of Rockbox for the Y1 financially, consider donating to one of the following causes instead:
 - The hungarian prime minister is trying to criminalize every queer person in Hungary and by extension Europe. To support the people standing up against this human rights violation (10000 HUF = 25€): https://budapestpride.hu/en/one-time-donation-paypal/
 - Partners in Health: https://www.pih.org/maternal-center-excellence
 - The maintainers of the original Rockbox project: https://www.rockbox.org/
