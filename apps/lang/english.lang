@@ -7140,34 +7140,6 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_PLAYLIST_CREATED
-  desc: Message shown when a playlist is successfully created
-  user: core
-  <source>
-    *: "Playlist Created"
-  </source>
-  <dest>
-    *: "Playlist Created"
-  </dest>
-  <voice>
-    *: "Playlist Created"
-  </voice>
-</phrase>
-<phrase>
-  id: LANG_PLAYLIST_SONG_ADDED
-  desc: Message shown when a song is added to a playlist
-  user: core
-  <source>
-    *: "Song added to playlist"
-  </source>
-  <dest>
-    *: "Song added to playlist"
-  </dest>
-  <voice>
-    *: "Song added to playlist"
-  </voice>
-</phrase>
-<phrase>
   id: LANG_PAUSE
   desc: in wps and recording trigger menu
   user: core

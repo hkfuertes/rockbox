@@ -318,10 +318,8 @@ int catalog_insert_into(const char* playlist, bool new_playlist,
     if ((sel_attr & FILE_ATTR_MASK) == FILE_ATTR_AUDIO)
     {
         /* append the selected file */
-        if (fdprintf(fd, "%s\n", sel) > 0) {
+        if (fdprintf(fd, "%s\n", sel) > 0)
             result = 0;
-            splash(HZ, ID2P(LANG_PLAYLIST_SONG_ADDED));
-        }
     }
     else if ((sel_attr & FILE_ATTR_MASK) == FILE_ATTR_M3U)
     {
@@ -428,48 +426,42 @@ bool catalog_pick_new_playlist_name(char *pl_name, size_t buf_size,
 {
     char bmark_file[MAX_PATH + 7], *p;
     bool do_save = false;
-    int suffix = 1;
-    remove_extension(pl_name);
-    apply_playlist_extension(pl_name, buf_size);
-    // Ensure unique name if file exists
-    while (file_exists(pl_name)) {
-        // Remove extension
-        remove_extension(pl_name);
-        // Append number
-        size_t len = strlen(pl_name);
-        snprintf(pl_name + len, buf_size - len, "_%d", suffix++);
-        apply_playlist_extension(pl_name, buf_size);
-    }
-    // Create directory if necessary
-    if (*pl_name == PATH_SEPCH) /* Require absolute filenames */
+    while (!do_save && !remove_extension(pl_name) &&
+           !kbd_input(pl_name, buf_size - 7, NULL))
     {
-        p = strrchr(pl_name, PATH_SEPCH);
-        do_save = *(p + 1);   /* Disallow empty filename */
-        fix_path_part(p, 1, strlen(p + 1));
-        if (do_save && p != (char *) pl_name)
+        if (*pl_name == PATH_SEPCH) /* Require absolute filenames */
         {
-            *p = '\0';
-            do_save = dir_exists(pl_name) || mkdir(pl_name) == 0;
-            if (!do_save)
-                splashf(HZ*2, ID2P(LANG_CATALOG_NO_DIRECTORY), pl_name);
-            *p = PATH_SEPCH;
+            p = strrchr(pl_name, PATH_SEPCH);
+            do_save = *(p + 1);   /* Disallow empty filename */
+
+            /* prevent illegal characters */
+            fix_path_part(p, 1, strlen(p + 1));
+
+            /* Create dir if necessary */
+            if (do_save && p != (char *) pl_name)
+            {
+                *p = '\0';
+                do_save = dir_exists(pl_name) || mkdir(pl_name) == 0;
+                if (!do_save)
+                    splashf(HZ*2, ID2P(LANG_CATALOG_NO_DIRECTORY), pl_name);
+                *p = PATH_SEPCH;
+            }
         }
-    } else {
-        do_save = true;
-    }
-    // Remove unrelated bookmark file if needed
-    if (do_save && (!curr_pl_name || strcmp(curr_pl_name, pl_name)))
-    {
-        if (file_exists(pl_name))
-            do_save = yesno_pop(ID2P(LANG_REALLY_OVERWRITE));
-        if (do_save) {
-            snprintf(bmark_file, sizeof(bmark_file), "%s.bmark", pl_name);
-            if (file_exists(bmark_file))
-                remove(bmark_file);
+        apply_playlist_extension(pl_name, buf_size);
+
+        /* warn before overwriting existing (different) playlist */
+        if (do_save && (!curr_pl_name || strcmp(curr_pl_name, pl_name)))
+        {
+            if (file_exists(pl_name))
+                do_save = yesno_pop(ID2P(LANG_REALLY_OVERWRITE));
+
+            if (do_save) /* delete bookmark file unrelated to new playlist */
+            {
+                snprintf(bmark_file, sizeof(bmark_file), "%s.bmark", pl_name);
+                if (file_exists(bmark_file))
+                    remove(bmark_file);
+            }
         }
-    }
-    if (do_save) {
-        splash(HZ, ID2P(LANG_PLAYLIST_CREATED));
     }
     return do_save;
 }
