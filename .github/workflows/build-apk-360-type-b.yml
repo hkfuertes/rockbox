@@ -105,6 +105,10 @@ jobs:
         sudo mkdir -p mount_user/data/org.rockbox/app_rockbox/rockbox/docs
         sudo cp ../docs/COPYING mount_user/data/org.rockbox/app_rockbox/rockbox/docs/COPYING.txt
         sudo cp ../docs/LICENSES mount_user/data/org.rockbox/app_rockbox/rockbox/docs/LICENSES.txt
+        unzip ../android/build/libs/armeabi/libmisc.so
+        for f in .rockbox/*; do
+          sudo cp -rf "$f" mount_user/data/org.rockbox/app_rockbox/rockbox/
+        done
 
         sudo cp ../android/scripts/install-recovery.sh mount_sys/etc/install-recovery.sh
         sudo chmod 755 mount_sys/etc/install-recovery.sh
@@ -142,6 +146,7 @@ jobs:
         rm com.innioasis.y1_2.7.2.apk
         rm -r mount_sys
         rm -r mount_user
+        rm -r .rockbox
         cd ../
         zip -j rom.zip base/*
     - name: Set release date
