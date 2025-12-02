@@ -80,6 +80,7 @@ public class RockboxService extends Service
     private long mLastRestartTime = 0; // Timestamp of last restart attempt
     private static final long RESTART_COOLDOWN_MS = 500; // Minimum 1 seconds between restarts
     private PowerManager pm;
+    private PowerManager.WakeLock wakeLock;
     /* possible result values for intent handling */ 
     public static final int RESULT_INVOKING_MAIN = 0;
     public static final int RESULT_LIB_LOAD_PROGRESS = 1;
@@ -95,6 +96,10 @@ public class RockboxService extends Service
         pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         mMediaButtonReceiver = new MediaButtonReceiver(this);
         mFgRunner = new RunForegroundManager(this);
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Wakelock");
+        if (wakeLock != null && !wakeLock.isHeld()) {
+            wakeLock.acquire();
+        }
     }
 
     public static RockboxService getInstance()
@@ -307,7 +312,7 @@ public class RockboxService extends Service
                         strm.write("start directory: " + Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + "\n");
                         strm.write("lang: /sdcard/.rockbox/langs/" + getString(R.string.rockbox_language_file) + "\n");
                         strm.write("wheel vibration intensity: 15\n");
-                        strm.write("idle poweroff: 0\n");
+                        strm.write("idle poweroff: 15\n");
                         strm.write("font: /.rockbox/fonts/24-Terminus-Bold.fnt\n");
                         strm.write("timestretch enabled: on\n");
                         strm.write("Timestretch mode: on\n");
@@ -378,6 +383,9 @@ public class RockboxService extends Service
         
         instance = null;
         rockbox_running = false;
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
         System.runFinalization();
         /* exit() seems unclean but is needed in order to get the .so file garbage 
          * collected, otherwise Android caches this Service and librockbox.so
