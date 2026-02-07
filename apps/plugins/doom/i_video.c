@@ -170,9 +170,6 @@ void I_ShutdownGraphics(void)
 #define DOOMBUTTON_OPEN       BUTTON_MENU
 
 #elif (CONFIG_KEYPAD == ANDROID_PAD)
-#define DOOMBUTTON_SCROLLWHEEL
-#define DOOMBUTTON_SCROLLWHEEL_CC     BUTTON_SCROLL_BACK
-#define DOOMBUTTON_SCROLLWHEEL_CW    BUTTON_SCROLL_FWD
 #define DOOMBUTTON_UP         BUTTON_MENU
 #define DOOMBUTTON_WEAPON     BUTTON_SELECT
 #define DOOMBUTTON_LEFT       BUTTON_LEFT
@@ -649,6 +646,7 @@ void I_ShutdownGraphics(void)
 #error Keymap not defined!
 #endif
 
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 #ifdef HAVE_TOUCHSCREEN
 #ifndef DOOMBUTTON_UP
 #define DOOMBUTTON_UP      BUTTON_TOPMIDDLE
@@ -676,6 +674,7 @@ void I_ShutdownGraphics(void)
 #endif
 #ifndef DOOMBUTTON_WEAPON
 #define DOOMBUTTON_WEAPON  BUTTON_BOTTOMLEFT
+#endif
 #endif
 #endif
 
