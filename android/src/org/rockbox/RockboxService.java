@@ -325,6 +325,10 @@ public class RockboxService extends Service
                         strm.write("timestretch enabled: on\n");
                         strm.write("Timestretch mode: on\n");
                         strm.write("volume adjustment mode: perceptual\n");
+                        strm.write("qs top: brightness\n");
+                        strm.write("qs left: shuffle\n");
+                        strm.write("qs right: repeat\n");
+                        strm.write("qs bottom: brightness\n");
                         strm.close();
                     } catch(Exception e) {
                         Logger.d("Exception when writing default config", e);
