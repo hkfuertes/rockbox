@@ -21,7 +21,7 @@
 
 package org.rockbox;
 
-
+import org.rockbox.Helper.MediaButtonReceiver;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -30,6 +30,7 @@ import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.view.KeyEvent;
 import android.util.Log;
 
 public class RockboxKeyboardInput
@@ -37,6 +38,7 @@ public class RockboxKeyboardInput
     public void kbd_input(final String text, final String ok, final String cancel)
     {
         final Activity c = RockboxService.getInstance().getActivity();
+        MediaButtonReceiver.setDpadMode(true);
 
         c.runOnUiThread(new Runnable() {
             public void run()
@@ -45,7 +47,7 @@ public class RockboxKeyboardInput
                 View addView = inflater.inflate(R.layout.keyboardinput, null);
                 EditText input = (EditText) addView.findViewById(R.id.KbdInput);
                 input.setText(text);
-                new AlertDialog.Builder(c)
+                AlertDialog.Builder builder = new AlertDialog.Builder(c)
                     .setTitle(R.string.KbdInputTitle)
                     .setView(addView)
                     .setIcon(R.drawable.icon)
@@ -57,6 +59,7 @@ public class RockboxKeyboardInput
                                                     .findViewById(R.id.KbdInput);
                             Editable s = input.getText();
                             put_result(true, s.toString());
+                            MediaButtonReceiver.setDpadMode(false);
                         }
                     })
                     .setNegativeButton(cancel, new DialogInterface.OnClickListener()
@@ -64,9 +67,17 @@ public class RockboxKeyboardInput
                         public void onClick(DialogInterface dialog, int whichButton)
                         {
                             put_result(false, "");
+                            MediaButtonReceiver.setDpadMode(false);
                         }
-                    })
-                    .show();
+                    });
+                final AlertDialog dialog = builder.create();
+                dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    public void onDismiss(DialogInterface dialogInterface) {
+                        MediaButtonReceiver.setDpadMode(false);
+                    }
+                });
+                
+                dialog.show();
 
                 new Thread(new Runnable() {
                     public void run() {

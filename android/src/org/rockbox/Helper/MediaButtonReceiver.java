@@ -30,6 +30,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.view.KeyEvent;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.hardware.input.InputManager;
+import android.os.SystemClock;
+import android.view.InputEvent;
+import java.lang.reflect.Method;
+
+import android.util.Log;
 
 public class MediaButtonReceiver
 {
@@ -50,8 +58,13 @@ public class MediaButtonReceiver
 
     IMultiMediaReceiver api;
 
+    private static Context mContext;
+    public static SharedPreferences prefs;
     public MediaButtonReceiver(Context c)
     {
+        mContext = c.getApplicationContext();
+        prefs = mContext.getSharedPreferences("app_state", Context.MODE_PRIVATE);
+
         try {
             api = new NewApi(c);
         } catch (Throwable t) {
@@ -60,6 +73,11 @@ public class MediaButtonReceiver
             api = new OldApi(c);
             Logger.i("MediaButtonReceiver: Falling back to compatibility API");
         }
+    }
+
+    public static void setDpadMode(boolean enabled) {
+        prefs.edit().putBoolean("dpad_mode", enabled).apply();
+        Log.d("MediaButtonReceiver", "dpad_mode set to: " + enabled);
     }
 
     public void register()
@@ -80,27 +98,83 @@ public class MediaButtonReceiver
             baseIntent.setClass(c, RockboxService.class);
             c.startService(baseIntent);
         }
+
+        private static int mediaToDpad(int keyCode) {
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_MEDIA_NEXT: return KeyEvent.KEYCODE_DPAD_RIGHT;
+                case KeyEvent.KEYCODE_MEDIA_PREVIOUS: return KeyEvent.KEYCODE_DPAD_LEFT;
+                case KeyEvent.KEYCODE_MEDIA_PLAY: return KeyEvent.KEYCODE_DPAD_UP;
+                case KeyEvent.KEYCODE_MEDIA_PAUSE: return KeyEvent.KEYCODE_DPAD_DOWN;
+                case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: return KeyEvent.KEYCODE_DPAD_CENTER;
+                default: return KeyEvent.KEYCODE_DPAD_RIGHT;
+            }
+        }
+
+        private static void injectKeyEvent(Context context, KeyEvent event) {
+            try {
+                InputManager im = (InputManager) context.getSystemService(Context.INPUT_SERVICE);
+                Method injectInputEvent = InputManager.class.getMethod(
+                        "injectInputEvent", InputEvent.class, int.class);
+                final int INJECT_INPUT_EVENT_MODE_ASYNC = 0;
+                injectInputEvent.invoke(im, event, INJECT_INPUT_EVENT_MODE_ASYNC);
+            } catch (Exception e) {
+                Log.e("MediaButtonReceiver", "Failed to inject key event", e);
+            }
+        }
+
         @Override
         public void onReceive(Context context, Intent intent)
         {
-            if (Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction()))
-            {
-                KeyEvent key = (KeyEvent)intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-                if (key.getAction() == KeyEvent.ACTION_UP)
-                {   /* pass the pressed key to Rockbox, starting it if needed */
-                    RockboxService s = RockboxService.getInstance();
-                    if (s == null || !s.isRockboxRunning())
-                        startService(context, intent);
-                    else if (RockboxFramebuffer.buttonHandler(key.getKeyCode(), false))
+            boolean dpad_mode = prefs.getBoolean("dpad_mode", false);
+            if (dpad_mode){
+                if (Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction())) {
+                    KeyEvent key = (KeyEvent) intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                    if (key == null) return;
+
+                    int action = key.getAction();
+                    int mediaCode = key.getKeyCode();
+                    int dpadCode = mediaToDpad(mediaCode);
+
+                    long now = SystemClock.uptimeMillis();
+
+                    if (action == KeyEvent.ACTION_UP) {
+                        KeyEvent down = new KeyEvent(now, now, KeyEvent.ACTION_DOWN, dpadCode, 0);
+                        KeyEvent up   = new KeyEvent(now+20, now+20, KeyEvent.ACTION_UP,   dpadCode, 0);
+
+                        Log.d("MediaButtonReceiver", "simulating dpad: " + dpadCode);
+                        injectKeyEvent(context, down);
+                        injectKeyEvent(context, up);
+
+                        // Prevent other media apps from also handling this
                         abortBroadcast();
+                    }
                 }
-                else if (key.getAction() == KeyEvent.ACTION_DOWN && key.getRepeatCount() > 0)
-                {   /* handle repeat events */
-                    RockboxService s = RockboxService.getInstance();
-                    if (s != null && s.isRockboxRunning())
-                    {
-                        if (RockboxFramebuffer.buttonHandlerRepeat(key.getKeyCode()))
+
+            } else{
+                if (Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction()))
+                {
+                    KeyEvent key = (KeyEvent)intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                    if (key.getAction() == KeyEvent.ACTION_UP)
+                    {   /* pass the pressed key to Rockbox, starting it if needed */
+                        RockboxService s = RockboxService.getInstance();
+                        if (s == null || !s.isRockboxRunning())
+                            startService(context, intent);
+                        else if (RockboxFramebuffer.buttonHandler(key.getKeyCode(), false))
                             abortBroadcast();
+                    }
+                    else if (key.getAction() == KeyEvent.ACTION_DOWN)
+                    {   
+                        if (key.getRepeatCount() > 0){
+                            /* handle repeat events */
+                            RockboxService s = RockboxService.getInstance();
+                            if (s != null && s.isRockboxRunning())
+                            {
+                                if (RockboxFramebuffer.buttonHandlerRepeat(key.getKeyCode()))
+                                    abortBroadcast();
+                            }
+                        } else if (RockboxFramebuffer.buttonHandler(key.getKeyCode(), true)) {
+                            abortBroadcast();
+                        }
                     }
                 }
             }

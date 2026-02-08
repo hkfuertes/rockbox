@@ -23,18 +23,13 @@ If you would like to support the development of Rockbox for the Y1 financially, 
 
 ## Controls
 
-- Scroll Wheel (Most Screens): Up / Down
-- Scroll Wheel (Now Playing screen): Volume
+Most controls are identical to the iPod 6G, refer to this [manual](https://download.rockbox.org/daily/manual/rockbox-ipod6g.pdf)
+
+Exceptions:
 - Center (Short): Accept / Enter
 - Center (Long): Open Context Menu
 - Center (Very Long): Turn Off Screen
-- Menu/Back (Short): Cancel / Back
-- Menu/Back (Long): Open Quick Screen / Open Menu (Pictureflow)
-- Play/Pause (Long) (Most Screens): Open While Playing Screen
-- Play/Pause (Long) (Now Playing screen): WPS Hotkey
-- Play/Pause (Press 3-4x): Stop Playback
-- Play/Pause (Press 3-4x) (Text Input): Open Keyboard
-- Media Buttons: Play/Pause/Next/Previous/Seek
+- Play/Pause (Short, Text Input): Open Keyboard
 - Holding Next + Previous (>5 seconds): Restart Rockbox (Thanks, u/thinkVHS!)
 
 ## Dual Boot: How to switch between Rockbox and Stock
@@ -121,16 +116,8 @@ adb reboot
 ```
 - Update keymap file to be able to navigate systems menus
 ```
-adb shell mount -o rw,remount /system
-adb pull /system/usr/keylayout/Generic.kl Generic.kl
-cp Generic.kl Generic.kl_backup
-sed -i '/key 103   DPAD_UP/c\key 105   DPAD_UP' Generic.kl
-sed -i '/key 108   DPAD_DOWN/c\key 106   DPAD_DOWN' Generic.kl
-sed -i '/key 105   DPAD_LEFT/c\key 103   MEDIA_PREVIOUS' Generic.kl
-sed -i '/key 106   DPAD_RIGHT/c\key 108   MEDIA_NEXT' Generic.kl
-sed -i '/key 163   MEDIA_NEXT/c\key 163   DPAD_RIGHT' Generic.kl
-sed -i '/key 165   MEDIA_PREVIOUS/c\key 165   DPAD_LEFT' Generic.kl
-adb push Generic.kl /system/usr/keylayout/Generic.kl
+adb remount
+adb push android/scripts/Rockbox.kl /system/usr/keylayout/Generic.kl Generic.kl
 adb shell chmod 644 /system/usr/keylayout/Generic.kl
 adb reboot
 ```
@@ -169,3 +156,17 @@ adb reboot
 ```
 - (optional) Download the voice pack from the releases, extract it, drag the .rockbox folder onto your device
 - **If rockbox gets stuck at the Rockbox logo and doesn't load your theme please delete .rockbox/config.cfg on your SD card**
+
+## Collection of technical information and quirks
+### Keylock exemptions are weird
+Sometimes keylock exemptions take some time to work or need a second press. It seems like this is a limitation that will be hard to fully solve without the touch wheel driver sources or access to the AOSP source used for this ROM. Once the device is in sleep mode for a while the touch wheel simply stops sending button presses to the kernel. This is likely a power-saving setting that an app has no control over. Feel free to contribute a fix for this if you have one.
+
+### Overwriting files usually found in .rockbox (language files and others)
+To for example edit `.lang` files you will want to access the respective files, usually found .rockbox. Currently these files are not populated in the .rockbox folder on the SD card of the device but instead on the internal storage (`/data/data/org.rockbox/app_rockbox/rockbox/langs`) . If you place these files in the .rockbox folder however Rockbox will use these instead of the files in the internal storage.
+
+**So where can you find and edit these files easily?**
+- download `update.zip` of the Rockbox release you are using
+- extract `update.zip`
+- rename `/data/data/org.rockbox/app_rockbox/rockbox/langs/libmisc.so` to libmisc.zip and extract it
+- modify the files in the .rockbox folder you just extracted from `libmisc` and place them in the .rockbox folder on the SD card
+- restart Rockbox

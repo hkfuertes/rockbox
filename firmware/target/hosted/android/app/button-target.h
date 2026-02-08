@@ -29,6 +29,7 @@ unsigned dpad_to_button(int keyboard_key);
 void android_ignore_back_button(bool yes);
 
 /* Main unit's buttons */
+/*
 #define BUTTON_MENU        0x00000001
 #define BUTTON_BACK        0x00000002
 #define BUTTON_DPAD_LEFT   0x00000004
@@ -39,18 +40,25 @@ void android_ignore_back_button(bool yes);
 #define BUTTON_VOL_UP      0x00000080
 #define BUTTON_VOL_DOWN    0x00000100
 #define BUTTON_MAIN        0x00000fff
-/* Hack: Custom buttons for multimedia keys outside of WPS 
- * This was necessary because seek forward and backward is not implemented
- * in misc.c and needed to be handled custom in the WPS. 
- * */
-#define BUTTON_MEDIA_PREV  0x00000200
-#define BUTTON_MEDIA_NEXT  0x00000400
+*/
+
+#define BUTTON_SELECT       0x00000001
+#define BUTTON_MENU         0x00000002
+
+#define BUTTON_LEFT         0x00000004
+#define BUTTON_RIGHT        0x00000008
+#define BUTTON_SCROLL_FWD   0x00000010
+#define BUTTON_SCROLL_BACK  0x00000020
+
+#define BUTTON_PLAY         0x00000040
 
 /* Compatibility hacks for flipping. Needs a somewhat better fix. */
+/*x
 #define BUTTON_LEFT  BUTTON_DPAD_LEFT
 #define BUTTON_RIGHT BUTTON_DPAD_RIGHT
 #define BUTTON_UP    BUTTON_DPAD_UP
 #define BUTTON_DOWN  BUTTON_DPAD_DOWN
+*/
 
 /* Touch Screen Area Buttons */
 #define BUTTON_TOPLEFT      0x00001000

@@ -142,15 +142,19 @@ int _battery_level(void) { return -1; }
 static int percent_now; /* Cached to avoid polling too often */
 
 #if !(CONFIG_BATTERY_MEASURE & TIME_MEASURE)
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 int _battery_time(void) { return -1; }
 #else
 static int time_now; /* Cached to avoid polling too often */
 #endif
+#endif
 
 #ifdef HAVE_TIME_ESTIMATION
 static int time_now;     /* reported time in minutes */
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 static int64_t time_cnt; /* reported time in seconds */
 static int64_t time_err; /* error... it's complicated */
+#endif
 #endif
 
 #if !(CONFIG_BATTERY_MEASURE & VOLTAGE_MEASURE)
@@ -187,7 +191,7 @@ int battery_level(void)
  * on the battery level and the actual current usage. */
 int battery_time(void)
 {
-#if (CONFIG_BATTERY_MEASURE & TIME_MEASURE) || defined(HAVE_TIME_ESTIMATION)
+#if (CONFIG_BATTERY_MEASURE & TIME_MEASURE) || defined(HAVE_TIME_ESTIMATION) || (CONFIG_PLATFORM & PLATFORM_ANDROID)
     return time_now;
 #else
     return -1;
@@ -400,7 +404,7 @@ static void battery_status_update(void)
     int level = -1;
 #endif
 
-#if CONFIG_BATTERY_MEASURE & TIME_MEASURE
+#if (CONFIG_BATTERY_MEASURE & TIME_MEASURE) || (CONFIG_PLATFORM & PLATFORM_ANDROID)
     time_now = _battery_time();
 #elif defined(HAVE_TIME_ESTIMATION)
     /* TODO: This is essentially a bad version of coloumb counting,

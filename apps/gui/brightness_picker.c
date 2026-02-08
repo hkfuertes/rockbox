@@ -15,6 +15,7 @@
 #include "icon.h"
 #include "brightness_picker.h"
 #include "viewport.h"
+#include "backlight.h"
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 #include "../firmware/target/hosted/android/brightness-android.h"
@@ -35,9 +36,6 @@ struct brightness_pick
 /* brightness step size */
 #define BRIGHTNESS_STEP 4
 
-/* Brightness settings file */
-#define BRIGHTNESS_SETTINGS_FILE ROCKBOX_DIR "/brightness.cfg"
-
 #define MARGIN_TOP              2 /* Top margin of screen                 */
 #define MARGIN_BOTTOM           6 /* Bottom margin of screen              */
 #define SLIDER_TEXT_MARGIN      2 /* Gap between text and slider          */
@@ -45,45 +43,6 @@ struct brightness_pick
 #define SELECTOR_TB_MARGIN      1 /* Margin on top and bottom of selector */
 #define SELECTOR_WIDTH          get_icon_width(display->screen_type)
 #define SELECTOR_HEIGHT         8 /* Height of > and < bitmaps            */
-
-/* Load brightness setting from file */
-static int load_brightness_setting(void)
-{
-    int fd = open(BRIGHTNESS_SETTINGS_FILE, O_RDONLY);
-    if (fd < 0) {
-        return -1; /* File doesn't exist */
-    }
-    
-    char buf[8];
-    int bytes_read = read(fd, buf, sizeof(buf) - 1);
-    close(fd);
-    
-    if (bytes_read > 0) {
-        buf[bytes_read] = '\0';
-        int brightness = atoi(buf);
-        if (brightness >= BRIGHTNESS_MIN && brightness <= BRIGHTNESS_MAX) {
-            return brightness;
-        }
-    }
-    
-    return -1; /* Invalid or no data */
-}
-
-/* Save brightness setting to file */
-static bool save_brightness_setting(int brightness)
-{
-    int fd = open(BRIGHTNESS_SETTINGS_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-    if (fd < 0) {
-        return false;
-    }
-    
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%d", brightness);
-    int bytes_written = write(fd, buf, strlen(buf));
-    close(fd);
-    
-    return bytes_written > 0;
-}
 
 static void draw_screen(struct screen *display, char *title,
                         struct brightness_pick *brightness)
@@ -157,18 +116,10 @@ bool set_brightness(struct screen *display, char *title, int *brightness)
     struct brightness_pick brightness_pick;
 
     /* Initialize with saved brightness setting if available */
-    brightness_pick.brightness = load_brightness_setting();
-    if (brightness_pick.brightness < 0) {
-        /* No saved setting available, try current Android brightness */
-        brightness_pick.brightness = android_brightness_get_percent();
-        if (brightness_pick.brightness < 0 || brightness_pick.brightness > 100) {
-            /* Final fallback to provided value */
-            brightness_pick.brightness = *brightness;
-        }
-    }
+    brightness_pick.brightness = global_settings.brightness;
 
     /* Apply the initial brightness setting */
-    android_brightness_set_percent(brightness_pick.brightness);
+    backlight_set_brightness(brightness_pick.brightness);
 
     while (!exit)
     {
@@ -196,7 +147,8 @@ bool set_brightness(struct screen *display, char *title, int *brightness)
                 if (brightness_pick.brightness > BRIGHTNESS_MIN) {
                     brightness_pick.brightness = brightness_pick.brightness - BRIGHTNESS_STEP;
                     /* Apply the change immediately */
-                    android_brightness_set_percent(brightness_pick.brightness);
+                    global_settings.brightness = brightness_pick.brightness;
+                    backlight_set_brightness(brightness_pick.brightness);
                 }
                 break;
 
@@ -208,13 +160,15 @@ bool set_brightness(struct screen *display, char *title, int *brightness)
                 if (brightness_pick.brightness < BRIGHTNESS_MAX) {
                     brightness_pick.brightness = brightness_pick.brightness + BRIGHTNESS_STEP;
                     /* Apply the change immediately */
-                    android_brightness_set_percent(brightness_pick.brightness);
+                    global_settings.brightness = brightness_pick.brightness;
+                    backlight_set_brightness(brightness_pick.brightness);
                 }
                 break;
 
             case ACTION_STD_CANCEL:
                 /* Exit and save the current brightness setting */
-                save_brightness_setting(brightness_pick.brightness);
+                global_settings.brightness = brightness_pick.brightness;
+                settings_save();
                 exit = 1;
                 break;
 

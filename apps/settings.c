@@ -878,28 +878,28 @@ void settings_apply(bool read_disk)
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
     backlight_set_brightness(global_settings.brightness);
 #endif
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-    /* Apply Android brightness setting on startup */
-    /* Load saved brightness setting from file */
-    int brightness = 100; /* Default value */
-    int fd = open(ROCKBOX_DIR "/brightness.cfg", O_RDONLY);
-    if (fd >= 0) {
-        char buf[8];
-        int bytes_read = read(fd, buf, sizeof(buf) - 1);
-        close(fd);
-        if (bytes_read > 0) {
-            buf[bytes_read] = '\0';
-            int saved_brightness = atoi(buf);
-            if (saved_brightness >= 0 && saved_brightness <= 100) {
-                brightness = saved_brightness;
-            }
-        }
-    }
-    android_brightness_set_percent(brightness);
+// #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+//     /* Apply Android brightness setting on startup */
+//     /* Load saved brightness setting from file */
+//     int brightness = 100; /* Default value */
+//     int fd = open(ROCKBOX_DIR "/brightness.cfg", O_RDONLY);
+//     if (fd >= 0) {
+//         char buf[8];
+//         int bytes_read = read(fd, buf, sizeof(buf) - 1);
+//         close(fd);
+//         if (bytes_read > 0) {
+//             buf[bytes_read] = '\0';
+//             int saved_brightness = atoi(buf);
+//             if (saved_brightness >= 0 && saved_brightness <= 100) {
+//                 brightness = saved_brightness;
+//             }
+//         }
+//     }
+//     android_brightness_set_percent(brightness);
     
-    /* Note: Android screen timeout is applied when the user changes the setting,
-       not during initialization to avoid JNI environment issues */
-#endif
+//     /* Note: Android screen timeout is applied when the user changes the setting,
+//        not during initialization to avoid JNI environment issues */
+// #endif
 #ifdef HAVE_BACKLIGHT
     backlight_set_timeout(global_settings.backlight_timeout);
 #if CONFIG_CHARGING

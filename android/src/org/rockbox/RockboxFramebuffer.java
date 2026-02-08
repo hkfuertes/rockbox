@@ -23,6 +23,7 @@ package org.rockbox;
 
 import java.nio.ByteBuffer;
 
+import org.rockbox.RockboxService;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -53,30 +54,42 @@ public class RockboxFramebuffer extends SurfaceView
         0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50
     };
 
-    private static final int CENTER_KEYCODE = KeyEvent.KEYCODE_ENTER; // 66
-    private static final int BACK_KEYCODE = 4;
-    private static final long LONG_PRESS_DURATION_MS = 1000;
-    private Handler longPressHandler = new Handler(Looper.getMainLooper());
-    private boolean centerLongPressDetected = false;
-    private PowerManager powerManager;
+    private static final int CENTER_KEYCODE = KeyEvent.KEYCODE_ENTER;
+    private static final int PLAY_KEYCODE = KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
+    private static final int SCROLL_BACK_KEYCODE = KeyEvent.KEYCODE_MEDIA_PLAY;
+    private static final int SCROLL_FWD_KEYCODE = KeyEvent.KEYCODE_MEDIA_PAUSE;
 
-    public static boolean isNotRoot = false;
-    private boolean justCreated = true;
+    private static final int BACK_KEYCODE = 4;
+    private Handler longPressHandler = new Handler(Looper.getMainLooper());
+    private PowerManager powerManager;
+    private long centerPressStartTime = 0;
+    private boolean centerIsHeld = false;
+    private boolean centerSleepTriggered = false;
+    private static final long REPEAT_THRESHOLD_MS = 250;
+    private static final long SLEEP_THRESHOLD_MS = 1000;
+    private static final long SHUTDOWN_THRESHOLD_MS = 5000;
+
+    private static long lastScrollPressTime = 0;
+    private static final long SCROLL_REPEAT_THRESHOLD_MS = 100;
+
     private boolean centerRepeat = false;
-    private Runnable centerLongPressRunnable = new Runnable() {
+    private Runnable centerShutdownRunnable = new Runnable() {
         @Override
         public void run() {
-            centerLongPressDetected = true;
-            centerRepeat = false;
-            Log.d("RockboxButton", "Turning off screen...");
+            try {
+                RockboxService s = RockboxService.getInstance();
+                s.shutdownDevice(0);
+                Log.d("RockboxButton", "Shutdown device...");
+            } catch (Exception e) {
+                Log.e("RockboxButton", "Shutdown failed: " + e.getMessage());
+            }
         }
     };
-
-    // Framebuffer size constants
-    private int FB_WIDTH = 480;   // Native resolution
-    private int FB_HEIGHT = 360;  // Native resolution
+    /* Framebuffer size constants (Native resolution) */
+    private int FB_WIDTH = 480;
+    private int FB_HEIGHT = 360;
     
-    // Virtual framebuffer dimensions for 240p mode
+    /* Virtual framebuffer dimensions for 240p mode */
     private int VIRTUAL_FB_WIDTH = 320;
     private int VIRTUAL_FB_HEIGHT = 240;
 
@@ -105,16 +118,16 @@ public class RockboxFramebuffer extends SurfaceView
         if (c == null)
             return;
 
-        // Get current mode and dimensions
+        /* Get current mode and dimensions */
         int currentActivity = getCurrentActivity();
         
-        // Get actual framebuffer dimensions from native code
+        /* Get actual framebuffer dimensions from native code */
         int[] dimensions = new int[2];
         getVirtualFramebufferDimensions(dimensions);
         int actualWidth = dimensions[0];
         int actualHeight = dimensions[1];
         
-        // Make sure our bitmap matches the actual framebuffer dimensions
+        /* Make sure our bitmap matches the actual framebuffer dimensions */
         if (btm == null || btm.getWidth() != actualWidth || btm.getHeight() != actualHeight) {
             if (btm != null) {
                 btm.recycle();
@@ -125,9 +138,9 @@ public class RockboxFramebuffer extends SurfaceView
         btm.copyPixelsFromBuffer(framebuffer);
         synchronized (holder)
         { /* draw */
-            c.drawColor(android.graphics.Color.BLACK); // clear canvas first!
+            c.drawColor(android.graphics.Color.BLACK); /* clear canvas first! */
             
-            // Plugin mode - render the full framebuffer directly, no scaling
+            /* Plugin mode - render the full framebuffer directly, no scaling */
             Rect src = new Rect(0, 0, actualWidth, actualHeight);
             Rect dst = new Rect(0, 0, c.getWidth(), c.getHeight());
             c.drawBitmap(btm, src, dst, sharpPaint);
@@ -142,16 +155,16 @@ public class RockboxFramebuffer extends SurfaceView
 
     public boolean onTouchEvent(MotionEvent me)
     {
-        // Check resolution mode for proper scaling
+        /* Check resolution mode for proper scaling */
         float scaleX, scaleY;
         
-        // Get actual framebuffer dimensions from native code
+        /* Get actual framebuffer dimensions from native code */
         int[] dimensions = new int[2];
         getVirtualFramebufferDimensions(dimensions);
         int actualWidth = dimensions[0];
         int actualHeight = dimensions[1];
         
-        // Map touch events to appropriate coordinates
+        /* Map touch events to appropriate coordinates */
         scaleX = (float)actualWidth / (float)getWidth();
         scaleY = (float)actualHeight / (float)getHeight();
         
@@ -173,90 +186,94 @@ public class RockboxFramebuffer extends SurfaceView
         return false;
     }
 
-    public boolean onKeyDown(int keyCode, KeyEvent event)
-    {
-        justCreated = false;
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        long currentTime = System.currentTimeMillis();
+        
         if (keyCode == CENTER_KEYCODE) {
             if (event.getRepeatCount() == 0) {
-                centerLongPressDetected = false;                
-                longPressHandler.postDelayed(centerLongPressRunnable, LONG_PRESS_DURATION_MS);
+                centerPressStartTime = event.getEventTime();
+                centerIsHeld = false;
+                centerSleepTriggered = false;
+                longPressHandler.postDelayed(centerShutdownRunnable, SHUTDOWN_THRESHOLD_MS);
+                
+                buttonHandler(keyCode, true);  
                 return true;
             } else {
-                centerRepeat = true;
+                centerIsHeld = true;
+                long elapsed = event.getEventTime() - centerPressStartTime;
+                if (elapsed >= SLEEP_THRESHOLD_MS && !centerSleepTriggered) {
+                    centerSleepTriggered = true;
+                    Log.d("RockboxButton", "trigger sleep on release");
+                }
                 return true;
             }
         }
-        /* Handle repeat events */
-        else {
-            if (event.getRepeatCount() > 0)
-            {
+        
+        /* Other keys as before */
+        if (event.getRepeatCount() > 0) {
+            return buttonHandlerRepeat(keyCode);
+        } else {
+            if ((keyCode == SCROLL_BACK_KEYCODE || keyCode == SCROLL_FWD_KEYCODE) && 
+                (currentTime - lastScrollPressTime <= SCROLL_REPEAT_THRESHOLD_MS)){
+                lastScrollPressTime = currentTime;
                 return buttonHandlerRepeat(keyCode);
-            }
-            else
-            {
+            } else {
                 return buttonHandler(keyCode, true);
             }
         }
     }
 
-    public boolean onKeyUp(int keyCode, KeyEvent event)
-    {
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        long currentTime = System.currentTimeMillis();
         if (keyCode == CENTER_KEYCODE) {
-            // Cancel pending timer
-            longPressHandler.removeCallbacks(centerLongPressRunnable);
 
-            // Only put device to sleep if long-press was detected
-            if (centerLongPressDetected) {
-                centerLongPressDetected = false;
-                centerRepeat = false;
-                Log.d("RockboxButton", "Putting device to sleep");
+            longPressHandler.removeCallbacks(centerShutdownRunnable);
+            
+            long holdDuration = event.getEventTime() - centerPressStartTime;
+            
+            if (centerSleepTriggered) {
                 try {
                     powerManager.goToSleep(SystemClock.uptimeMillis());
+                    /* goToSleep only requests sleep, this takes some time
+                        So we make sure */
+                    Thread.sleep(1000);
+                    buttonHandler(keyCode, false);
                     Log.d("RockboxButton", "Device put to sleep");
                 } catch (Exception e) {
                     Log.e("RockboxButton", "Failed to put device to sleep: " + e.getMessage());
                 }
-                return true;
-            } else if (!justCreated){
-                try {                
-                    if (centerRepeat) {
-                    // center button hold but not long enough for screen-off, handle like a normal repeat press
-                        centerRepeat = false;
-                        buttonHandlerRepeat(keyCode);
-                        // pause to make Rockbox catch up
-                        Thread.sleep(10);
-                        if (!isNotRoot){
-                            return buttonHandler(keyCode, false);
-                        } else { // hack, for some reason the context menu needs an extra button click outside the root menu
-                            Log.d("RockboxButton", "Trigger center second time");
-                            buttonHandler(keyCode, true);
-                            Thread.sleep(10);
-                            return buttonHandler(keyCode, false);
-                        }
-                    } else {
-                    // center button was pressed, handle like a normal press
+            } else if (holdDuration >= REPEAT_THRESHOLD_MS && centerIsHeld) {
+                try {
+                    buttonHandlerRepeat(keyCode);
+                    Thread.sleep(10);
+                    buttonHandler(keyCode, false);
+                } catch (Exception e) {
+                    Log.e("RockboxButton", "Failed to send center repeat + key up: " + e.getMessage());
+                }
+            } else {
+                buttonHandler(keyCode, false);
+            }
+            
+            centerPressStartTime = 0;
+            centerIsHeld = false;
+            centerSleepTriggered = false;
+            return true;
+        }
+        
+        /* Other keys */
 
-                        buttonHandler(keyCode, true);
-                        // pause to make Rockbox catch up
-                        Thread.sleep(10);
-                        buttonHandler(keyCode, false);
-                    }
-                } catch (InterruptedException e) {
-                        Log.e("RockboxButton", "Failed sending center keyDown event: " + e.getMessage());
-                    }
+        if ((keyCode == SCROLL_BACK_KEYCODE || keyCode == SCROLL_FWD_KEYCODE) && 
+            (currentTime - lastScrollPressTime <= SCROLL_REPEAT_THRESHOLD_MS)){
+            lastScrollPressTime = currentTime;
+            return true;
+        } else {
+            if (keyCode == SCROLL_BACK_KEYCODE || keyCode == SCROLL_FWD_KEYCODE) {
+                lastScrollPressTime = currentTime;
             }
-        } 
-            if (!(keyCode == CENTER_KEYCODE && justCreated)){
-                justCreated = false;
-                return buttonHandler(keyCode, false);
-            }
-            else {
-                Log.d("RockboxButton", "Just woke up - don't handle this center press");
-                justCreated = false;
-                return true;
-            }
-    }
- 
+            return buttonHandler(keyCode, false);
+        }
+    } 
+
     private int getDpi()
     {
         return metrics.densityDpi;
@@ -271,16 +288,16 @@ public class RockboxFramebuffer extends SurfaceView
     public native static boolean buttonHandler(int keycode, boolean state);
     public native static boolean buttonHandlerRepeat(int keycode);
     public native static void triggerVibrationNative(int baseDuration, int boostDuration);
-    
+
     public native void surfaceCreated(SurfaceHolder holder);
     
-    // Add native method to force a full redraw from native code
+    /* Add native method to force a full redraw from native code */
     public native void forceFullRedraw();
     
-    // Add method to get current activity
+    /* Add method to get current activity */
     public native int getCurrentActivity();
   
-    // Add native method to get virtual framebuffer dimensions
+    /* Add native method to get virtual framebuffer dimensions */
     public native void getVirtualFramebufferDimensions(int[] dimensions);
 
     /* Trigger vibration for button feedback */
@@ -301,18 +318,18 @@ public class RockboxFramebuffer extends SurfaceView
     }
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        // Get actual framebuffer dimensions from native code
+        /* Get actual framebuffer dimensions from native code */
         int[] dimensions = new int[2];
         getVirtualFramebufferDimensions(dimensions);
         int actualWidth = dimensions[0];
         int actualHeight = dimensions[1];
         
-        // Create bitmap with the appropriate dimensions
+        /* Create bitmap with the appropriate dimensions */
         btm = Bitmap.createBitmap(actualWidth, actualHeight, Bitmap.Config.RGB_565);
         Log.d("RockboxFramebuffer", "Created bitmap with dimensions: " + actualWidth + "x" + actualHeight);
         
         setEnabled(true);
-        // Trigger a full framebuffer redraw from native code
+        /* Trigger a full framebuffer redraw from native code */
         forceFullRedraw();
     }
 
@@ -324,4 +341,5 @@ public class RockboxFramebuffer extends SurfaceView
             btm = null;
         }
     }
+
 }

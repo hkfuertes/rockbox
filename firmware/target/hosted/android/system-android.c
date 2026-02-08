@@ -28,7 +28,7 @@
 #include "system.h"
 #include "power.h"
 #include "button.h"
-
+#include "action.h"
 
 
 /* global fields for use with various JNI calls */
@@ -46,7 +46,7 @@ extern void telephony_init_device(void);
 void system_exception_wait(void)
 {
     intptr_t dummy = 0;
-    while(button_read_device(&dummy) != BUTTON_BACK);
+    while(button_read_device(&dummy) != BUTTON_MENU);
 }
 
 void system_reboot(void)
@@ -119,7 +119,6 @@ Java_org_rockbox_RockboxService_main(JNIEnv *env, jobject this)
     /* simply return here. this will allow the VM to clean up objects and do
      * garbage collection */
 }
-
 
 /* below is the facility for external (from other java threads) to safely call
  * into our snative code. When extracting rockbox.zip the main function is

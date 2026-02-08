@@ -3408,7 +3408,7 @@ fi
     sharedir="/data/data/org.rockbox/app_rockbox/rockbox"
     bindir="/data/data/org.rockbox/lib"
     libdir="/data/data/org.rockbox/app_rockbox"
-    memory=128
+    memory=256
     uname=`uname`
     androidcc 19 armeabi "-march=armv7-a -mtune=cortex-a9 -mfloat-abi=softfp"
     tool="cp "

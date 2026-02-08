@@ -59,6 +59,8 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import java.lang.reflect.Method;
 import java.util.Set;
+import android.content.Context;
+import android.content.SharedPreferences;
 
 /* This class is used as the main glue between java and c.
  * All access should be done through RockboxService.get_instance() for safety.
@@ -89,9 +91,15 @@ public class RockboxService extends Service
     public static final int RESULT_LIB_LOADED = 5;
     public static final int RESULT_ROCKBOX_EXIT = 6;
 
+    public SharedPreferences prefs;
+
     @Override
     public void onCreate()
     {
+        /* Handle media buttons as usual until context changes accordingly */
+        prefs = getSharedPreferences("app_state", Context.MODE_PRIVATE);
+        prefs.edit().putBoolean("dpad_mode", false).apply();
+
         instance = this;
         pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         mMediaButtonReceiver = new MediaButtonReceiver(this);
@@ -411,23 +419,6 @@ public class RockboxService extends Service
     }
 
     /**
-     * Tell RockboxFramebuffer we are not in root menu
-     * Called from native code via JNI
-     */
-    public int isNotRoot(boolean notRoot)
-    {
-        Log.d("RockboxButton", "Service - isNotRoot: " + notRoot);
-        if (notRoot) {
-            //Log.d("RockboxButton", "We are in root menu (RockboxService)"); 
-            RockboxFramebuffer.isNotRoot = true;
-        } else {
-            //Log.d("RockboxButton", "We are NOT in root menu (RockboxService)"); 
-            RockboxFramebuffer.isNotRoot = false;
-        }
-        return 1;
-    }
-
-    /**
      * Get current Android brightness as percentage
      * Called from native code via JNI
      * @return Current brightness percentage (0-100)
@@ -543,11 +534,14 @@ public class RockboxService extends Service
     public void shutdownDevice(int show) {
         final int showDialog = show;
         final Activity activity = getActivity();
+
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if (showDialog == 1){
-                    new AlertDialog.Builder(activity)
+                    Log.d("RockboxService", "set dpad mode: false");
+                    prefs.edit().putBoolean("dpad_mode", true).apply();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(activity)
                         .setTitle("Shutdown Device")
                         .setMessage("Are you sure you want to shut down the device?")
                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
@@ -556,6 +550,8 @@ public class RockboxService extends Service
                                 // Run shutdown in background thread
                                 new Thread(new Runnable() {
                                     public void run() {
+                                        Log.d("RockboxService", "set dpad mode: false");
+                                        prefs.edit().putBoolean("dpad_mode", false).apply();
                                         try {
                                             Log.d("RockboxService", "Attempting device shutdown...");
                                             java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"input", "keyevent", "KEYCODE_MEDIA_STOP"});
@@ -571,8 +567,17 @@ public class RockboxService extends Service
                                 }).start();
                             }
                         })
-                        .setNegativeButton("No", null)
-                        .show();
+                        .setNegativeButton("No", null);
+                    AlertDialog dialog = builder.create();
+                    dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                        @Override
+                        public void onDismiss(DialogInterface dialogInterface) {
+                            Log.d("RockboxService", "set dpad mode: false");
+                            prefs.edit().putBoolean("dpad_mode", false).apply();
+                        }
+                    });
+
+                    dialog.show();
                 } else {
                     try {
                         Log.d("RockboxService", "Attempting device shutdown...");

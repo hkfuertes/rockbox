@@ -21,7 +21,7 @@
 
 package org.rockbox;
 
-
+import org.rockbox.Helper.MediaButtonReceiver;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -31,6 +31,9 @@ import android.os.ResultReceiver;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
+import android.content.Context;
+import android.os.PowerManager;
+import android.util.Log;
 
 public class RockboxActivity extends Activity 
 {
@@ -38,6 +41,7 @@ public class RockboxActivity extends Activity
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
+        System.loadLibrary("rockbox");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -115,6 +119,8 @@ public class RockboxActivity extends Activity
         fb.requestFocus();
         setVisible(true);
         setServiceActivity(true);
+        /* disable key lock */
+        keyLock(false);
     }
     
     /* this is also called when the backlight goes off,
@@ -127,6 +133,8 @@ public class RockboxActivity extends Activity
         /* this will cause the framebuffer's Surface to be destroyed, enabling
          * us to disable drawing */
         setVisible(false);
+        /* enable key lock */
+        keyLock(true);
     }
     
     @Override
@@ -142,4 +150,25 @@ public class RockboxActivity extends Activity
         super.onDestroy();
         setServiceActivity(false);
     }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        boolean screenOn = pm.isScreenOn();
+        if (hasFocus) {
+            MediaButtonReceiver.setDpadMode(false);
+            Log.d("RockboxActivity", "back in Rockbox, disable dpad mode");
+        }
+        /* also check if the screen is on since the activity also loose focus if screen is off while in Rockbox */
+        else if (!hasFocus && screenOn) {
+            MediaButtonReceiver.setDpadMode(true);
+            Log.d("RockboxActivity", "outside of Rockbox, enable dpad mode");
+        }
+    }
+
+    /* call native method to trigger key lock */
+    public native static void keyLock(boolean keyLock);
+
 }

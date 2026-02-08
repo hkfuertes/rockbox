@@ -74,46 +74,6 @@
 #include "plugin.h"
 #include "disk.h"
 
-#include <jni.h>
-/* External references to JNI environment and service */
-extern JNIEnv *env_ptr;
-extern jclass RockboxService_class;
-extern jobject RockboxService_instance;
-
-/* Method IDs for Java methods */
-static jmethodID android_is_not_root_method = NULL;
-
-/* Tell java side we are not in a menu we need to handle differently */
-int android_is_not_root(bool wps)
-{
-    /* Check if JNI environment and service are available */
-    if (env_ptr == NULL || RockboxService_instance == NULL) {
-        return -1; /* Error if not ready */
-    }
-        
-    /* Get method ID if not already cached */
-    if (android_is_not_root_method == NULL) {
-        android_is_not_root_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class,
-                                                     "isNotRoot", "(Z)I");
-        if (android_is_not_root_method == NULL) {
-            return -1; /* Error on method not found */
-        }
-    }
-    
-    /* Call the Java method */
-    jint result = (*env_ptr)->CallIntMethod(env_ptr, RockboxService_instance, 
-                                        android_is_not_root_method, (jboolean)wps);
-    
-    /* Check for exceptions */
-    if ((*env_ptr)->ExceptionCheck(env_ptr)) {
-        (*env_ptr)->ExceptionClear(env_ptr);
-        return -1; /* Error on exception */
-    }
-    
-    return (int)result;
-}
-
-
 struct root_items {
     int (*function)(void* param);
     void* param;
@@ -765,11 +725,6 @@ static inline int load_screen(int screen)
 {
     /* set the global_status.last_screen before entering,
         if we dont we will always return to the wrong screen on boot */
-    if (screen == GO_TO_ROOT || screen == GO_TO_ROOTITEM_CONTEXT){
-        android_is_not_root(false);
-    } else {
-        android_is_not_root(true);
-    }
     int old_previous = last_screen;
     int ret_val;
     enum current_activity activity = ACTIVITY_UNKNOWN;
@@ -1015,7 +970,6 @@ void root_menu(void)
 
     while (true)
     {
-        android_is_not_root(false);
         switch (next_screen)
         {
             case MENU_ATTACHED_USB:
@@ -1074,7 +1028,6 @@ void root_menu(void)
                 break;
             case GO_TO_PLUGIN:
             {
-                android_is_not_root(true);
 
                 char *key;
                 if (global_status.last_screen == GO_TO_SHORTCUTMENU)

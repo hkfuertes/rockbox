@@ -774,8 +774,27 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
 #endif
 #ifdef HAVE_MULTIMEDIA_KEYS
         /* multimedia keys on keyboards, headsets */
-        case BUTTON_MULTIMEDIA_PLAYPAUSE:
+    case BUTTON_MULTIMEDIA_PLAYPAUSE:
         {
+            int status = audio_status();
+            if (status & AUDIO_STATUS_PLAY)
+            {
+                if (status & AUDIO_STATUS_PAUSE)
+                    unpause_action(true);
+                else
+                    pause_action(true);
+            }
+            else
+                if (playlist_resume() != -1)
+                {
+                    playlist_start(global_status.resume_index,
+                                   global_status.resume_elapsed,
+                                   global_status.resume_offset);
+                }
+            return event;
+        }
+     case ACTION_STD_AUDIO_PLAY:
+    {
             int status = audio_status();
             if (status & AUDIO_STATUS_PLAY)
             {
@@ -796,7 +815,7 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
 	case ACTION_STD_AUDIO_PREV:
             audio_prev();
             return event;
-        case ACTION_STD_AUDIO_NEXT:
+    case ACTION_STD_AUDIO_NEXT:
             audio_next();
             return event;
 	case BUTTON_MULTIMEDIA_STOP:

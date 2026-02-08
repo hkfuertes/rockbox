@@ -41,6 +41,7 @@
 #include "appevents.h"
 #include "statusbar-skinned.h"
 
+
 /* The minimum number of pending button events in queue before starting
  * to limit list drawing interval.
  */
@@ -627,7 +628,10 @@ bool gui_synclist_do_button(struct gui_synclist * lists, int *actionptr)
                 else if (TIME_AFTER(current_tick, last_accel_tick + accel_wait))
                 {
                     last_accel_tick = current_tick;
-                    next_item_modifier++;
+                    next_item_modifier = next_item_modifier*2;
+                    if (next_item_modifier > 64){
+                        next_item_modifier = 64;
+                    }
                 }
             }
             else if (last_accel_tick)

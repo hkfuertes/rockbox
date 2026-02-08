@@ -45,6 +45,10 @@
 #include "lcd-remote.h"
 #endif
 
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+#include "brightness-android.h"
+#endif
+
 #ifndef SIMULATOR
 /*
     Device specific implementation:

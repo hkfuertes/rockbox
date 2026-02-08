@@ -855,7 +855,9 @@ static int dirbrowse(void)
             case ACTION_STD_REC:
                 return exit_to_new_screen(GO_TO_RECSCREEN);
 #endif
-
+            case ACTION_TREE_PLAY:
+                return button_queue_try_post(BUTTON_MULTIMEDIA_PLAYPAUSE, 0);
+                break;
             case ACTION_TREE_WPS:
                 return exit_to_new_screen(GO_TO_PREVIOUS_MUSIC);
                 break;

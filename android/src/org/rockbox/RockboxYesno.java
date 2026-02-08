@@ -21,9 +21,13 @@
 
 package org.rockbox;
 
+import org.rockbox.Helper.MediaButtonReceiver;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.util.Log;
 
 public class RockboxYesno
 {
@@ -31,11 +35,13 @@ public class RockboxYesno
     {
         /* default to "No" if onClick isn't called at all */
         private boolean result = false;
-        
+
         /* called when the user presses the Yes or the No button */
         @Override
         public void onClick(DialogInterface dialog, int which)
         {
+            MediaButtonReceiver.setDpadMode(false);
+            
             result = (which == DialogInterface.BUTTON_POSITIVE);
         }
 
@@ -46,6 +52,7 @@ public class RockboxYesno
         @Override
         public void onDismiss(DialogInterface dialog)
         {
+            MediaButtonReceiver.setDpadMode(false);
             put_result(result);
         }
     }
@@ -53,7 +60,8 @@ public class RockboxYesno
     private void yesno_display(final String text, final String yes, final String no)
     {
         final Activity c = RockboxService.getInstance().getActivity();
-
+        
+        MediaButtonReceiver.setDpadMode(false);
         c.runOnUiThread(new Runnable() {
             public void run()
             {

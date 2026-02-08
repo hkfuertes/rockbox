@@ -19,6 +19,8 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
+#include <jni.h>
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -367,15 +369,22 @@ static inline bool action_poll_button(action_last_t *last, action_cur_t *cur)
     * On Context Changed eat all buttons until the previous button
     * was |BUTTON_REL (also eat the |BUTTON_REL button)
     */
+
     else if ((cur->context != last->context) && ((last->button & BUTTON_REL) == 0))
     {
-        if (has_flag(*button, BUTTON_REL))
-        {
-            last->button = *button;
-            last->action = ACTION_NONE;
-        }
+        /* eat buttons unless they are media keys */
+        if (*button == 4 || *button == 8 || *button == 16 || *button == 32 || *button == 64 ){
+            ret = false;
+        } 
+        else {
+            if (has_flag(*button, BUTTON_REL))
+            {
+                last->button = *button;
+                last->action = ACTION_NONE;
+            } 
 
-        *button = ACTION_NONE; /* "safest" return value */
+            *button = ACTION_NONE; /* "safest" return value */
+        }
     }
    /* ****************************
     * regular button press,
@@ -716,7 +725,7 @@ static inline void action_code_lookup(action_last_t *last, action_cur_t *cur)
 * on user selection it will be locked
 * or unlocked as well
 */
-static inline void do_key_lock(bool lock)
+void do_key_lock(bool lock)
 {
     action_last.keys_locked = lock;
     action_last.button = BUTTON_NONE;

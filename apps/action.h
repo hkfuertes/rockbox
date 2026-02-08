@@ -80,6 +80,9 @@ void set_selective_softlock_actions(bool selective, unsigned int mask);
  * also arm autolock if enabled. */
 void action_autosoftlock_init(void);
 
+/* export do_key_lock so we can call it when we lock the screen on android */
+void do_key_lock(bool lock);
+
 #endif /* !defined(HAS_BUTTON_HOLD) */
 
 #if defined(HAVE_BACKLIGHT)
@@ -159,6 +162,7 @@ enum {
     ACTION_STD_KEYLOCK,
     ACTION_STD_REC,
     ACTION_STD_HOTKEY,
+    ACTION_STD_AUDIO_PLAY,
     ACTION_STD_AUDIO_PREV,
     ACTION_STD_AUDIO_NEXT,
 
@@ -207,6 +211,7 @@ enum {
     ACTION_TREE_PGLEFT,/* optional */
     ACTION_TREE_PGRIGHT,/* optional */
     ACTION_TREE_STOP,
+    ACTION_TREE_PLAY,
     ACTION_TREE_WPS,
     ACTION_TREE_HOTKEY,
 

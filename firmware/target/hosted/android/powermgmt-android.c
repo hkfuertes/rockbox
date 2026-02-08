@@ -39,6 +39,7 @@ extern jobject RockboxService_instance;
 static jfieldID __battery_level;
 static jfieldID __plugged_status;
 static jfieldID __is_charging;
+static jfieldID __battery_time_remaining;
 static jobject BatteryMonitor_instance;
 
 static void new_battery_monitor(void)
@@ -64,6 +65,10 @@ static void new_battery_monitor(void)
     __is_charging = (*env_ptr)->GetFieldID(env_ptr,
                                             class,
                                             "mCharging", "I");
+
+    /* cache the battery time field id */
+    __battery_time_remaining = (*env_ptr)->GetFieldID(env_ptr, 
+                                            class, "mEstimatedMinutes", "I");
 }
 
 int _battery_level(void)
@@ -104,4 +109,18 @@ void sys_poweroff(void)
     splash(2*HZ, ID2P(LANG_SHUTTINGDOWN));
     sleep(1);
     android_shutdown_device(0);
+}
+
+int _battery_time(void)
+{
+    if (!BatteryMonitor_instance)
+        new_battery_monitor();
+    
+    int level = _battery_level();
+    if (level < 0 || charging_state())
+        return -1;
+    
+    int estimated = (*env_ptr)->GetIntField(env_ptr, BatteryMonitor_instance, 
+                                           __battery_time_remaining);
+    return estimated > 0 ? estimated : -1;
 }

@@ -16,6 +16,15 @@
 /* define this if you have a colour LCD */
 #define HAVE_LCD_COLOR
 
+/* Define this for LCD backlight available */
+#define HAVE_BACKLIGHT
+/* Enable LCD brightness control */
+#define HAVE_BACKLIGHT_BRIGHTNESS
+/* Main LCD backlight brightness range and defaults */
+#define MIN_BRIGHTNESS_SETTING      1
+#define MAX_BRIGHTNESS_SETTING      100
+#define DEFAULT_BRIGHTNESS_SETTING  100
+
 /* define this if you want album art for this target */
 #define HAVE_ALBUMART
 
@@ -78,6 +87,7 @@
 
 #define HAVE_HEADPHONE_DETECTION
 
+#define HAVE_TIME_ESTIMATION
 #define CONFIG_BATTERY_MEASURE PERCENTAGE_MEASURE
 #define CONFIG_CHARGING CHARGING_MONITOR
 

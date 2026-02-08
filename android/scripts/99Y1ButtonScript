@@ -6,9 +6,8 @@
 #    Note: For reliable detection, press LEFT first, then RIGHT immediately, and hold both for 5 seconds.
 #    Pressing both very quickly at the same time may miss events and fail to trigger the restart.
 # 2. Trigger Keyboard when Play/Pause is pressed 3x in a text input prompt
-# 3. Send "KEYCODE_MEDIA_STOP" when Play/Pause is pressed 3x
-# 4. Switch to Rockbox when Back + Play are pressed for 10 seconds in Stock app.
-# 5. Initial setup of apps and settings on first boot
+# 3. Switch to Rockbox when Back + Play are pressed for 10 seconds in Stock app.
+# 4. Initial setup of apps and settings on first boot
 
 # wait for boot completion before proceeding
 BOOT_COMPLETED=0
@@ -32,7 +31,6 @@ fi
 DEVICE="/dev/input/event2"
 MAX_HOLD=5  # seconds to trigger restart
 MAX_HOLD_DUAL_BOOT=10
-MAX_NUM_PLAY_PRESS=3
 
 # Exit if the input device is not found
 if [ ! -e "$DEVICE" ]; then
@@ -53,7 +51,6 @@ press_start_sec=0
 press_start_sec_dual_boot=0
 press_start_sec_media_stop=0
 press_last_sec_media_stop=0
-num_play_press=0
 
 package_rb="org.rockbox"
 
@@ -118,28 +115,24 @@ while true; do
                     # reset other keys, combination is interrupted
                     left_down=0
                     right_down=0
-                    num_play_press=0
                     ;;
                 105) # KEY_LEFT / previous track
                     left_down=$value
                     # reset other keys, combination is interrupted
                     play_down=0
                     menu_down=0
-                    num_play_press=0
                     ;;
                 106) # KEY_RIGHT / next track
                     right_down=$value
                     # reset other keys, combination is interrupted
                     play_down=0
                     menu_down=0
-                    num_play_press=0
                     ;;
             *) # reset keys if any other is pressed
                     play_down=0
                     menu_down=0
                     left_down=0
                     right_down=0
-                    num_play_press=0
             esac
 
             # Record start of the combination
@@ -149,30 +142,6 @@ while true; do
 
             if [ "$menu_down" -eq 1 ] && [ "$play_down" -eq 1 ] && [ "$press_start_sec_dual_boot" -eq 0 ]; then
                 press_start_sec_dual_boot=$sec
-            fi
-
-            # Hack to send KEYCODE_MEDIA_STOP and open keyboard when Play/Pause is pressed 3x
-            if [ "$play_down" -eq 1 ]; then
-                if [ "$press_start_sec_media_stop" -eq 0 ]; then
-                    press_start_sec_media_stop=$sec
-                    num_play_press=`expr $num_play_press + 1`
-                else
-                    press_last_sec_media_stop=$press_start_sec_media_stop
-                    press_start_sec_media_stop=$sec
-                    time_between=`expr $press_start_sec_media_stop - $press_last_sec_media_stop`
-                    if [ "$time_between" -le "1" ]; then
-                        num_play_press=`expr $num_play_press + 1`
-                    else
-                        num_play_press=0
-                    fi
-                    if [ "$num_play_press" -ge "$MAX_NUM_PLAY_PRESS" ]; then
-                        input keyevent KEYCODE_MEDIA_STOP
-                        input trackball press
-                        num_play_press=0
-                        press_start_sec_media_stop=0
-                        press_last_sec_media_stop=0
-                    fi
-                fi
             fi
 
             # Check if either key is released (left/right)

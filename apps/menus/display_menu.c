@@ -184,6 +184,9 @@ MENUITEM_SETTING(lcd_sleep_after_backlight_off,
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
 MENUITEM_SETTING(brightness_item, &global_settings.brightness, NULL);
 #endif
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+MENUITEM_SETTING(android_screen_timeout, &global_settings.android_screen_timeout, NULL);
+#endif
 #endif /* HAVE_BACKLIGHT */
 #ifdef HAVE_LCD_CONTRAST
 MENUITEM_SETTING(contrast, &global_settings.contrast, NULL);
@@ -199,6 +202,7 @@ MENUITEM_SETTING(flip_display, &global_settings.flip_display, flipdisplay_callba
 MAKE_MENU(lcd_settings,ID2P(LANG_LCD_MENU),
             NULL, Icon_Display_menu
 #ifdef HAVE_BACKLIGHT
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
             ,&backlight_timeout
 # if CONFIG_CHARGING
             ,&backlight_timeout_plugged
@@ -214,6 +218,7 @@ MAKE_MENU(lcd_settings,ID2P(LANG_LCD_MENU),
 # ifdef HAVE_LCD_SLEEP_SETTING
             ,&lcd_sleep_after_backlight_off
 # endif
+#endif
 # ifdef HAVE_BACKLIGHT_BRIGHTNESS
             ,&brightness_item
 # endif
@@ -227,6 +232,9 @@ MAKE_MENU(lcd_settings,ID2P(LANG_LCD_MENU),
 # ifdef HAVE_LCD_FLIP
             ,&flip_display
 # endif
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+            ,&android_screen_timeout
+#endif
          );
 /*    LCD MENU                    */
 /***********************************/
@@ -585,12 +593,10 @@ MENUITEM_FUNCTION(touchscreen_menu_reset_calibration, 0,
 	              reset_mapping, NULL, Icon_NOICON);
 MENUITEM_SETTING(list_line_padding, &global_settings.list_line_padding, line_padding_callback);
 
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 MAKE_MENU(touchscreen_menu, ID2P(LANG_TOUCHSCREEN_SETTINGS), NULL, Icon_NOICON, &list_line_padding, &touch_mode,
             &touchscreen_menu_calibrate, &touchscreen_menu_reset_calibration);
 #endif
-
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-MENUITEM_SETTING(android_screen_timeout, &global_settings.android_screen_timeout, NULL);
 #endif
 
 static int codepage_callback(int action,
@@ -621,19 +627,18 @@ MAKE_MENU(display_menu, ID2P(LANG_DISPLAY),
             NULL, Icon_Display_menu,
 #ifdef HAVE_BACKLIGHT
             &lcd_settings,
-#endif
+#endif /* CONFIG_PLATFORM & PLATFORM_ANDROID */
 #ifdef HAVE_REMOTE_LCD
             &lcd_remote_settings,
-#endif
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-            &android_screen_timeout,
 #endif
             &scroll_settings_menu,
             &peak_meter_menu,
             &codepage_setting,
 #ifdef HAVE_BACKLIGHT
+#if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 #ifdef HAVE_TOUCHSCREEN
             &touchscreen_menu,
+#endif
 #endif
 #endif
             );
