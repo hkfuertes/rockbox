@@ -38,6 +38,9 @@ mkdir -p /system/etc/init.d
 cp /sdcard/.rockbox/update/99Y1ButtonScript /system/etc/init.d/
 chmod 755 /system/etc/init.d/99Y1ButtonScript
 cp /sdcard/.rockbox/update/switch-to-stock.sh /data/data/
+cp /sdcard/.rockbox/update/gocurl /data/data/
+chmod 755 /data/data/gocurl
+cp /sdcard/.rockbox/update/update.sh /data/data/update/update.sh
 echo "++ Updated scripts"
 
 cp /sdcard/.rockbox/update/Rockbox.kl /system/usr/keylayout/Rockbox.kl

@@ -22,12 +22,25 @@ jobs:
         sudo apt update
         sudo apt install lib32z1
         sudo apt install openjdk-17-jdk
+        sudo apt install golang-go
         java --version
         cd android
         yes | ./installToolchain.sh
     - name: create build directory
       run: |
         mkdir android/build
+    - name: build go tools
+      run: |
+        cd android/build
+        export GOPATH=$PWD/go
+        export CGO_ENABLED=0
+        export GOOS=linux
+        export GOARCH=arm
+        export GOARM=6
+        git clone https://github.com/rockbox-y1/gocurl.git
+        cd gocurl
+        git checkout cacert-option
+        go build -ldflags '-s -w' -o gocurl
     - name: configure
       run: |
         cd android/build
@@ -75,8 +88,10 @@ jobs:
         cp ../scripts/install-recovery.sh update/.
         cp ../scripts/99Y1ButtonScript update/.
         cp ../scripts/switch-to-stock.sh update/.
+        cp ../scripts/update.sh update/.
         cp ../scripts/Rockbox.kl update/.
         cp ../scripts/Stock.kl update/.
+        cp gocurl/gocurl update/.
         zip -r update.zip update/*
     - name: bundle image
       run: |
@@ -116,6 +131,11 @@ jobs:
         sudo cp ../android/scripts/99Y1ButtonScript mount_sys/etc/init.d/
         sudo chmod 755 mount_sys/etc/init.d/99Y1ButtonScript
         sudo cp ../android/scripts/switch-to-stock.sh mount_user/data/
+
+        sudo cp ../android/build/gocurl/gocurl mount_user/data
+        sudo chmod 755 mount_user/data/gocurl
+        wget https://curl.se/ca/cacert.pem
+        sudo cp cacert.pem mount_user/data
 
         sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Rockbox.kl
         sudo cp ../android/scripts/Stock.kl mount_sys/usr/keylayout/Stock.kl

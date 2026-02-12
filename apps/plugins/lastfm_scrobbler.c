@@ -66,6 +66,7 @@ Example
     All strings should be written as UTF-8, although the file does not use a BOM.
     All fields except those marked (optional) above are required.
 */
+#include <android/log.h>
 
 #include "plugin.h"
 #include "lib/configfile.h"
@@ -135,6 +136,8 @@ static struct scrobbler_cfg
     int  minms;
     int  tracknfo;
     int  remove_dup;
+    int  timezone;
+    bool  upload;
     bool delete_log;
 } gConfig;
 
@@ -143,6 +146,7 @@ static struct opt_items tracknfo_option[3] = {
     { "Skip if Missing", -1},
     {ID2P(LANG_DISPLAY_TRACK_NAME_ONLY), -1},
 };
+
 static char *tracknfo_strs[] = {"Save All", "Skip if Missing", "Filename Only"};
 
 static struct opt_items dup_option[3] = {
@@ -155,10 +159,12 @@ static char *dup_strs[] = {"Save All", "No Resume Duplicates", "No Duplicates"};
 static struct configdata config[] =
 {
     {TYPE_ENUM, 0, 3, { .int_p = &gConfig.tracknfo },              "TrackInfo", tracknfo_strs},
-    {TYPE_ENUM, 0, 3, { .int_p =  &gConfig.remove_dup },          "RemoveDupes", dup_strs},
+    {TYPE_ENUM, 0, 3, { .int_p =  &gConfig.remove_dup },           "RemoveDupes", dup_strs},
     {TYPE_BOOL, 0, 1, { .bool_p =  &gConfig.delete_log },          "DeleteLog", NULL},
     {TYPE_INT, 0, 100, { .int_p = &gConfig.savepct },              "SavePct", NULL},
     {TYPE_INT, MIN_ELAPSED_MS, 10000, { .int_p = &gConfig.minms }, "MinMs", NULL},
+    {TYPE_INT, -12, 12, { .int_p = &gConfig.timezone },            "Timezone", NULL},
+    {TYPE_BOOL, 0, 1, { .bool_p =  &gConfig.upload },              "Upload", NULL},
 };
 const int gCfg_sz = sizeof(config)/sizeof(*config);
 static long yield_tick = 0;
@@ -171,6 +177,8 @@ static void config_set_defaults(void)
     gConfig.remove_dup = 0; /* save all*/
     gConfig.delete_log = true;
     gConfig.tracknfo = 0; /* save all */
+    gConfig.timezone = 0; /* UTC */
+    gConfig.upload = false;
 }
 
 static int scrobbler_menu_action(int selection, bool has_log)
@@ -205,9 +213,16 @@ static int scrobbler_menu_action(int selection, bool has_log)
             rb->set_option(ID2P(LANG_TRACK_INFO), &gConfig.tracknfo, RB_INT,
                            tracknfo_option, 3, NULL);
             break;
-        case 5: /* sep */
+        case 5: /* set time zone */
+            rb->set_int("Timezone", "GMT", UNIT_HOUR,
+                        &gConfig.timezone, NULL, 1, -12, 12, NULL );
             break;
-        case 6: /* view playback log */
+        case 6: /* set time zone */
+            rb->set_bool("Upload to Last.fm", &gConfig.upload);
+            break;
+        case 7: /* sep */
+            break;
+        case 8: /* view playback log */
             if (crc != rb->crc_32(&gConfig, sizeof(struct scrobbler_cfg), 0xFFFFFFFF))
             {
                 /* there are changes to save */
@@ -224,7 +239,7 @@ static int scrobbler_menu_action(int selection, bool has_log)
             }
             return view_playback_log();
             break;
-        case 7: /* set defaults */
+        case 9: /* set defaults */
         {
             const struct text_message prompt = {
                 (const char*[]){ ID2P(LANG_AUDIOSCROBBLER),
@@ -236,9 +251,9 @@ static int scrobbler_menu_action(int selection, bool has_log)
             }
             break;
         }
-        case 8: /*sep*/
+        case 10: /*sep*/
             break;
-        case 9: /* Cancel */
+        case 11: /* Cancel */
             has_log = false;
             if (crc != rb->crc_32(&gConfig, sizeof(struct scrobbler_cfg), 0xFFFFFFFF))
             {
@@ -249,7 +264,7 @@ static int scrobbler_menu_action(int selection, bool has_log)
                 }
             }
             /* fallthrough */
-        case 10: /* Export & exit */
+        case 12: /* Export & exit */
         {
             res = configfile_save(CFG_FILE, config, gCfg_sz, CFG_VER);
             if (res >= 0)
@@ -308,6 +323,8 @@ static int scrobbler_menu(bool resume)
                         ID2P(LANG_COMPRESSOR_THRESHOLD),
                         "Minimum elapsed",
                         ID2P(LANG_TRACK_INFO), //Skip tracks without metadata
+                        "Timezone",
+                        "Upload to Last.fm",
                         ID2P(VOICE_BLANK),
                         ID2P(LANG_VIEWLOG),
                         ID2P(LANG_REVERT_TO_DEFAULT_SETTINGS),
@@ -489,6 +506,17 @@ static int sbl_create_entry(struct scrobbler_entry *entry, int output_fd)
                  track_len_rate_timestamp_mbid);
     #undef SEP
     #undef EOL
+
+    // upload this scrobble entry
+    if (gConfig.upload){
+        bool ret = rb->upload_scrobble(artist, id->title, id->album, timestamp);
+        if (ret){
+            return SCROBBLER_LOG_OK;
+        } else {
+            __android_log_print(ANDROID_LOG_DEBUG, "RockboxLastfm", "upload failed");
+            return SCROBBLER_LOG_SKIPTRACK;
+        }
+    }
     return SCROBBLER_LOG_OK;
 }
 
@@ -533,7 +561,7 @@ static int sbl_check_or_open(bool check_only)
         {
             /* write file header */
             rb->fdprintf(fd, "#AUDIOSCROBBLER/" SCROBBLER_VERSION "\n"
-                         "#TZ/UNKNOWN\n" "#CLIENT/Rockbox "
+                         "#TZ/UTC\n" "#CLIENT/Rockbox "
                          TARGET_NAME SCROBBLER_REVISION
                          HDR_STR_TIMELESS "\n");
             rb->fdprintf(fd, ITEM_HDR);
@@ -600,7 +628,7 @@ static bool pbl_parse_entry(struct scrobbler_entry *entry, const char *begin)
     if (!p_path || *(++p_path) == '\0')
         goto failure;
 
-    entry->timestamp = pbl_parse_atoul(p_time);
+    entry->timestamp = pbl_parse_atoul(p_time) + (3600 * gConfig.timezone);
     entry->elapsed = pbl_parse_atoul(p_elapsed);
     entry->length = pbl_parse_atoul(p_length);
     entry->path = p_path;

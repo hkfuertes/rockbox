@@ -37,6 +37,7 @@ import org.rockbox.Helper.RunForegroundManager;
 import org.rockbox.Helper.BrightnessController;
 import org.rockbox.Helper.ScreenTimeoutController;
 import org.rockbox.Helper.ExternalAppsManager;
+import org.rockbox.Helper.Connectivity;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Service;
@@ -61,6 +62,8 @@ import java.lang.reflect.Method;
 import java.util.Set;
 import android.content.Context;
 import android.content.SharedPreferences;
+import java.io.InputStream;
+import java.util.Properties;
 
 /* This class is used as the main glue between java and c.
  * All access should be done through RockboxService.get_instance() for safety.
@@ -531,6 +534,22 @@ public class RockboxService extends Service
             }
         } catch (Exception e) {
             Logger.d("Error launching app at index: " + index, e);
+        }
+        return false;
+    }
+
+    public boolean lastfmScrobbler(String artist, String track, String album, int timestamp){
+        Properties properties = new Properties();
+        try (InputStream input = new FileInputStream("/sdcard/.rockbox/lastfm.credentials")) {
+            properties.load(input);
+            String username = properties.getProperty("username").trim();
+            String password = properties.getProperty("password").trim();
+            String apiKey = properties.getProperty("apiKey").trim();
+            String sharedSecret = properties.getProperty("sharedSecret").trim();
+
+            return Connectivity.lastFm(username, password, apiKey, sharedSecret, artist, track, album, timestamp);
+        } catch (IOException e) {
+            Log.d("RockboxService", "Error reading LastFM credentials: " + e.getMessage());
         }
         return false;
     }

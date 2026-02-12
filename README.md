@@ -39,31 +39,16 @@ Exceptions:
 ### In Stock
 - Hold Menu/Back + Play/Pause for ~15 seconds
 
-## Themes
-
-### Installation
-
-1. (optional) Download the fontpack, extract it, drag the .rockbox folder onto your device https://www.rockbox.org/dl.cgi?bin=fonts
-2. Download a theme from (360p see below, 240p: https://themes.rockbox.org/index.php?target=ipod6g)
-3. extract it
-4. drag the .rockbox folder onto your device
-
-### List of 360p Themes
-
-- Theme Pack with included Fonts: https://github.com/rockbox-y1/themes/releases/latest
-- ipodmod3blk-y1: https://github.com/AkikoKumagara/ipodmod3blk-y1
-- AdwaitaPod-Arcticons (AdwaitaPod Dark Simplified): https://codeberg.org/joelchrono/AdwaitaPod-Arcticons-rockbox-360p/releases/
-
-## Installation
+## Update Rockbox
 1. Download the latest Rockbox `update.zip` here: https://github.com/rockbox-y1/rockbox/releases
 2. Connect your Y1 and copy `update.zip` to `.rockbox/update.zip`
 3. Safely disconnect your Y1
 4. Go to `Main Menu > System` and click `Firmware Update`
 5. The update process will now run in the background and automatically restart the device once it is done
 
-**Note:** If this is the first time you install Rockbox on your Y1, if you don't see the `Firmware Update` option in `Main Menu > System`, or if just want to have a fresh install follow the steps for `Initial Installation` below.
+**Note:** If this is the first time you install Rockbox on your Y1, if you don't see the `Firmware Update` option in `Main Menu > System`, or if just want to have a fresh install follow the steps for `Full Installation` below.
 
-## Initial Installation
+## Full Installation
 ### MTKClient
 
 1. Install MTKClient: https://github.com/bkerler/mtkclient
@@ -91,7 +76,70 @@ python ../mtk.py w logo,uboot,bootimg,recovery,android,usrdata logo.bin,lk.bin,b
 4. Start SP Flash Tool
 5. Follow the [official firmware flashing instructions](https://support.innioasis.com/download/flashing_tutorial/Flashing_tutorial-Y1_EN%20v2.0.7-20241021.pdf) but use the MT6572_Android_scatter.txt from the rom.zip file
 
-### Manual installation (for developers)
+## Themes
+
+### Installation
+
+1. (optional) Download the fontpack, extract it, drag the .rockbox folder onto your device https://www.rockbox.org/dl.cgi?bin=fonts
+2. Download a theme from (360p see below, 240p: https://themes.rockbox.org/index.php?target=ipod6g)
+3. extract it
+4. drag the .rockbox folder onto your device
+5. (optional) Download the voice pack from the releases, extract it, drag the .rockbox folder onto your device
+
+**If rockbox gets stuck at the Rockbox logo and doesn't load your theme please delete .rockbox/config.cfg on your SD card**
+
+### List of 360p Themes
+
+- Theme Pack with included Fonts: https://github.com/rockbox-y1/themes/releases/latest
+- ipodmod3blk-y1: https://github.com/AkikoKumagara/ipodmod3blk-y1
+- AdwaitaPod-Arcticons (AdwaitaPod Dark Simplified): https://codeberg.org/joelchrono/AdwaitaPod-Arcticons-rockbox-360p/releases/
+
+## Upload Last.fm scrobbles directly from Rockbox
+### Disclaimer
+The Innioasis Y1 runs an outdated version of Android. Going online with it has inherent risks. The connections this plugin makes *should* be save, as they use up-to-date certificates and only make secure connections to official Last.fm API servers. With such old software you never know though. Please make your own judgement calls if you are fine with this risk.
+
+### Setup
+1. Do a full installation of the newest Rockbox release
+2. Setup a Wi-Fi connection: Android System Settings > Wi-Fi > turn on > select your network
+3. Enter password with the on screen keyboard or:
+```
+adb shell input text YOUR_WIFI_PASSWORD
+```
+4. Login to Last.fm
+5. Create an application [here](https://www.last.fm/api/account/create) (you only need to enter an application name, e.g. `rockbox`)
+6. Save the API key and the Shared secret that is displayed after creating the application
+7. Download the credentials config [here](https://github.com/rockbox-y1/rockbox/blob/y1/android/scripts/lastfm.credentials)
+8. Fill `lastfm.credentials` with your username, password, API key and Shared secret
+9. Keep this file save, don't share it online
+10. Copy `lastfm.credentials` to `.rockbox/lastfm.credentials` on the SD card
+
+### Scrobble Songs
+1. Go to Plugins > Applications > lastfm_scrobbler
+2. Follow general setup instructions
+3. Upload to Last.fm > Yes
+4. (Listen to some music)
+5. Press Export
+
+**Hint:** Set the timezone setting to 0 if it was configured to something else before. The time and time zone is setup automatically once you connect to the internet if you didn't change any time/date settings in the Android System Menus.
+
+## Collection of technical information and quirks
+### Keylock exemptions are weird
+Sometimes keylock exemptions take some time to work or need a second press. It seems like this is a limitation that will be hard to fully solve without the touch wheel driver sources or access to the AOSP source used for this ROM. Once the device is in sleep mode for a while the touch wheel simply stops sending button presses to the kernel. This is likely a power-saving setting that an app has no control over. Feel free to contribute a fix for this if you have one.
+
+### Overwriting files usually found in .rockbox (language files and others)
+To for example edit `.lang` files you will want to access the respective files, usually found .rockbox. Currently these files are not populated in the .rockbox folder on the SD card of the device but instead on the internal storage (`/data/data/org.rockbox/app_rockbox/rockbox/langs`) . If you place these files in the .rockbox folder however Rockbox will use these instead of the files in the internal storage.
+
+**So where can you find and edit these files easily?**
+- download `update.zip` of the Rockbox release you are using
+- extract `update.zip`
+- rename `/data/data/org.rockbox/app_rockbox/rockbox/langs/libmisc.so` to libmisc.zip and extract it
+- modify the files in the .rockbox folder you just extracted from `libmisc` and place them in the .rockbox folder on the SD card
+- restart Rockbox
+
+### Time can't be adjusted when connected to Wi-Fi
+The time should be set to the correct time and time zone automatically if you are connected to the internet. If you still want to adjust the time manually, deactivate the automatic time setting in the Android System Menu.
+
+## Manual installation (for developers)
 
 If, despite all warnings, you still want to try installing it manually you need to do the following:
 
@@ -154,19 +202,3 @@ adb push libs/armeabi/* /data/data/org.rockbox/lib/.
 ```
 adb reboot
 ```
-- (optional) Download the voice pack from the releases, extract it, drag the .rockbox folder onto your device
-- **If rockbox gets stuck at the Rockbox logo and doesn't load your theme please delete .rockbox/config.cfg on your SD card**
-
-## Collection of technical information and quirks
-### Keylock exemptions are weird
-Sometimes keylock exemptions take some time to work or need a second press. It seems like this is a limitation that will be hard to fully solve without the touch wheel driver sources or access to the AOSP source used for this ROM. Once the device is in sleep mode for a while the touch wheel simply stops sending button presses to the kernel. This is likely a power-saving setting that an app has no control over. Feel free to contribute a fix for this if you have one.
-
-### Overwriting files usually found in .rockbox (language files and others)
-To for example edit `.lang` files you will want to access the respective files, usually found .rockbox. Currently these files are not populated in the .rockbox folder on the SD card of the device but instead on the internal storage (`/data/data/org.rockbox/app_rockbox/rockbox/langs`) . If you place these files in the .rockbox folder however Rockbox will use these instead of the files in the internal storage.
-
-**So where can you find and edit these files easily?**
-- download `update.zip` of the Rockbox release you are using
-- extract `update.zip`
-- rename `/data/data/org.rockbox/app_rockbox/rockbox/langs/libmisc.so` to libmisc.zip and extract it
-- modify the files in the .rockbox folder you just extracted from `libmisc` and place them in the .rockbox folder on the SD card
-- restart Rockbox

@@ -68,6 +68,7 @@
 static unsigned char pluginbuf[PLUGIN_BUFFER_SIZE];
 void sim_lcd_ex_init(unsigned long (*getpixel)(int, int));
 void sim_lcd_ex_update_rect(int x, int y, int width, int height);
+bool upload_scrobble(const char *artist, const char *track, const char *album, int timestamp);
 #else
 extern unsigned char pluginbuf[];
 #include "bitswap.h"
@@ -845,6 +846,9 @@ static const struct plugin_api rockbox_api = {
     add_playbacklog,
     &device_battery_tables,
     yesno_pop_confirm,
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    .upload_scrobble = upload_scrobble,
+#endif
 };
 
 static int plugin_buffer_handle;
