@@ -314,5 +314,22 @@ public class RockboxPCM extends AudioTrack
         }
     }
 
+    private void set_balance(int balance_i){
+        float mLeftVol = 1.0f;
+        float mRightVol = 1.0f;
+        float balance = (float) balance_i / 100.0f;
+
+        // left
+        if (balance < 0) {
+            mLeftVol = 1.0f;
+            mRightVol = (1.0f + balance);
+        // right
+        } else {
+            mLeftVol = (1.0f - balance);
+            mRightVol = 1.0f;
+        }
+        setStereoVolume(mLeftVol, mRightVol);
+    }
+
     public native int nativeWrite(byte[] temp, int len);
 }

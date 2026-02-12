@@ -41,6 +41,7 @@ static pthread_mutex_t audio_lock_mutex = PTHREAD_MUTEX_INITIALIZER;
 static jmethodID play_pause_method;
 static jmethodID stop_method;
 static jmethodID set_volume_method;
+static jmethodID set_balance_method;
 static jmethodID write_method;
 static jclass    RockboxPCM_class;
 static jobject   RockboxPCM_instance;
@@ -190,6 +191,7 @@ void pcm_play_dma_init(void)
     /* cache needed methods */
     play_pause_method = e->GetMethodID(env_ptr, RockboxPCM_class, "play_pause", "(Z)V");
     set_volume_method = e->GetMethodID(env_ptr, RockboxPCM_class, "set_volume", "(I)V");
+    set_balance_method = e->GetMethodID(env_ptr, RockboxPCM_class, "set_balance", "(I)V");
     stop_method       = e->GetMethodID(env_ptr, RockboxPCM_class, "stop", "()V");
     write_method      = e->GetMethodID(env_ptr, RockboxPCM_class, "write", "([BII)I");
 }
@@ -201,6 +203,11 @@ void pcm_play_dma_postinit(void)
 void pcm_set_mixer_volume(int volume)
 {
     (*env_ptr)->CallVoidMethod(env_ptr, RockboxPCM_instance, set_volume_method, volume);
+}
+
+void pcm_set_balance(int balance)
+{
+    (*env_ptr)->CallVoidMethod(env_ptr, RockboxPCM_instance, set_balance_method, balance);
 }
 
 /*

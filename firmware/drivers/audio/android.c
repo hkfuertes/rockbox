@@ -31,7 +31,8 @@ void audiohw_set_volume(int volume)
 
 void audiohw_set_balance(int balance)
 {
-    (void)balance;
+    extern void pcm_set_balance(int);
+    pcm_set_balance(balance);
 }
 
 void audiohw_close(void)
