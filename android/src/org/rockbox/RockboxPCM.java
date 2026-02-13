@@ -52,6 +52,8 @@ public class RockboxPCM extends AudioTrack
     private int setstreamvolume = -1;
     private float minpcmvolume;
     private float curpcmvolume = 0;
+    private float curleftvol = 0;
+    private float currightvol = 0;
     private float pcmrange;
 
     /* 8k is plenty, but some devices may have a higher minimum.
@@ -299,18 +301,15 @@ public class RockboxPCM extends AudioTrack
 
         float fraction = 1 - (volume / -990.0f);
         int streamvolume = (int)Math.ceil(maxstreamvolume * fraction);
-        if (streamvolume > 0) {
-            float streamfraction = (float)streamvolume / maxstreamvolume;
-            float pcmvolume =
-                (fraction / streamfraction) * pcmrange + minpcmvolume;
-            setStereoVolume(pcmvolume, pcmvolume);
-        }
-
         int oldstreamvolume = audiomanager.getStreamVolume(streamtype);
         if (streamvolume != oldstreamvolume) {
             Logger.d("java:setStreamVolume("+streamvolume+")");
             setstreamvolume = streamvolume;
             audiomanager.setStreamVolume(streamtype, streamvolume, 0);
+        }
+
+        if (streamvolume > 0) {
+            setStereoVolume(curleftvol, currightvol);
         }
     }
 
@@ -329,6 +328,8 @@ public class RockboxPCM extends AudioTrack
             mRightVol = 1.0f;
         }
         setStereoVolume(mLeftVol, mRightVol);
+        curleftvol = mLeftVol;
+        currightvol = mRightVol;
     }
 
     public native int nativeWrite(byte[] temp, int len);
