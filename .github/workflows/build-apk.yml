@@ -179,7 +179,7 @@ jobs:
         release_name: Rockbox-Y1 Nightly-${{ steps.date.outputs.release_date }} (iPod Theme Compatible)
         tag_name: nightly-ipod-theme-compatible-${{ github.sha }}
         prerelease: false
-        make_latest: true
+        make_latest: false
     - name: upload apk
       uses: shogo82148/actions-upload-release-asset@v1
       with:
