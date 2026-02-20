@@ -40,6 +40,8 @@ chmod 755 /system/etc/init.d/99Y1ButtonScript
 cp /sdcard/.rockbox/update/switch-to-stock.sh /data/data/
 cp /sdcard/.rockbox/update/gocurl /data/data/
 chmod 755 /data/data/gocurl
+cp /sdcard/.rockbox/update/poddl /data/data/
+chmod 755 /data/data/poddl
 cp /sdcard/.rockbox/update/update.sh /data/data/update/update.sh
 echo "++ Updated scripts"
 

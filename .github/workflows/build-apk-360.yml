@@ -37,8 +37,13 @@ jobs:
         export GOARM=6
         git clone https://github.com/rockbox-y1/gocurl.git 
         cd gocurl
-        git checkout cacert-option
+        git checkout json-data
         go build -ldflags '-s -w' -o gocurl
+        cd ..
+        git clone https://codeberg.org/rockbox-y1/download-podcast.git
+        cd download-podcast
+        git checkout patches
+        go build -o poddl
     - name: configure
       run: |
         cd android/build
@@ -90,6 +95,7 @@ jobs:
         cp ../scripts/Rockbox.kl update/.
         cp ../scripts/Stock.kl update/.
         cp gocurl/gocurl update/.
+        cp download-podcast/poddl update/.
         zip -r update.zip update/*
     - name: bundle image
       run: |
@@ -132,6 +138,8 @@ jobs:
 
         sudo cp ../android/build/gocurl/gocurl mount_user/data
         sudo chmod 755 mount_user/data/gocurl
+        sudo cp ../android/build/download-podcast/poddl mount_user/data
+        sudo chmod 755 mount_user/data/poddl
         wget https://curl.se/ca/cacert.pem
         sudo cp cacert.pem mount_user/data
 

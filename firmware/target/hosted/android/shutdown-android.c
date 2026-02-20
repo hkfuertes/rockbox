@@ -45,4 +45,5 @@ int android_switch_firmware(void)
     }
     return 0;
 }
+
 #endif 

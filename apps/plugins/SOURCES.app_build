@@ -28,6 +28,7 @@ logo.c
 lrcplayer.c
 matrix.c
 main_menu_config.c
+podcast_downloader.c
 mosaique.c
 pitch_screen.c
 plasma.c

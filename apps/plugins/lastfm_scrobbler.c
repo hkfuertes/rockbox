@@ -218,7 +218,7 @@ static int scrobbler_menu_action(int selection, bool has_log)
                         &gConfig.timezone, NULL, 1, -12, 12, NULL );
             break;
         case 6: /* set time zone */
-            rb->set_bool("Upload to Last.fm", &gConfig.upload);
+            rb->set_bool("Upload Scrobbles on Export", &gConfig.upload);
             break;
         case 7: /* sep */
             break;
@@ -324,7 +324,7 @@ static int scrobbler_menu(bool resume)
                         "Minimum elapsed",
                         ID2P(LANG_TRACK_INFO), //Skip tracks without metadata
                         "Timezone",
-                        "Upload to Last.fm",
+                        "Upload Scrobbles on Upload",
                         ID2P(VOICE_BLANK),
                         ID2P(LANG_VIEWLOG),
                         ID2P(LANG_REVERT_TO_DEFAULT_SETTINGS),
@@ -509,11 +509,12 @@ static int sbl_create_entry(struct scrobbler_entry *entry, int output_fd)
 
     // upload this scrobble entry
     if (gConfig.upload){
-        bool ret = rb->upload_scrobble(artist, id->title, id->album, timestamp);
+        bool ret = rb->upload_scrobble(artist, id->title, id->album, timestamp, (long)entry->length);
         if (ret){
             return SCROBBLER_LOG_OK;
         } else {
             __android_log_print(ANDROID_LOG_DEBUG, "RockboxLastfm", "upload failed");
+            rb->splash(HZ, "Upload failed.");
             return SCROBBLER_LOG_SKIPTRACK;
         }
     }
@@ -912,6 +913,15 @@ static int sbl_export(void)
     /* Export playbacklog to scrobbler.log */
     rb->lcd_clear_display();
 
+    if (gConfig.upload){
+        rb->splash(HZ, "Connecting to WiFi...");
+        const char* wifi_ret;
+        wifi_ret = rb->android_podcast_connect_wifi();
+        if (strcmp(wifi_ret, "Success") != 0){
+            rb->splash(HZ, "Failed connecting to WiFi, please check .rockbox/wifi.cfg and make sure the network is available.");
+            return PLUGIN_ERROR;
+        }
+    }
     rb->splash(0, ID2P(LANG_WAIT));
 
     static char buf[SCROBBLER_MAXENTRY_LEN];
@@ -992,6 +1002,10 @@ static int sbl_export(void)
 
     clear_display();
     rb->splashf(HZ *5, ID2P(LANG_PLAYLIST_SAVE_COUNT),tracks_saved, buf);
+
+    if (gConfig.upload){
+        rb->android_podcast_disconnect_wifi();
+    }
     return PLUGIN_OK;
 entry_error:
     if (scrobbler_fd >= 0)

@@ -56,6 +56,7 @@
 #include "../firmware/target/hosted/android/reset-bluetooth-android.h"
 #include "../firmware/target/hosted/android/update-android.h"
 #include "../gui/brightness_picker.h"
+#include <android/log.h>
 #endif
 
 static const struct browse_folder_info config = {ROCKBOX_DIR, SHOW_CFG};
@@ -589,9 +590,6 @@ static int android_restart_func(void)
 
 static int android_debug_func(void)
 {
-    // use this for debugging system calls
-    system("sleep 1");
-
     return 0;
 }
 
