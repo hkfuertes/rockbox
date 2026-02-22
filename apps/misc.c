@@ -107,6 +107,8 @@
 #include "piezo.h"
 #endif
 
+#include "powermgmt-android.h"
+
 /* units used with output_dyn_value */
 const unsigned char * const byte_units[] =
 {
@@ -1569,8 +1571,17 @@ char* string_sleeptimer(char *buffer, size_t buffer_len)
 /* If a sleep timer is running, cancel it, otherwise start one */
 int toggle_sleeptimer(void)
 {
-    set_sleeptimer_duration(get_sleep_timer() ? 0
-                    : global_settings.sleeptimer_duration);
+    int current_timer = get_sleep_timer();
+    int new_duration = current_timer ? 0 : global_settings.sleeptimer_duration;
+    
+    set_sleeptimer_duration(new_duration);
+    
+    if (current_timer) {
+        android_release_wakelock();
+    } else if (new_duration > 0) {
+        android_acquire_wakelock();
+    }
+
     return 0;
 }
 

@@ -128,9 +128,6 @@ public class RockboxService extends Service
         mMediaButtonReceiver = new MediaButtonReceiver(this);
         mFgRunner = new RunForegroundManager(this);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Wakelock");
-        if (wakeLock != null && !wakeLock.isHeld()) {
-            wakeLock.acquire();
-        }
 
         loadConfig();
         Connectivity.setContext(this);
@@ -861,5 +858,19 @@ public class RockboxService extends Service
                 }
             }
         }).start();
+    }
+
+    public void acquireWakeLock()
+    {
+        if (wakeLock != null && !wakeLock.isHeld()) {
+            wakeLock.acquire();
+        }
+    }
+
+    public void releaseWakeLock()
+    {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
     }
 }
