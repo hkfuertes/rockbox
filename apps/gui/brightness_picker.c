@@ -166,6 +166,8 @@ bool set_brightness(struct screen *display, char *title, int *brightness)
                 break;
 
             case ACTION_STD_CANCEL:
+            case ACTION_STD_MENU:
+            case ACTION_STD_OK:
                 /* Exit and save the current brightness setting */
                 global_settings.brightness = brightness_pick.brightness;
                 settings_save();

@@ -289,12 +289,9 @@ bool set_time_screen(const char* title, struct tm *tm, bool set_date)
             }
 
             /* print help text */
-            if (nb_lines > 5) {
-                screen->puts(0, 4, "Center: Select");
-                screen->puts(0, 5, "Wheel: Adjust");
+            if (nb_lines > 4) {
+                screen->puts(0, 4, "Back: Accept");
             }
-            if (nb_lines > 6)
-                screen->puts(0, 6, "Back: Accept");
             screen->update_viewport();
             screen->set_viewport(last_vp);
         }
