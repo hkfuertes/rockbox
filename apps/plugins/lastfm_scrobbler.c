@@ -324,7 +324,7 @@ static int scrobbler_menu(bool resume)
                         "Minimum elapsed",
                         ID2P(LANG_TRACK_INFO), //Skip tracks without metadata
                         "Timezone",
-                        "Upload Scrobbles on Upload",
+                        "Upload Scrobbles on Export",
                         ID2P(VOICE_BLANK),
                         ID2P(LANG_VIEWLOG),
                         ID2P(LANG_REVERT_TO_DEFAULT_SETTINGS),
