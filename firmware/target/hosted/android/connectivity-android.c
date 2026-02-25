@@ -3,9 +3,9 @@
 #include "plugin.h"
 
 /* global fields for use with various JNI calls */
-JNIEnv *env_ptr;
-jobject RockboxService_instance;
-jclass  RockboxService_class;
+extern JNIEnv *env_ptr;
+extern jobject RockboxService_instance;
+extern jclass  RockboxService_class;
 
 extern bool upload_scrobble(const char *artist, const char *track, const char *album, int timestamp, long length);
 
