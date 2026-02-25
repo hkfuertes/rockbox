@@ -118,8 +118,9 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
         else if (dpad_press_count >= 20) {
             boost_duration = 0;
         }
-        Java_org_rockbox_RockboxFramebuffer_triggerVibrationNative(env, class, global_settings.wheel_vibration_intensity, boost_duration);
-
+        if (state){
+            Java_org_rockbox_RockboxFramebuffer_triggerVibrationNative(env, class, global_settings.wheel_vibration_intensity, boost_duration);
+        }
     }
 
     button = multimedia_to_button((int)keycode);
