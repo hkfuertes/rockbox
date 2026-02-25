@@ -347,6 +347,7 @@ MENUITEM_SETTING(volume_adjust_norm_steps, &global_settings.volume_adjust_norm_s
 #endif
 
 /* Keyclick menu */
+MENUITEM_SETTING(haptic_immediate, &global_settings.haptic_immediate, NULL);
 MENUITEM_SETTING(keyclick, &global_settings.keyclick, NULL);
 MENUITEM_SETTING(keyclick_repeats, &global_settings.keyclick_repeats, NULL);
 #ifdef HAVE_HARDWARE_CLICK
@@ -355,7 +356,7 @@ MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
            &keyclick, &keyclick_hardware, &keyclick_repeats);
 #else
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_repeats);
+           &haptic_immediate, &keyclick, &keyclick_repeats);
 #endif
 
 #if CONFIG_CHARGING

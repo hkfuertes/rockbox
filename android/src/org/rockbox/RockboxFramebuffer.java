@@ -24,6 +24,7 @@ package org.rockbox;
 import java.nio.ByteBuffer;
 
 import org.rockbox.RockboxService;
+import org.rockbox.Helper.Connectivity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -301,19 +302,34 @@ public class RockboxFramebuffer extends SurfaceView
     public native void getVirtualFramebufferDimensions(int[] dimensions);
 
     /* Trigger vibration for button feedback */
-    public static void triggerVibration(Context context, int baseDuration, int boostDuration) {
-        try {
-            Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-            if (vibrator != null) {
-                int base_ms = duration_mapping[baseDuration];
-                int boost_ms = boostDuration;
-                int total_ms = base_ms + boost_ms;
-                vibrator.vibrate(total_ms);
-            } else {
-                android.util.Log.e("RockboxFramebuffer", "Vibrator is null");
+    public static void triggerVibration(Context context, int baseDuration, int boostDuration, boolean hapticImmediate) {
+        if (hapticImmediate){
+            final String duration = String.valueOf(baseDuration);
+                new Thread(new Runnable() {
+                    public void run() {
+                try {
+                        Log.d("RockboxFramebuffer", "Trigger vibration: " + duration + "ms");
+                        Connectivity.execShell("echo "+ duration +" > /sys/class/timed_output/vibrator/enable");
+                    } catch (Exception e) {
+                        Log.e("RockboxFramebuffer", "Failed to send vibration: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                    }
+                }).start();
+        } else {
+            try {
+                Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                if (vibrator != null) {
+                    int base_ms = duration_mapping[baseDuration];
+                    int boost_ms = boostDuration;
+                    int total_ms = base_ms + boost_ms;
+                    vibrator.vibrate(total_ms);
+                } else {
+                    android.util.Log.e("RockboxFramebuffer", "Vibrator is null");
+                }
+            } catch (Exception e) {
+                android.util.Log.e("RockboxFramebuffer", "Vibration error: " + e.getMessage());
             }
-        } catch (Exception e) {
-            android.util.Log.e("RockboxFramebuffer", "Vibration error: " + e.getMessage());
         }
     }
     @Override

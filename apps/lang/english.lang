@@ -9395,6 +9395,20 @@
   </voice>
 </phrase>
 <phrase>
+  id: LANG_HAPTIC_IMMEDIATE
+  desc: in keyclick settings menu
+  user: core
+  <source>
+    *: "Taptic Engine Mode"
+  </source>
+  <dest>
+    *: "Taptic Engine Mode"
+  </dest>
+  <voice>
+    *: "Taptic Engine Mode"
+  </voice>
+</phrase>
+<phrase>
   id: LANG_ACCESSORY_SUPPLY
   desc: in system settings menu
   user: core

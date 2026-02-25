@@ -2191,6 +2191,8 @@ const struct settings_list settings[] = {
                    ID2P(LANG_STRONG)),
     OFFON_SETTING(0, keyclick_repeats, LANG_KEYCLICK_REPEATS, false,
                   "keyclick repeats", NULL),
+    OFFON_SETTING(0, haptic_immediate, LANG_HAPTIC_IMMEDIATE, false,
+                  "haptic immediate", NULL),
 #endif
     TEXT_SETTING(0, playlist_catalog_dir, "playlist catalog directory",
                      PLAYLIST_CATALOG_DEFAULT_DIR, NULL, NULL),
@@ -2400,8 +2402,8 @@ const struct settings_list settings[] = {
     OFFON_SETTING(0, playback_log, LANG_LOGGING, false, "play log", NULL),
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     CHOICE_SETTING(0, wheel_vibration_intensity, LANG_WHEEL_VIBRATIONS, 25,
-                   "wheel vibration intensity", "0,5,10,15,20,25,30,35,40,45,50", NULL, 11,
-                   "0ms", "5ms", "10ms", "15ms", "20ms", "25ms", "30ms", "35ms", "40ms", "45ms", "50ms"),
+                   "wheel vibration intensity", "0,1,2,3,4,5,10,15,20,25,30,35,40,45,50", NULL, 15,
+                   "0ms", "1ms", "2ms", "3ms", "4ms", "5ms", "10ms", "15ms", "20ms", "25ms", "30ms", "35ms", "40ms", "45ms", "50ms"),
 #endif
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     CHOICE_SETTING(0, android_screen_timeout, LANG_ANDROID_SCREEN_TIMEOUT, -1,

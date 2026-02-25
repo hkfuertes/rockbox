@@ -2,7 +2,7 @@
 ## Replacing vibration motor with Taptic Engine
 An iPhone 12 Mini taptic engine fits the housing when the internal speaker is removed. You can roughly follow [this video](https://www.youtube.com/watch?v=zDgUktwXOa0).
 
-The haptic feedback is a lot better since it responds quicker to the vibration signal compared to the original vibration motor.
+The haptic feedback is a lot better since it responds quicker to the vibration signal compared to the original vibration motor. It is recommended to enable Settings > General Settings > Keyclick > Taptic Engine Mode.
 
 ## Keylock exemptions are weird
 Sometimes keylock exemptions take some time to work or need a second press. It seems like this is a limitation that will be hard to fully solve without the touch wheel driver sources or access to the AOSP source used for this ROM. Once the device is in sleep mode for a while the touch wheel simply stops sending button presses to the kernel. This is likely a power-saving setting that an app has no control over. Feel free to contribute a fix for this if you have one.

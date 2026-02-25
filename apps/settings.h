@@ -414,6 +414,7 @@ struct user_settings
     int  beep;              /* system beep volume when changing tracks etc. */
     int  keyclick;          /* keyclick volume */
     int  keyclick_repeats;  /* keyclick on repeats */
+    int  haptic_immediate;  /* taptic engine mode */
     bool dithering_enabled;
 #ifdef HAVE_PITCHCONTROL
     bool timestretch_enabled;
