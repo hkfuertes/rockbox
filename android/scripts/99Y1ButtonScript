@@ -29,7 +29,7 @@ if [ ! -f /data/data/initialized ]; then
 fi
 
 DEVICE="/dev/input/event2"
-MAX_HOLD=5  # seconds to trigger restart
+MAX_HOLD=10  # seconds to trigger restart
 MAX_HOLD_DUAL_BOOT=10
 
 # Exit if the input device is not found

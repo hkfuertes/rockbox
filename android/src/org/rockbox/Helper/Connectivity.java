@@ -420,8 +420,8 @@ public class Connectivity{
                 config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
                 config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
                 
-                // try to add network for up to 5s, the wifi stack takes some time to get ready
-                threshold = 50;
+                // try to add network for up to 10s, the wifi stack takes some time to get ready
+                threshold = 100;
                 i = 1;
                 while (networkId == -1 && i < threshold){
                     networkId = wifiManager.addNetwork(config);

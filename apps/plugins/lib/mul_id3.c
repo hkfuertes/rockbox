@@ -258,7 +258,8 @@ bool collect_dir_stats(struct dir_stats *stats, bool (*id3_cb)(const char*))
         if (info.attribute & ATTR_DIRECTORY)
         {
             if (!rb->strcmp((char *)entry->d_name, ".") ||
-                !rb->strcmp((char *)entry->d_name, ".."))
+                !rb->strcmp((char *)entry->d_name, "..") ||
+                !rb->strcmp((char *)entry->d_name, ".android_secure"))
                 continue; /* skip these */
 
             rb->snprintf(stats->dirname + dirlen, sizeof(stats->dirname) - dirlen,

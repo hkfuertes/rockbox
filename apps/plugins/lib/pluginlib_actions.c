@@ -110,8 +110,7 @@ const struct button_mapping pla_main_ctx[] =
     || (CONFIG_KEYPAD == HM801_PAD) \
     || (CONFIG_KEYPAD == SONY_NWZ_PAD) \
     || (CONFIG_KEYPAD == CREATIVE_ZEN_PAD) \
-    || (CONFIG_KEYPAD == AGPTEK_ROCKER_PAD) \
-    || (CONFIG_KEYPAD == ANDROID_PAD))
+    || (CONFIG_KEYPAD == AGPTEK_ROCKER_PAD))
     { PLA_UP,               BUTTON_MENU,                        BUTTON_NONE },
     { PLA_DOWN,             BUTTON_PLAY,                        BUTTON_NONE },
     { PLA_LEFT,             BUTTON_LEFT,                        BUTTON_NONE },
@@ -133,6 +132,19 @@ const struct button_mapping pla_main_ctx[] =
     { PLA_DOWN_REPEAT,      BUTTON_PLAY|BUTTON_REPEAT,          BUTTON_NONE },
     { PLA_LEFT_REPEAT,      BUTTON_LEFT|BUTTON_REPEAT,          BUTTON_NONE },
     { PLA_RIGHT_REPEAT,     BUTTON_RIGHT|BUTTON_REPEAT,         BUTTON_NONE },
+#elif (CONFIG_KEYPAD == ANDROID_PAD)
+    { PLA_UP,               (BUTTON_MENU|BUTTON_REL),           BUTTON_NONE },
+    { PLA_DOWN,             (BUTTON_PLAY|BUTTON_REL),           BUTTON_NONE },
+    { PLA_LEFT,             (BUTTON_LEFT|BUTTON_REL),           BUTTON_NONE },
+    { PLA_RIGHT,            (BUTTON_RIGHT|BUTTON_REL),          BUTTON_NONE },
+    { PLA_UP_REPEAT,        BUTTON_MENU|BUTTON_REPEAT,          BUTTON_NONE },
+    { PLA_DOWN_REPEAT,      BUTTON_PLAY|BUTTON_REPEAT,          BUTTON_NONE },
+    { PLA_LEFT_REPEAT,      BUTTON_LEFT|BUTTON_REPEAT,          BUTTON_NONE },
+    { PLA_RIGHT_REPEAT,     BUTTON_RIGHT|BUTTON_REPEAT,         BUTTON_NONE },
+    { PLA_SCROLL_BACK,       BUTTON_SCROLL_BACK,                BUTTON_NONE },
+    { PLA_SCROLL_FWD,        BUTTON_SCROLL_FWD,                 BUTTON_NONE },
+    { PLA_SCROLL_BACK_REPEAT,BUTTON_SCROLL_BACK|BUTTON_REPEAT,  BUTTON_NONE },
+    { PLA_SCROLL_FWD_REPEAT, BUTTON_SCROLL_FWD|BUTTON_REPEAT,   BUTTON_NONE },
 #elif (CONFIG_KEYPAD == IRIVER_H10_PAD)
     { PLA_UP,               BUTTON_SCROLL_UP,                   BUTTON_NONE },
     { PLA_DOWN,             BUTTON_SCROLL_DOWN,                 BUTTON_NONE },

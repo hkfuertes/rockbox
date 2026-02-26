@@ -22,6 +22,7 @@
 
 #include "button.h"
 #include "android_keyevents.h"
+#include <android/log.h>
 
 static bool ignore_back_button = false;
 void android_ignore_back_button(bool yes)

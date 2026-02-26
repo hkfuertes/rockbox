@@ -20,7 +20,7 @@ local function dump_albumart(fileout)
     if t_albumart.pos > 0 and t_albumart.size > 0 and t_albumart.type > 0 then
 
         if t_aaext[t_albumart.type] then
-            local filename = "/" .. fileout .. t_aaext[t_albumart.type]
+            local filename = "/sdcard/" .. fileout .. t_aaext[t_albumart.type]
             local aa = io.open(filename, "w+") -- overwrite
             if not aa then
                 rb.splash(rb.HZ, "Error writing " .. filename)
@@ -67,7 +67,7 @@ local function print_setting_table(t_tbl, s_sep)
     return pfunct(t_tbl, s_sep, str, "")
 end
 
-local filename = "/metadata.txt"
+local filename = "/sdcard/metadata.txt"
 local file = io.open(filename, "w+") -- overwrite
 local t_settings
 
@@ -86,5 +86,5 @@ file:close()
 rb.splash(100, "metadata dumped: " .. filename)
 
 if rb.settings.read(cur_trk, track_data.has_embedded_albumart) then
-    dump_albumart("/albumart")
+    dump_albumart("/sdcard/albumart")
 end

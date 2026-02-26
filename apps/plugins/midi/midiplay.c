@@ -37,7 +37,7 @@
 #define MIDI_PLAYPAUSE  BUTTON_ON
 
 #elif (CONFIG_KEYPAD == IPOD_4G_PAD) || (CONFIG_KEYPAD == IPOD_3G_PAD) || \
-      (CONFIG_KEYPAD == IPOD_1G2G_PAD)
+      (CONFIG_KEYPAD == IPOD_1G2G_PAD) || (CONFIG_KEYPAD == ANDROID_PAD)
 #define MIDI_QUIT       (BUTTON_SELECT | BUTTON_MENU)
 #define MIDI_FFWD       BUTTON_RIGHT
 #define MIDI_REWIND     BUTTON_LEFT
@@ -502,8 +502,8 @@ static int midimain(const void * filename)
         return -1;
     }
 
-    if (initSynth(mf, ROCKBOX_DIR "/patchset/patchset.cfg",
-        ROCKBOX_DIR "/patchset/drums.cfg") == -1)
+    if (initSynth(mf, "/sdcard/.rockbox/patchset/patchset.cfg",
+        "/sdcard/.rockbox/patchset/drums.cfg") == -1)
     {
 #if defined(HAVE_ADJUSTABLE_CPU_FREQ)
         rb->cpu_boost(false);

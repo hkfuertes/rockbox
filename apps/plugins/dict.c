@@ -60,8 +60,8 @@ static long reverse (long N) {
 
 
 /* data files */
-#define DICT_INDEX PLUGIN_APPS_DIR "/dict.index"
-#define DICT_DESC PLUGIN_APPS_DIR "/dict.desc"
+#define DICT_INDEX "/sdcard/.rockbox/rocks/apps/dict.index"
+#define DICT_DESC "/sdcard/.rockbox/rocks/apps/dict.desc"
 
 /* the main plugin function */
 enum plugin_status plugin_start(const void* parameter)

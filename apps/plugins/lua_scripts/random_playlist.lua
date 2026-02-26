@@ -38,7 +38,7 @@ require("dbgettags")
 get_tags = nil -- unneeded
 
 -- User defaults
-local playlistpath = "/Playlists"
+local playlistpath = "/sdcard/Playlists"
 local max_tracks = 500;  -- size of playlist to create
 local min_repeat = 500;  -- this many songs before a repeat
 local play_on_success = true;
@@ -255,7 +255,7 @@ local function create_random_playlist(database, playlist, trackcount, play, save
 
     local playlist_handle
     local playlistisfinalized = false
-    local file = io.open('/' .. database or "", "r") --read
+    local file = io.open('/sdcard/' .. database or "", "r") --read
     if not file then rb.splash(100, string.format(sERROROPENFMT, database)) return end
 
     local fsz = file:seek("end")
@@ -518,7 +518,7 @@ local function create_random_playlist(database, playlist, trackcount, play, save
 end -- playlist_create
 
 local function main()
-    if not rb.file_exists(rb.ROCKBOX_DIR .. "/database_4.tcd") then
+    if not rb.file_exists("/sdcard/.rockbox" .. "/database_4.tcd") then
         rb.splash(rb.HZ, sINITDATABASE)
         os.exit(1);
     end
@@ -530,7 +530,7 @@ local function main()
     rb.lcd_clear_display()
     rb.lcd_update()
     collectgarbage("collect")
-    create_random_playlist(rb.ROCKBOX_DIR .. "/database_4.tcd",
+    create_random_playlist("/sdcard/.rockbox" .. "/database_4.tcd",
                         playlist_name, max_tracks, play_on_success);
     -- Restore user backlight settings
     rb.backlight_use_settings()

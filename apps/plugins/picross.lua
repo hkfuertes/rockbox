@@ -23,7 +23,7 @@ local _nums = require("draw_num")
 local _clr   = require("color") -- clrset, clrinc provides device independent colors
 local _lcd   = require("lcd")   -- lcd helper functions
 
-local plugindir = rb.PLUGIN_GAMES_DATA_DIR
+local plugindir = "/sdcard/.rockbox/rocks/games"
 local userdir = plugindir .. "/.picross"
 
 local wrap = rb.settings.read('global_settings', rb.system.global_settings.list_wraparound)

@@ -24,9 +24,9 @@
 #include "lib/playback_control.h"
 #include "lib/display_text.h"
 
-#define DEFAULT_FILES PLUGIN_APPS_DATA_DIR "/disktidy.config"
-#define CUSTOM_FILES  PLUGIN_APPS_DATA_DIR "/disktidy_custom.config"
-#define LAST_RUN_STATS_FILE PLUGIN_APPS_DATA_DIR "/disktidy.stats"
+#define DEFAULT_FILES "/sdcard/.rockbox/rocks/apps/disktidy.config"
+#define CUSTOM_FILES  "/sdcard/.rockbox/rocks/apps/disktidy_custom.config"
+#define LAST_RUN_STATS_FILE "/sdcard/.rockbox/rocks/apps/disktidy.stats"
 #define DIR_STACK_SIZE 25
 
 struct dir_info {

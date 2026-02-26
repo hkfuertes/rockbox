@@ -10090,16 +10090,13 @@
   desc: in Settings -> General -> Display -> Touchscreen Settings
   user: core
   <source>
-    *: none
-    touchscreen: "Touchscreen Mode"
+    *: "Touchscreen Mode"
   </source>
   <dest>
-    *: none
-    touchscreen: "Touchscreen Mode"
+    *: "Touchscreen Mode"
   </dest>
   <voice>
-    *: none
-    touchscreen: "Touchscreen Mode"
+    *: "Touchscreen Mode"
   </voice>
 </phrase>
 <phrase>
@@ -10107,16 +10104,13 @@
   desc: in Settings -> General -> Display -> Touchscreen Settings
   user: core
   <source>
-    *: none
-    touchscreen: "3x3 Grid"
+    *: "3x3 Grid"
   </source>
   <dest>
-    *: none
-    touchscreen: "3x3 Grid"
+    *: "3x3 Grid"
   </dest>
   <voice>
-    *: none
-    touchscreen: "3 by 3 grid"
+    *: "3 by 3 grid"
   </voice>
 </phrase>
 <phrase>
@@ -10124,16 +10118,13 @@
   desc: in Settings -> General -> Display -> Touchscreen Settings
   user: core
   <source>
-    *: none
-    touchscreen: "Absolute Point"
+    *: "Absolute Point"
   </source>
   <dest>
-    *: none
-    touchscreen: "Absolute Point"
+    *: "Absolute Point"
   </dest>
   <voice>
-    *: none
-    touchscreen: "Absolute Point"
+    *: "Absolute Point"
   </voice>
 </phrase>
 <phrase>
@@ -10183,16 +10174,13 @@
   desc: in Settings -> General -> Display menu
   user: core
   <source>
-    *: none
-    touchscreen: "Touchscreen Settings"
+    *: "Touchscreen Settings"
   </source>
   <dest>
-    *: none
-    touchscreen: "Touchscreen Settings"
+    *: "Touchscreen Settings"
   </dest>
   <voice>
-    *: none
-    touchscreen: "Touchscreen Settings"
+    *: "Touchscreen Settings"
   </voice>
 </phrase>
 <phrase>
@@ -10200,16 +10188,13 @@
   desc: in Settings -> General -> Display -> Touchscreen Settings
   user: core
   <source>
-    *: none
-    touchscreen: "Calibrate"
+    *: "Calibrate"
   </source>
   <dest>
-    *: none
-    touchscreen: "Calibrate"
+    *: "Calibrate"
   </dest>
   <voice>
-    *: none
-    touchscreen: "Calibrate"
+    *: "Calibrate"
   </voice>
 </phrase>
 <phrase>
@@ -10217,16 +10202,13 @@
   desc: in Settings -> General -> Display -> Touchscreen Settings
   user: core
   <source>
-    *: none
-    touchscreen: "Reset Calibration"
+    *: "Reset Calibration"
   </source>
   <dest>
-    *: none
-    touchscreen: "Reset Calibration"
+    *: "Reset Calibration"
   </dest>
   <voice>
-    *: none
-    touchscreen: "Reset Calibration"
+    *: "Reset Calibration"
   </voice>
 </phrase>
 <phrase>
@@ -11277,16 +11259,13 @@
   desc: in keyboard
   user: core
   <source>
-    *: none
-    touchscreen: "OK"
+    *: "OK"
   </source>
   <dest>
-    *: none
-    touchscreen: "OK"
+    *: "OK"
   </dest>
   <voice>
-    *: none
-    touchscreen: "OK"
+    *: "OK"
   </voice>
 </phrase>
 <phrase>
@@ -11294,16 +11273,13 @@
   desc: in keyboard
   user: core
   <source>
-    *: none
-    touchscreen: "Del"
+    *: "Del"
   </source>
   <dest>
-    *: none
-    touchscreen: "Del"
+    *: "Del"
   </dest>
   <voice>
-    *: none
-    touchscreen: "Del"
+    *: "Del"
   </voice>
 </phrase>
 <phrase>
@@ -11311,16 +11287,13 @@
   desc: in keyboard
   user: core
   <source>
-    *: none
-    touchscreen: "Cancel"
+    *: "Cancel"
   </source>
   <dest>
-    *: none
-    touchscreen: "Cancel"
+    *: "Cancel"
   </dest>
   <voice>
-    *: none
-    touchscreen: "Cancel"
+    *: "Cancel"
   </voice>
 </phrase>
 <phrase>
@@ -11502,16 +11475,13 @@
   desc: list padding, in display settings
   user: core
   <source>
-    *: none
-    touchscreen: "Line Padding in Lists"
+    *: "Line Padding in Lists"
   </source>
   <dest>
-    *: none
-    touchscreen: "Line Padding in Lists"
+    *: "Line Padding in Lists"
   </dest>
   <voice>
-    *: none
-    touchscreen: "Line Padding in Lists"
+    *: "Line Padding in Lists"
   </voice>
 </phrase>
 <phrase>

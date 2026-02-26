@@ -42,6 +42,9 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.graphics.Paint;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 public class RockboxFramebuffer extends SurfaceView 
                                  implements SurfaceHolder.Callback
@@ -59,6 +62,8 @@ public class RockboxFramebuffer extends SurfaceView
     private static final int PLAY_KEYCODE = KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
     private static final int SCROLL_BACK_KEYCODE = KeyEvent.KEYCODE_MEDIA_PLAY;
     private static final int SCROLL_FWD_KEYCODE = KeyEvent.KEYCODE_MEDIA_PAUSE;
+    private static final int SKIP_NEXT_KEYCODE = KeyEvent.KEYCODE_MEDIA_NEXT;
+    private static final int SKIP_PREV_KEYCODE = KeyEvent.KEYCODE_MEDIA_PREVIOUS;
 
     private static final int BACK_KEYCODE = 4;
     private Handler longPressHandler = new Handler(Looper.getMainLooper());
@@ -187,7 +192,7 @@ public class RockboxFramebuffer extends SurfaceView
         return false;
     }
 
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
+    public boolean onKeyDown(final int keyCode, KeyEvent event) {
         long currentTime = System.currentTimeMillis();
         
         if (keyCode == CENTER_KEYCODE) {
@@ -196,9 +201,7 @@ public class RockboxFramebuffer extends SurfaceView
                 centerIsHeld = false;
                 centerSleepTriggered = false;
                 longPressHandler.postDelayed(centerShutdownRunnable, SHUTDOWN_THRESHOLD_MS);
-                
-                buttonHandler(keyCode, true);  
-                return true;
+                return buttonHandler(keyCode, true);  
             } else {
                 centerIsHeld = true;
                 long elapsed = event.getEventTime() - centerPressStartTime;
@@ -217,8 +220,24 @@ public class RockboxFramebuffer extends SurfaceView
             if ((keyCode == SCROLL_BACK_KEYCODE || keyCode == SCROLL_FWD_KEYCODE) && 
                 (currentTime - lastScrollPressTime <= SCROLL_REPEAT_THRESHOLD_MS)){
                 lastScrollPressTime = currentTime;
+
                 return buttonHandlerRepeat(keyCode);
             } else {
+                if (keyCode == SCROLL_BACK_KEYCODE || keyCode == SCROLL_FWD_KEYCODE){
+                    buttonHandler(keyCode, true);
+                    new Thread(new Runnable() {
+                        public void run() {
+                            try {
+                                Thread.sleep(50);
+                                buttonHandler(keyCode, false);
+                            } catch (Exception e) {
+                                Log.e("RockboxButton", "Failed to send buttonHandler(keyCode, false): " + e.getMessage());
+                                e.printStackTrace();
+                            }
+                        }
+                    }).start();
+                    return true;
+                }
                 return buttonHandler(keyCode, true);
             }
         }
@@ -270,6 +289,7 @@ public class RockboxFramebuffer extends SurfaceView
         } else {
             if (keyCode == SCROLL_BACK_KEYCODE || keyCode == SCROLL_FWD_KEYCODE) {
                 lastScrollPressTime = currentTime;
+                return true;
             }
             return buttonHandler(keyCode, false);
         }
@@ -307,9 +327,24 @@ public class RockboxFramebuffer extends SurfaceView
             final String duration = String.valueOf(baseDuration);
                 new Thread(new Runnable() {
                     public void run() {
-                try {
-                        Log.d("RockboxFramebuffer", "Trigger vibration: " + duration + "ms");
-                        Connectivity.execShell("echo "+ duration +" > /sys/class/timed_output/vibrator/enable");
+                    try {
+                        FileOutputStream f = null;
+                        try {
+                            f = new FileOutputStream(new File("/sys/class/timed_output/vibrator/enable"));
+                            f.write(duration.getBytes());
+                            f.flush();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } finally {
+                            if (f != null) {
+                                try {
+                                    f.close();
+                                } catch (IOException e) {
+                                    Log.e("RockboxFramebuffer", "Failed to send vibration: " + e.getMessage());
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
                     } catch (Exception e) {
                         Log.e("RockboxFramebuffer", "Failed to send vibration: " + e.getMessage());
                         e.printStackTrace();

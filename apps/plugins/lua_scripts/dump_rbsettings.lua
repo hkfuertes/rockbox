@@ -25,7 +25,7 @@ local function print_setting_table(t_tbl, s_sep)
     return pfunct(t_tbl, s_sep, str, "")
 end
 
-local filename = "/settings.txt"
+local filename = "/sdcard/settings.txt"
 local file = io.open(filename, "w+") -- overwrite
 local t_settings
 

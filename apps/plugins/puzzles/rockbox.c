@@ -253,7 +253,7 @@
 
 /* subtract two to allow for the fixed and UI fonts */
 #define MAX_FONTS (MAXUSERFONTS - 2)
-#define FONT_TABLE PLUGIN_GAMES_DATA_DIR "/.sgt-puzzles.fnttab"
+#define FONT_TABLE "/sdcard/.rockbox/rocks/games/.sgt-puzzles.fnttab"
 
 /* font bundle size range (in pixels) */
 #define BUNDLE_MIN 7
@@ -3255,7 +3255,7 @@ static void save_fonts(void)
 
 static void save_fname(char *buf)
 {
-    rb->snprintf(buf, MAX_PATH, "%s/sgt-%s.sav", PLUGIN_GAMES_DATA_DIR, thegame.htmlhelp_topic);
+    rb->snprintf(buf, MAX_PATH, "%s/sgt-%s.sav", "/sdcard/.rockbox/rocks/games", thegame.htmlhelp_topic);
 }
 
 /* expects a totally free me* pointer */

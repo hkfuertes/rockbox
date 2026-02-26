@@ -4,7 +4,7 @@
 #ifndef VERSIONALREADYCHOSEN              // used for batch compiling
 
 #ifndef DATADIR
-#define DATADIR ROCKBOX_DIR "/wolf3d/"
+#define DATADIR "/sdcard/.rockbox/wolf3d/"
 #endif
 
 /* Defines used for different versions */

@@ -45,8 +45,7 @@ extern void telephony_init_device(void);
 
 void system_exception_wait(void)
 {
-    intptr_t dummy = 0;
-    while(button_read_device(&dummy) != BUTTON_MENU);
+    while(button_read_device() != BUTTON_MENU);
 }
 
 void system_reboot(void)

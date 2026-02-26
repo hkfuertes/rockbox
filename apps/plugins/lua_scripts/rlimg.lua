@@ -199,7 +199,7 @@ function create_logo()
 
     img3:copy(img2, 1, 1, 1, 1, nil, nil, false, _blit.CUSTOM, my_blit)
     img2 = nil
-    _img_save(img3, "pix.bmp")
+    _img_save(img3, "/sdcard/pix.bmp")
     return img3
 end -- copy_logo
 
@@ -787,7 +787,7 @@ end -- long_text
 
 -- creates or loads an image to use as logo
 function get_logo()
-    local logo_img = _img.load("/pix.bmp") --loads the previously saved image (if we saved it before)
+    local logo_img = _img.load("/sdcard/pix.bmp") --loads the previously saved image (if we saved it before)
 
     --create a logo if an image wasn't saved previously
     if(not logo_img) then
@@ -797,8 +797,8 @@ function get_logo()
     --fallback
     if(not logo_img) then
         -- Load a BMP file in the variable backdrop
-        local base = "/.rockbox/icons/"
-        local backdrop = _img.load("/image.bmp") --user supplied image
+        local base = "/sdcard/.rockbox/icons/"
+        local backdrop = _img.load("/sdcard/image.bmp") --user supplied image
                   or _img.load(base .. "tango_small_viewers.bmp")
                   or _img.load(base .. "tango_small_viewers_mono.bmp")
                   or _img.load(base .. "tango_small_mono.bmp")
@@ -854,7 +854,7 @@ function main_menu()
                          random_img(_lcd()); _lcd:update(); rb.sleep(rb.HZ)
                        end,
                 [12] = function(CLEAR) _lcd:clear(BLACK); rock_lua() end,
-                [13] = function(SAVEI) _LCD:invert(); _img_save(_LCD, "/rocklua.bmp") end,
+                [13] = function(SAVEI) _LCD:invert(); _img_save(_LCD, "/sdcard/rocklua.bmp") end,
                 [14] = function(EXIT_) return true end
                 }
 
@@ -898,7 +898,7 @@ end
 end
 
 do
-local img = _img.load("/rocklua.bmp")
+local img = _img.load("/sdcard/rocklua.bmp")
     if not img then
         rock_lua()
     else

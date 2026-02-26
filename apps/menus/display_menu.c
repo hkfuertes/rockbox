@@ -316,20 +316,6 @@ MAKE_MENU(lcd_remote_settings, ID2P(LANG_LCD_REMOTE_MENU),
 
 /***********************************/
 /*    SCROLL MENU                  */
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-static int line_padding_callback(int action,
-                                 const struct menu_item_ex *this_item,
-                                 struct gui_synclist *this_list)
-{
-    (void)this_item;
-    (void)this_list;
-    if (action == ACTION_EXIT_MENUITEM)
-        viewportmanager_theme_changed(THEME_LISTS);
-    return action;
-}
-MENUITEM_SETTING(list_line_padding, &global_settings.list_line_padding, line_padding_callback);
-#endif
-
 MENUITEM_SETTING_W_TEXT(scroll_speed, &global_settings.scroll_speed,
                          ID2P(LANG_SCROLL), NULL);
 MENUITEM_SETTING(scroll_delay, &global_settings.scroll_delay, NULL);
@@ -377,9 +363,6 @@ MAKE_MENU(scroll_settings_menu, ID2P(LANG_SCROLL_MENU), 0, Icon_NOICON,
           &list_order,
 #ifndef HAVE_WHEEL_ACCELERATION
           &list_accel_start_delay, &list_accel_wait
-#endif
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-          ,&list_line_padding
 #endif
           );
 /*    SCROLL MENU                  */

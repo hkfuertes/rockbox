@@ -56,10 +56,6 @@
 
 #define HAVE_LCD_ENABLE
 
-/* define this to indicate your device's keypad */
-#define HAVE_TOUCHSCREEN
-#define HAVE_BUTTON_DATA
-
 /* define this if you have a real-time clock */
 #define CONFIG_RTC APPLICATION
 

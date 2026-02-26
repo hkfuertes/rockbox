@@ -40,7 +40,7 @@ local sERRORMENUENTRY = "Error finding menu entry"
 local sBLANKLINE = "##sBLANKLINE##"
 local sDEFAULTMENU = "customfilter"
 
-local sFILEOUT       = "/.rockbox/tagnavi_custom.config"
+local sFILEOUT       = "/sdcard/.rockbox/tagnavi_custom.config"
 local sFILEHEADER    = "#! rockbox/tagbrowser/2.0"
 local sMENUSTART     = "%menu_start \"custom\" \"Database\""
 local sMENUTITLE     = "title = \"fmt_title\""
@@ -310,7 +310,7 @@ function main_menu()
     end
 
     local function sel_tag(item, item_mt, t_tags)
-        t_tags = get_tags(rb.ROCKBOX_DIR .. "/" .. ts_DBPATH[item], ts_TAGTYPE[item], t_tags)
+        t_tags = get_tags("/sdcard/.rockbox" .. "/" .. ts_DBPATH[item], ts_TAGTYPE[item], t_tags)
         sel[item], ts_tags[item] = print_tags(t_tags, nil, sel[item])
         if ts_tags[item] then
             mt[item_mt] = ts_TAGTYPE[item] .. " [" .. #sel[item] .. "]"

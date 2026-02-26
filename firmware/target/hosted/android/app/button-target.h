@@ -71,4 +71,8 @@ void android_ignore_back_button(bool yes);
 #define BUTTON_BOTTOMMIDDLE 0x00080000
 #define BUTTON_BOTTOMRIGHT  0x00100000
 
+#define BUTTON_MAIN (BUTTON_SELECT|BUTTON_MENU\
+                |BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SCROLL_FWD\
+                |BUTTON_SCROLL_BACK|BUTTON_PLAY)
+
 #endif /* _BUTTON_TARGET_H_ */

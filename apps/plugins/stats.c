@@ -26,7 +26,7 @@ enum plugin_status plugin_start(const void* parameter)
     (void)parameter;
     int button, success;
     static struct dir_stats stats;
-    stats.dirname[0] = '/';
+    rb->strcpy(stats.dirname, "/sdcard/");
     stats.count_all = true;
 #ifdef HAVE_ADJUSTABLE_CPU_FREQ
     rb->cpu_boost(true);

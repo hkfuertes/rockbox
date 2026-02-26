@@ -33,6 +33,7 @@
 #include "android_keyevents.h"
 #include "settings.h"
 #include "action.h"
+#include <android/log.h>
 
 extern volatile long current_tick;
 
@@ -45,7 +46,6 @@ JNIEXPORT void JNICALL Java_org_rockbox_RockboxFramebuffer_triggerVibrationNativ
 
 static int last_y, last_x;
 static int last_btns;
-static int held_buttons = 0;
 static long last_dpad_press_time = 0;
 static int dpad_press_count = 0;
 
@@ -135,23 +135,17 @@ Java_org_rockbox_RockboxFramebuffer_buttonHandler(JNIEnv*env, jclass class,
     if (button == BUTTON_NONE)
     {
         last_btns = button;
+        __android_log_print(ANDROID_LOG_DEBUG, "RockboxButton", "ubutton == BUTTON_NONEp");
         return false;
     }
 
-    bool was_down = (last_btns & button) != 0;
-    if (state)
-    {
-        last_btns |= button;
-        held_buttons |= button;
-        if (!was_down) {
-            pending_buttons |= button;
-       }
-    }
-    else
+    if (!state)
     {
         last_btns &= (~button);
-        held_buttons &= (~button);
-        return false;
+        __android_log_print(ANDROID_LOG_DEBUG, "RockboxButton", "up");
+    } else {
+        last_btns |= button;
+        __android_log_print(ANDROID_LOG_DEBUG, "RockboxButton", "down");
     }
 
     return true;
@@ -296,23 +290,9 @@ void touchscreen_enable_device(bool en)
     (void)en; /* FIXME: do something smart */
 }
 
-int button_read_device(int *data)
+int button_read_device(void)
 {
     int btn = last_btns | pending_buttons;
-    
-    // Auto-clear latch after processing (emulate one-shot)
-    if (btn & pending_buttons) {
-        pending_buttons &= ~btn;  
-    }
-    /* Get grid button/coordinates based on the current touchscreen mode
-     *
-     * Caveat: the caller seemingly depends on *data always being filled with
-     *         the last known touchscreen position, so always call
-     *         touchscreen_to_pixels() */
-    int touch = touchscreen_to_pixels(last_x, last_y, data);
-
-    if (last_touch_state == STATE_DOWN)
-        btn |= touch;
 
     return btn;
 }

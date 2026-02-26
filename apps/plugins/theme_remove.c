@@ -23,8 +23,8 @@
 
 
 /* taken from apps/gui/wps_parser.c */
-#define WPS_DEFAULTCFG WPS_DIR "/rockbox_default.wps"
-#define RWPS_DEFAULTCFG WPS_DIR "/rockbox_default.rwps"
+#define WPS_DEFAULTCFG "/sdcard/.rockbox/wps/rockbox_default.wps"
+#define RWPS_DEFAULTCFG "/sdcard/.rockbox/wps/rockbox_default.rwps"
 
 #define CONFIG_FILENAME "theme_remove.cfg"
 #define LOG_FILENAME    "/theme_remove_log.txt"

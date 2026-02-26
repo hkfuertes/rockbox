@@ -50,10 +50,14 @@ Still To do:
 #elif (CONFIG_KEYPAD == IPOD_4G_PAD) || \
       (CONFIG_KEYPAD == IPOD_3G_PAD) || \
       (CONFIG_KEYPAD == IPOD_1G2G_PAD)
-
 #define QUIT BUTTON_MENU
 #define ACTION BUTTON_SELECT
 #define ACTIONTEXT "SELECT"
+
+#elif (CONFIG_KEYPAD == ANDROID_PAD)
+#define QUIT BUTTON_SELECT
+#define ACTION BUTTON_MENU
+#define ACTIONTEXT "MENU"
 
 #elif CONFIG_KEYPAD == IAUDIO_X5M5_PAD /* grayscale at the moment */
 

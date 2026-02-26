@@ -59,7 +59,7 @@ local Ball_Ref = {}
 --[[ 'Constants' ]]-------------------------------------------------------------
 local SCORE_MULTIPLY = 10
 local BSAND = 0x8--
-local HAS_TOUCHSCREEN = rb.action_get_touchscreen_press ~= nil
+local HAS_TOUCHSCREEN = false -- rb.action_get_touchscreen_press ~= nil
 local Empty_fn = function() end
 local LCD_H, LCD_W = rb.LCD_HEIGHT, rb.LCD_WIDTH
 local DEFAULT_BALL_SZ = LCD_H > LCD_W and LCD_W  / 30 or LCD_H / 30

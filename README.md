@@ -19,7 +19,7 @@ Exceptions:
 - Center (Long): Open Context Menu
 - Center (Very Long): Turn Off Screen
 - Play/Pause (Short, Text Input): Open Keyboard
-- Holding Next + Previous (>5 seconds): Restart Rockbox (Thanks, u/thinkVHS!)
+- Holding Next + Previous (>10 seconds): Restart Rockbox (Thanks, u/thinkVHS!)
 
 ## Dual Boot: How to switch between Rockbox and Stock
 ### In Rockbox

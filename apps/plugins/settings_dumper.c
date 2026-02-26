@@ -22,7 +22,7 @@
 
 
 
-#define FILENAME "/settings_dumper.txt"
+#define FILENAME "/sdcard/settings_dumper.txt"
 static int setting_count = 0;
 
 static void write_setting(const struct settings_list *setting, int fd, unsigned int group)

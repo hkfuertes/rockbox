@@ -23,7 +23,7 @@ if not ... then --if executed directly this is nil
 end
 collectgarbage("collect")
 
-local sDumpFile = "/rb-lua_functions.txt"
+local sDumpFile = "/sdcard/rb-lua_functions.txt"
 local filehandle
 
 local function a2m_m2a(addr_member)
