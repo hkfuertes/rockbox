@@ -424,7 +424,7 @@
 
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef PACMAN_UP
 #define PACMAN_UP       BUTTON_MIDRIGHT
 #endif

@@ -423,7 +423,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef BTN_DIR_UP
 #define BTN_DIR_UP     BUTTON_TOPMIDDLE
 #endif

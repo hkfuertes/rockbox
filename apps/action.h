@@ -302,7 +302,7 @@ enum {
     ACTION_KBD_MORSE_INPUT,
     ACTION_KBD_MORSE_SELECT,
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* the following are helper actions for touchscreen targets,
      * These are for actions which are not doable or required if buttons are
      * being used, but are nice additions if the touchscreen is used */
@@ -422,7 +422,7 @@ int get_action_statuscode(int *button);
    BUTTON_NONE or flagged with SYS_EVENT */
 intptr_t get_action_data(void);
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 /* return BUTTON_NONE               on error
  *        BUTTON_REPEAT             if repeated press
  *        BUTTON_REPEAT|BUTTON_REL  if release after repeated press

@@ -40,7 +40,7 @@
 #include "mask_select.h"
 #include "splash.h"
 #endif
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #include "screens.h"
 #endif
 #include "viewport.h"

@@ -395,7 +395,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef JEWELS_UP
 #define JEWELS_UP     BUTTON_TOPMIDDLE
 #endif

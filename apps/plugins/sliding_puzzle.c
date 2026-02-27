@@ -374,7 +374,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef PUZZLE_QUIT
 #define PUZZLE_QUIT    BUTTON_TOPLEFT
 #endif
@@ -894,7 +894,7 @@ enum plugin_status plugin_start(
         rb->lcd_putsxy(0, 28, "[MODE] shuffle");
         rb->lcd_putsxy(0, 38, "[MENU] change pic");
 #endif
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         rb->lcd_putsxy(0, 18, PUZZLE_QUIT_TEXT " to stop");
         rb->lcd_putsxy(0, 28, PUZZLE_SHUFFLE_TEXT " shuffle");
         rb->lcd_putsxy(0, 38, PUZZLE_PICTURE_TEXT " change pic");

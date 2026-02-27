@@ -502,7 +502,7 @@ CONFIG_KEYPAD == SANSA_M200_PAD
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef MPEG_MENU
 #define MPEG_MENU      (BUTTON_TOPRIGHT|BUTTON_REL)
 #endif

@@ -894,6 +894,7 @@ static int clix_handle_game(struct clix_game_state_t* state)
 
             button = rb->button_get_w_tmo(end - *rb->current_tick);
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
             if(button & BUTTON_TOUCHSCREEN)
             {
                 int x = rb->button_get_data() >> 16;
@@ -920,9 +921,10 @@ static int clix_handle_game(struct clix_game_state_t* state)
                 }
             }
 #endif
+#endif
             switch( button)
             {
-#ifndef HAVE_TOUCHSCREEN
+#if (!defined(HAVE_TOUCHSCREEN) || defined(PLATFORM_ANDROID))
 #ifdef CLIX_BUTTON_SCROLL_BACK
                 case CLIX_BUTTON_SCROLL_BACK:
                 case CLIX_BUTTON_SCROLL_BACK|BUTTON_REPEAT:
@@ -1017,7 +1019,9 @@ enum plugin_status plugin_start(const void* parameter)
     rb->lcd_set_background(LCD_BLACK);
     rb->lcd_setfont(FONT_SYSFIXED);
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
+#endif
 #endif
 
     highscore_load(SCORE_FILE, highscores, NUM_SCORES);

@@ -294,7 +294,7 @@ static bool gui_quickscreen_do_button(struct gui_quickscreen * qs, int button)
     return true;
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static int quickscreen_touchscreen_button(void)
 {
     short x,y;
@@ -375,7 +375,7 @@ static int gui_syncquickscreen_run(struct gui_quickscreen * qs, int button_enter
                                      vps[i], &vp_icons[i]);
         }
         button = get_action(CONTEXT_QUICKSCREEN, HZ/5);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         if (button == ACTION_TOUCHSCREEN)
             button = quickscreen_touchscreen_button();
 #endif

@@ -216,6 +216,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #ifndef QUIT
 #define QUIT        BUTTON_TOPLEFT
 #endif
@@ -227,6 +228,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #endif
 #ifndef ACTIONTEXT
 #define ACTIONTEXT "BOTTOMRIGHT"
+#endif
 #endif
 #endif
 

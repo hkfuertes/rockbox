@@ -257,7 +257,7 @@ redraw:
 int main(void)
 {
     int rc;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     int dummy;
 #endif
 
@@ -279,7 +279,7 @@ int main(void)
     /* Don't mount the disks yet, there could be file system/partition errors
        which are fixable in USB mode */
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     rc = button_read_device(&dummy);
 #else
     rc = button_read_device();

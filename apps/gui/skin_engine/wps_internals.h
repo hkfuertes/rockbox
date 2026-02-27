@@ -206,7 +206,7 @@ struct viewport_colour {
     unsigned colour;
 };
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 struct touchregion {
     OFFSETTYPE(char*) label;            /* label to identify this region */
     OFFSETTYPE(struct skin_viewport*) wvp;/* The viewport this region is in */
@@ -368,7 +368,7 @@ struct wps_data
     bool use_extra_framebuffer;
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     bool touchscreen_locked;
     OFFSETTYPE(struct skin_token_list *) touchregions;
 #endif
@@ -437,7 +437,7 @@ enum skin_find_what {
     SKIN_FIND_VP = 0,
     SKIN_FIND_UIVP,
     SKIN_FIND_IMAGE,
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     SKIN_FIND_TOUCHREGION,
 #endif
 #ifdef HAVE_SKIN_VARIABLES

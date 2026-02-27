@@ -473,7 +473,7 @@
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef VUMETER_QUIT
 #define VUMETER_QUIT      BUTTON_TOPLEFT
 #define LABEL_QUIT        "TOPLEFT"

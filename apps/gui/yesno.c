@@ -97,7 +97,7 @@ static void gui_yesno_draw(struct gui_yesno * yn)
 
     line_shift += put_message(display, main_message, line_shift, vp_lines);
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     if (display->screen_type == SCREEN_MAIN)
     {
         int w,h,tmo_w;
@@ -245,7 +245,7 @@ enum yesno_res gui_syncyesno_run_w_tmo(int ticks, enum yesno_res tmo_default_res
         yn[i].vp_lines = viewport_get_nb_lines(&(yn[i].vp));
     }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* switch to point mode because that's more intuitive */
     enum touchscreen_mode old_mode = touchscreen_get_mode();
     touchscreen_set_mode(TOUCHSCREEN_POINT);
@@ -275,7 +275,7 @@ enum yesno_res gui_syncyesno_run_w_tmo(int ticks, enum yesno_res tmo_default_res
         action = get_action(CONTEXT_YESNOSCREEN, HZ / 2); /* for statubar and tmo */
         switch (action)
         {
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             case ACTION_TOUCHSCREEN:
                 {
                     int btn;
@@ -354,7 +354,7 @@ exit:
         viewportmanager_theme_undo(i, true);
     }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     touchscreen_set_mode(old_mode);
 #endif
     return result;

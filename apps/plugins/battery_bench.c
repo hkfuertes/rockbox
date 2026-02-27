@@ -265,7 +265,7 @@ struct battery_tables_t {
 #endif
 
 #if defined(HAVE_TOUCHSCREEN)
-
+#ifndef PLATFORM_ANDROID
 #ifndef BATTERY_ON
 #define BATTERY_ON       BUTTON_CENTER
 #endif
@@ -277,6 +277,7 @@ struct battery_tables_t {
 #endif
 #ifndef BATTERY_OFF_TXT
 #define BATTERY_OFF_TXT "TOPLEFT"
+#endif
 #endif
 
 #endif

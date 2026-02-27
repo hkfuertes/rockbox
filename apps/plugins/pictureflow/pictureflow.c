@@ -81,7 +81,7 @@ static fb_data *lcd_fb;
      * others use left/right here too (as oppsed to up/down in lists) */
 const struct button_mapping pf_context_album_scroll[] =
 {
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     {PF_PREV,         BUTTON_MIDLEFT,                 BUTTON_NONE},
     {PF_PREV_REPEAT,  BUTTON_MIDLEFT|BUTTON_REPEAT,   BUTTON_NONE},
     {PF_NEXT,         BUTTON_MIDRIGHT,                BUTTON_NONE},
@@ -122,7 +122,7 @@ const struct button_mapping pf_context_album_scroll[] =
 
 const struct button_mapping pf_context_buttons[] =
 {
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     {PF_SELECT,       BUTTON_CENTER,              BUTTON_NONE},
     {PF_BACK,         BUTTON_BOTTOMRIGHT,         BUTTON_NONE},
 #endif

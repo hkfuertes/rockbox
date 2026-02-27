@@ -552,6 +552,7 @@ F3: equal to "="
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #ifndef CALCULATOR_LEFT
 #define CALCULATOR_LEFT           BUTTON_MIDLEFT
 #endif
@@ -577,6 +578,7 @@ F3: equal to "="
 #include "lib/pluginlib_touchscreen.h"
 static struct ts_raster calc_raster = { X_0_POS, Y_1_POS,
     BUTTON_COLS*REC_WIDTH, BUTTON_ROWS*REC_HEIGHT, REC_WIDTH, REC_HEIGHT };
+#endif
 #endif
 
 enum {
@@ -2112,7 +2114,9 @@ enum plugin_status plugin_start(const void* parameter)
     /* now go ahead and have fun! */
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
+#endif
 #endif
 
     cal_initial();
@@ -2120,6 +2124,7 @@ enum plugin_status plugin_start(const void* parameter)
     while (calStatus != cal_exit ) {
         btn = rb->button_get_w_tmo(HZ/2);
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
         if(btn & BUTTON_TOUCHSCREEN)
         {
             struct ts_raster_result res;
@@ -2150,6 +2155,7 @@ enum plugin_status plugin_start(const void* parameter)
                 }
             }
         }
+#endif
 #endif
         if (handleButton(btn) == -1)
         {

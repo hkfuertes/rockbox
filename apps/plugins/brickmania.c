@@ -379,6 +379,7 @@ CONFIG_KEYPAD == SANSA_M200_PAD
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #ifdef LEFT
 #define ALTLEFT   BUTTON_BOTTOMLEFT
 #else
@@ -399,6 +400,7 @@ CONFIG_KEYPAD == SANSA_M200_PAD
 #endif
 #ifndef DOWN
 #define DOWN      BUTTON_BOTTOMMIDDLE
+#endif
 #endif
 #endif
 
@@ -1590,10 +1592,11 @@ static int brickmania_menu(void)
     };
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     /* Entering Menu, set the touchscreen to the global setting */
     rb->touchscreen_set_mode(rb->global_settings->touch_mode);
 #endif
-
+#endif
     MENUITEM_STRINGLIST(main_menu, "Brickmania Menu", brickmania_menu_cb,
                         "Resume Game", "Start New Game",
                         "Difficulty", "Help", "High Scores",
@@ -1647,7 +1650,9 @@ static int brickmania_menu(void)
         }
     }
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
+#endif
 #endif
 }
 
@@ -2408,6 +2413,7 @@ static int brickmania_game_loop(void)
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
             if( move_button & BUTTON_TOUCHSCREEN)
             {
                 int data;
@@ -2433,6 +2439,7 @@ static int brickmania_game_loop(void)
                         ball[k].pos_x = pad_pos_x + pad_width/2;
             }
             else
+#endif
 #endif
             {
                 int button_right, button_left;
@@ -2486,7 +2493,9 @@ static int brickmania_game_loop(void)
             switch(button)
             {
 #if defined(HAVE_TOUCHSCREEN)
+#ifndef PLATFORM_ANDROID
                 case (BUTTON_REL | BUTTON_TOUCHSCREEN):
+#endif
 #endif
                 case UP:
                 case SELECT:
@@ -2609,7 +2618,9 @@ enum plugin_status plugin_start(const void* parameter)
     last_difficulty = difficulty;
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
+#endif
 #endif
 
     rb->lcd_setfont(FONT_SYSFIXED);

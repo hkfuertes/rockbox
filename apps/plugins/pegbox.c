@@ -736,7 +736,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #error "Unsupported keymap!"
 #endif
 
-#if defined(HAVE_TOUCHSCREEN)
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef PEGBOX_QUIT
 #define PEGBOX_QUIT     BUTTON_TOPLEFT
 #endif
@@ -893,7 +893,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #endif
 
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #include "lib/pluginlib_touchscreen.h"
 static struct ts_raster pegbox_raster =
     { BOARD_X, BOARD_Y, COLS*PIECE_WIDTH, ROWS*PIECE_HEIGHT,
@@ -1163,7 +1163,7 @@ static void pegbox_new_piece(struct game_context* pb, unsigned int x_loc,
     while (!exit) {
         pegbox_draw_board(pb);
         button = rb->button_get(true);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         if(button & BUTTON_TOUCHSCREEN)
         {
             pegbox_raster_btn.two_d_from.y = x_loc;
@@ -1393,7 +1393,7 @@ static int pegbox_main(struct game_context* pb)
 
     while (true) {
         button = rb->button_get(true);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         if(button & BUTTON_TOUCHSCREEN)
         {
             pegbox_raster_btn.two_d_from.y = pb->player_row;

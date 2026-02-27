@@ -95,7 +95,7 @@ int mask = global_settings.bt_selective_softlock_actions_mask;
                                        {ID2P(LANG_ACTION_AUTOLOCK_ON),    SEL_ACTION_AUTOLOCK},
                                        {ID2P(LANG_ACTION_ALWAYSAUTOLOCK), SEL_ACTION_ALWAYSAUTOLOCK},
  #endif
- #if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)
+ #if defined(HAVE_TOUCHPAD) || (defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID))
                                        {ID2P(LANG_ACTION_DISABLE_TOUCH),  SEL_ACTION_NOTOUCH},
  #endif
                                        {ID2P(LANG_ACTION_DISABLE_NOTIFY), SEL_ACTION_NONOTIFY},

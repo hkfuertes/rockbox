@@ -496,7 +496,7 @@
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef ROCKBLOX_OFF
 #define ROCKBLOX_OFF           BUTTON_TOPLEFT
 #endif

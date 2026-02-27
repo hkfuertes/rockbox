@@ -460,7 +460,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef MINESWP_QUIT
 #   define MINESWP_QUIT     BUTTON_TOPLEFT
 #endif
@@ -563,7 +563,7 @@ static bool no_mines = true;
 /* We need a stack (created on discover()) for the cascade algorithm. */
 static int stack_pos = 0;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 
 #include "lib/pluginlib_touchscreen.h"
 static struct ts_raster mine_raster = { 0, 0, MAX_WIDTH, MAX_HEIGHT, TileSize, TileSize };
@@ -779,7 +779,7 @@ static void mine_show( void )
         button = rb->button_get(true);
     while( ( button == BUTTON_NONE )
            || ( button & (BUTTON_REL|BUTTON_REPEAT) ) );
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     button = BUTTON_NONE;
 #endif
 }
@@ -864,7 +864,7 @@ static enum minesweeper_status minesweeper( void )
 {
     int i, j;
     int button;
-#if defined(HAVE_TOUCHSCREEN) || defined(MINESWP_TOGGLE_PRE) || defined(MINESWP_INFO_PRE)
+#if (defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)) || defined(MINESWP_TOGGLE_PRE) || defined(MINESWP_INFO_PRE)
     int lastbutton = BUTTON_NONE;
 #endif
 
@@ -882,7 +882,7 @@ static enum minesweeper_status minesweeper( void )
     top = (LCD_HEIGHT-height*TileSize)/2;
     left = (LCD_WIDTH-width*TileSize)/2;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     mine_raster.tl_x = left;
     mine_raster.tl_y = top;
     mine_raster.width = width*TileSize;
@@ -933,7 +933,7 @@ static enum minesweeper_status minesweeper( void )
         rb->lcd_update();
 
         button = rb->button_get(true);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         if(button & BUTTON_TOUCHSCREEN)
         {
             struct ts_raster_result res;
@@ -1076,7 +1076,7 @@ static enum minesweeper_status minesweeper( void )
                     return MINESWEEPER_USB;
                 break;
         }
-#if defined(HAVE_TOUCHSCREEN) || defined(MINESWP_TOGGLE_PRE) || defined(MINESWP_INFO_PRE)
+#if (defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)) || defined(MINESWP_TOGGLE_PRE) || defined(MINESWP_INFO_PRE)
         if( button != BUTTON_NONE )
             lastbutton = button;
 #endif

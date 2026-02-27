@@ -594,7 +594,7 @@ struct user_settings
     int scrollbar;    /* SCROLLBAR_* enum values */
     int scrollbar_width;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     int list_line_padding;
 #endif
 #if LCD_DEPTH > 1
@@ -812,7 +812,7 @@ struct user_settings
 #endif /* HAVE_SPEAKER */
     bool prevent_skip;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     int touch_mode;
     struct touchscreen_parameter ts_calibration_data;
 #endif

@@ -433,6 +433,7 @@
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #ifndef CUBE_QUIT
 #define CUBE_QUIT          BUTTON_TOPLEFT
 #endif
@@ -456,6 +457,7 @@
 #endif
 #ifndef CUBE_HIGHSPEED
 #define CUBE_HIGHSPEED     BUTTON_BOTTOMRIGHT
+#endif
 #endif
 #endif
 

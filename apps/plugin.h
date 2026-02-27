@@ -421,8 +421,10 @@ struct plugin_api {
                           const struct button_mapping* (*get_context_map)(int));
     int (*get_action)(int context, int timeout);
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     int (*action_get_touchscreen_press)(short *x, short *y);
     int (*action_get_touchscreen_press_in_vp)(short *x1, short *y1, struct viewport *vp);
+#endif
 #endif
     bool (*action_userabort)(int timeout);
     int (*core_set_keyremap)(struct button_mapping* core_keymap, int count);
@@ -445,8 +447,10 @@ struct plugin_api {
     bool (*button_get_sw_poweroff_state)(void);
 #endif
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     void (*touchscreen_set_mode)(enum touchscreen_mode);
     enum touchscreen_mode (*touchscreen_get_mode)(void);
+#endif
 #endif
 #ifdef HAVE_BUTTON_LIGHT
     void (*buttonlight_set_timeout)(int value);

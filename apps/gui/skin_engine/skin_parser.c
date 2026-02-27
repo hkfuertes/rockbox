@@ -173,7 +173,7 @@ void *skin_find_item(const char *label, enum skin_find_what what,
         case SKIN_FIND_IMAGE:
             list.linkedlist = SKINOFFSETTOPTR(databuf, data->images);
         break;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         case SKIN_FIND_TOUCHREGION:
             list.linkedlist = SKINOFFSETTOPTR(databuf, data->touchregions);
         break;
@@ -211,7 +211,7 @@ void *skin_find_item(const char *label, enum skin_find_what what,
                 if (!ret) break;
                 itemlabel = SKINOFFSETTOPTR(databuf, ((struct gui_img *)ret)->label);
                 break;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             case SKIN_FIND_TOUCHREGION:
                 if (!token) break;
                 ret = SKINOFFSETTOPTR(databuf, token->value.data);
@@ -987,7 +987,7 @@ static int parse_progressbar_tag(struct skin_element* element,
     int curr_param = 0;
     int setting_offset = 0;
     char *image_filename = NULL;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     bool suppress_touchregion = false;
 #endif
 
@@ -1160,7 +1160,7 @@ static int parse_progressbar_tag(struct skin_element* element,
         }
         else if (pb_op == eHORIZONTAL)
             pb->horizontal = true;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         else if (pb_op == eNOTOUCH)
             suppress_touchregion = true;
 #endif
@@ -1243,7 +1243,7 @@ static int parse_progressbar_tag(struct skin_element* element,
 
     pb->type = token->type;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     if (!suppress_touchregion &&
         (token->type == SKIN_TOKEN_VOLUMEBAR ||
          token->type == SKIN_TOKEN_PROGRESSBAR ||
@@ -1577,7 +1577,7 @@ static int parse_skinvar(  struct skin_element *element,
     }
 }
 #endif /* HAVE_SKIN_VARIABLES */
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static int parse_lasttouch(struct skin_element *element,
                            struct wps_token *token,
                            struct wps_data *wps_data)
@@ -1884,7 +1884,7 @@ static bool check_feature_tag(const int type)
 #endif
             return false;
         case SKIN_TOKEN_HAVE_TOUCH:
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             return true;
 #else
             return false;
@@ -1971,7 +1971,7 @@ static void skin_data_reset(struct wps_data *wps_data)
         skin_backdrop_unload(wps_data->backdrop_id);
     backdrop_filename = NULL;
 #endif
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     wps_data->touchregions = INVALID_OFFSET;
 #endif
 #ifdef HAVE_SKIN_VARIABLES
@@ -2496,7 +2496,7 @@ static int skin_element_callback(struct skin_element* element, void* data)
                 case SKIN_TOKEN_LIST_ITEM_CFG:
                     function = parse_listitemviewport;
                     break;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
                 case SKIN_TOKEN_TOUCHREGION:
                     function = parse_touchregion;
                     break;
@@ -2705,7 +2705,7 @@ bool skin_data_load(enum screen_type screen, struct wps_data *wps_data,
     wps_data->wps_loaded = wps_data->tree >= 0;
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* Check if there are any touch regions from the skin and not just
      * auto-created ones for bars */
     struct skin_token_list *regions = SKINOFFSETTOPTR(skin_buffer,

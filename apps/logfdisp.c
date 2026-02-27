@@ -184,7 +184,7 @@ bool logfdisplay(void)
             case ACTION_STD_OK:
                 user_index = 0;
                 break;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             case ACTION_TOUCHSCREEN:
             {
                 short x, y;

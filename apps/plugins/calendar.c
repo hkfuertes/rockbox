@@ -438,6 +438,7 @@
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #ifndef CALENDAR_QUIT
 #define CALENDAR_QUIT       BUTTON_MIDLEFT
 #endif
@@ -464,6 +465,7 @@
 #endif
 #ifndef CALENDAR_EVENT_MENU_NAME
 #define CALENDAR_EVENT_MENU_NAME "select"
+#endif
 #endif
 #endif
 

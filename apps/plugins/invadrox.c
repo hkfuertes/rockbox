@@ -307,7 +307,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #define RC_QUIT 0
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 
 #ifndef QUIT
 #define QUIT 0

@@ -52,7 +52,7 @@
 #endif
 
 /* Key setups */
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #define  GBN_BUTTON_UP                 BUTTON_TOPMIDDLE
 #define  GBN_BUTTON_DOWN               BUTTON_BOTTOMMIDDLE
 #define  GBN_BUTTON_LEFT               BUTTON_MIDLEFT

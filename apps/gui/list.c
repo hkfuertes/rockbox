@@ -114,7 +114,7 @@ void list_init_item_height(struct gui_synclist *list, enum screen_type screen)
 {
     struct viewport *vp = list->parent[screen];
     int line_height = font_get(vp->font)->height;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* the 4/12 factor is designed for reasonable item size on a 160dpi screen */
     if (global_settings.list_line_padding == -1)
         list->line_height[screen] = MAX(lcd_get_dpi()*4/12, line_height);
@@ -162,7 +162,7 @@ void gui_synclist_init(struct gui_synclist * gui_list,
     gui_list->nb_items = 0;
     gui_list->selected_item = 0;
     gui_synclist_init_display_settings(gui_list);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     gui_list->y_pos = 0;
 #endif
     FOR_NB_SCREENS(i)
@@ -276,7 +276,7 @@ static void gui_list_put_selection_on_screen(struct gui_synclist * gui_list,
         gui_list->start_item[screen] = bottom;
     else
         gui_list->start_item[screen] = new_start_item;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     gui_list->y_pos = gui_list->start_item[SCREEN_MAIN] * gui_list->line_height[SCREEN_MAIN];
 #endif
 }
@@ -642,7 +642,7 @@ bool gui_synclist_do_button(struct gui_synclist * lists, int *actionptr)
         }
     }
 #endif
-#if defined(HAVE_TOUCHSCREEN)
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     if (action == ACTION_TOUCHSCREEN)
         action = *actionptr = gui_synclist_do_touchscreen(lists);
     else if (action > ACTION_TOUCHSCREEN_MODE)

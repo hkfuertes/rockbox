@@ -32,7 +32,7 @@
 #include "appevents.h"
 #include "statusbar-skinned.h"
 #include "option_select.h"
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #include "sound.h"
 #include "misc.h"
 #endif
@@ -82,7 +82,7 @@ void fms_fix_displays(enum fms_exiting toggle_state)
 #endif
             viewportmanager_theme_undo(i, skin_has_sbs(gwps));
         }
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         if (i==SCREEN_MAIN && !gwps->data->touchregions)
             touchscreen_set_mode(toggle_state == FMS_ENTER ? 
                                  TOUCHSCREEN_BUTTON : global_settings.touch_mode);
@@ -95,7 +95,7 @@ int fms_do_button_loop(bool update_screen)
 {
     int button = skin_wait_for_action(FM_SCREEN, CONTEXT_FM|ALLOW_SOFTLOCK,
                                       update_screen ? TIMEOUT_NOBLOCK : HZ/5);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     struct gui_wps *gwps = skin_get_gwps(FM_SCREEN, SCREEN_MAIN);
     int offset;
     if (button == ACTION_TOUCHSCREEN)

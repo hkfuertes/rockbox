@@ -322,7 +322,7 @@ static void draw_screen(struct screen *display, char *title,
     display->set_viewport(last_vp);
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static int touchscreen_slider(struct screen *display,
                                 struct rgb_pick *rgb,
                                 int *selected_slider)
@@ -436,7 +436,7 @@ bool set_color(struct screen *display, char *title,
         }
 
         button = get_action(CONTEXT_SETTINGS_COLOURCHOOSER, TIMEOUT_BLOCK);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         if (button == ACTION_TOUCHSCREEN
                 && display->screen_type == SCREEN_MAIN)
             button = touchscreen_slider(display, &rgb, &slider);

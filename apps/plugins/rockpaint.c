@@ -433,7 +433,7 @@
 #error "Please define keys for this keypad"
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef ROCKPAINT_QUIT
 #define ROCKPAINT_QUIT      BUTTON_TOPLEFT
 #endif

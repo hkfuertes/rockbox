@@ -785,7 +785,7 @@ exit:
     return res;
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 void cleanup(void)
 {
     rb->screens[0]->set_viewport(NULL);
@@ -795,7 +795,7 @@ void cleanup(void)
 void plugin_quit(void)
 {
     int btn;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     static struct touchbutton button[] = {{
         .action = ACTION_STD_OK,
         .title = "OK",
@@ -866,7 +866,7 @@ enum plugin_status plugin_start(const void* parameter)
     rb->lcd_clear_display();
     rb->lcd_update();
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     rb->touchscreen_set_mode(rb->global_settings->touch_mode);
 #endif
 

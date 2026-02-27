@@ -530,6 +530,7 @@
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #ifndef FLIPIT_LEFT
 #define FLIPIT_LEFT         BUTTON_MIDLEFT
 #endif
@@ -556,6 +557,7 @@
 #endif
 #ifndef FLIPIT_TOGGLE
 #define FLIPIT_TOGGLE       BUTTON_CENTER
+#endif
 #endif
 #endif
 
@@ -925,11 +927,13 @@ enum plugin_status plugin_start(const void* parameter)
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     rb->lcd_putsxy(2, 8, "[BOTTOMLEFT]  to stop");
     rb->lcd_putsxy(2, 18, "[CENTRE]      toggle");
     rb->lcd_putsxy(2, 28, "[TOPRIGHT]    shuffle");
     rb->lcd_putsxy(2, 38, "[BOTTOMLEFT]  solution");
     rb->lcd_putsxy(2, 48, "[BOTTOMRIGHT] step by step");
+#endif
 #endif
 
     rb->lcd_update();

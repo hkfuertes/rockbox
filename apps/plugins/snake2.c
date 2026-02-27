@@ -475,7 +475,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef SNAKE2_LEFT
 #define SNAKE2_LEFT        BUTTON_MIDLEFT
 #endif

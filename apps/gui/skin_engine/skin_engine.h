@@ -42,7 +42,7 @@ struct skin_stats;
 struct skin_viewport;
 struct gui_wps;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 int skin_get_touchaction(struct gui_wps *gwps, int* edge_offset);
 void skin_disarm_touchregions(struct gui_wps *gwps);
 #endif

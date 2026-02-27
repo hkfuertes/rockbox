@@ -43,7 +43,7 @@ void sb_skin_has_title(enum screen_type screen);
 const char* sb_get_title(enum screen_type screen);
 enum themable_icons sb_get_icon(enum screen_type screen);
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 void sb_bypass_touchregions(bool enable);
 int sb_touch_to_button(int context);
 #endif

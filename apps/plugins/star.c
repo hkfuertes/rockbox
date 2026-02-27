@@ -694,7 +694,7 @@
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 //#ifndef STAR_QUIT
 //#define STAR_QUIT           BUTTON_TOPLEFT
 //#define STAR_QUIT_NAME           "TOPLEFT"

@@ -116,6 +116,7 @@ RB_WRAP(get_plugin_action)
 }
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 RB_WRAP(action_get_touchscreen_press)
 {
     short x, y;
@@ -139,6 +140,7 @@ RB_WRAP(touchscreen_mode)
     return 1;
 }
 
+#endif
 #endif
 
 RB_WRAP(kbd_input)
@@ -966,8 +968,10 @@ static const luaL_Reg rocklib[] =
     /* DEVICE INPUT CONTROL */
     RB_FUNC(get_plugin_action),
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     RB_FUNC(action_get_touchscreen_press),
     RB_FUNC(touchscreen_mode),
+#endif
 #endif
     RB_FUNC(kbd_input),
     RB_FUNC(gui_syncyesno_run),

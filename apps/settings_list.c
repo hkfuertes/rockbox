@@ -57,7 +57,7 @@
 #include "iap.h"
 #endif
 #include "statusbar.h"
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #include "touchscreen.h"
 #include "ctype.h" /* For isspace() */
 #endif
@@ -738,7 +738,7 @@ static void qs_set_default(void* var, void* defaultval)
     *(const struct settings_list **)var = find_setting(defaultval);
 }
 #endif
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 
 #if defined(APPLICATION) \
  || defined(ONDA_VX747)  \
@@ -2247,7 +2247,7 @@ const struct settings_list settings[] = {
                    "on,off", audio_enable_speaker, 2, ID2P(LANG_OFF), ID2P(LANG_ON)),
 #endif /* HAVE_HEADPHONE_DETECTION */
 #endif /* HAVE_SPEAKER */
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     CHOICE_SETTING(0, touch_mode, LANG_TOUCHSCREEN_MODE, DEFAULT_TOUCHSCREEN_MODE,
                    "touchscreen mode", "point,grid", NULL, 2,
                    ID2P(LANG_TOUCHSCREEN_POINT), ID2P(LANG_TOUCHSCREEN_GRID)),

@@ -314,7 +314,7 @@
 
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef ZX_UP
 #define ZX_UP           BUTTON_TOPMIDDLE
 #endif

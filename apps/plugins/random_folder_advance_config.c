@@ -637,7 +637,9 @@ enum plugin_status plugin_start(const void* parameter)
 {
     (void)parameter;
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     rb->touchscreen_set_mode(rb->global_settings->touch_mode);
+#endif
 #endif
 
     cancel = false;

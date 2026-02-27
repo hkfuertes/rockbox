@@ -368,7 +368,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #error "No keymap defined!"
 #endif
 
-#if defined(HAVE_TOUCHSCREEN)
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef QUIT
 #define QUIT  BUTTON_TOPLEFT
 #endif

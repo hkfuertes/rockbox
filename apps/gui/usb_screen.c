@@ -258,7 +258,7 @@ void gui_usb_screen_run(bool early_usb)
 #endif
 
     struct usb_screen_vps_t usb_screen_vps_ar[NB_SCREENS];
-#if defined HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     enum touchscreen_mode old_mode = touchscreen_get_mode();
 
     /* TODO: Paint buttons on screens OR switch to point mode and use
@@ -330,7 +330,7 @@ void gui_usb_screen_run(bool early_usb)
     }
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     touchscreen_set_mode(old_mode);
 #endif
 

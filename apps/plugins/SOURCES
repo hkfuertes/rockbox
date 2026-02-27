@@ -35,7 +35,7 @@ sort.c
 stats.c
 view_text.c
 pitch_screen.c
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 stopwatch.lua
 #else
 stopwatch.c
@@ -233,7 +233,7 @@ test_mem_jpeg.c
 test_resize.c
 #endif
 test_sampr.c
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 test_touchscreen.c
 #endif
 test_usb.c

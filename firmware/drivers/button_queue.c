@@ -138,7 +138,7 @@ void button_queue_post_remove_head(long id, intptr_t data)
 
 bool button_queue_try_post(long button, int data)
 {
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* one can swipe over the scren very quickly,
      * for this to work we want to forget about old presses and
      * only respect the very latest ones */

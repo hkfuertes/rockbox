@@ -603,7 +603,7 @@
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef CB_LEVEL
 #define CB_LEVEL          BUTTON_TOPLEFT
 #endif

@@ -47,7 +47,7 @@ void option_talk_value(const struct settings_list *setting, int value, bool enqu
 int option_value_as_int(const struct settings_list *setting);
 
 int get_setting_info_for_bar(const struct settings_list *setting, int offset, int *count, int *val);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 void update_setting_value_from_touch(const struct settings_list *setting, int offset, int selection);
 #endif
 

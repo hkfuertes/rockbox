@@ -2602,7 +2602,7 @@ CONFIG_KEYPAD == MROBE500_PAD
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef MP3ENC_PREV
 #define MP3ENC_PREV   BUTTON_MIDLEFT
 #endif

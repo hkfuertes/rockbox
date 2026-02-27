@@ -603,7 +603,7 @@
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifdef TV_QUIT
 #define TV_QUIT2        BUTTON_TOPLEFT
 #else

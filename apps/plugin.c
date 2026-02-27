@@ -366,8 +366,10 @@ static const struct plugin_api rockbox_api = {
     get_custom_action,
     get_action,
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     action_get_touchscreen_press,
     action_get_touchscreen_press_in_vp,
+#endif
 #endif
     action_userabort,
     core_set_keyremap,
@@ -390,8 +392,10 @@ static const struct plugin_api rockbox_api = {
     button_get_sw_poweroff_state,
 #endif
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     touchscreen_set_mode,
     touchscreen_get_mode,
+#endif
 #endif
 
 #ifdef HAVE_BUTTON_LIGHT
@@ -985,9 +989,10 @@ int plugin_load(const char* plugin, const void* parameter)
             viewportmanager_theme_enable(i, false, NULL);
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     touchscreen_set_mode(TOUCHSCREEN_BUTTON);
 #endif
-
+#endif
     /* allow voice to back off if the plugin needs lots of memory */
     if (!global_settings.talk_menu)
         talk_buffer_set_policy(TALK_BUFFER_LOOSE);
@@ -1018,7 +1023,9 @@ int plugin_load(const char* plugin, const void* parameter)
 
     /* Go back to the global setting in case the plugin changed it */
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
     touchscreen_set_mode(global_settings.touch_mode);
+#endif
 #endif
     /* restore default vp */
     lcd_set_viewport(NULL);

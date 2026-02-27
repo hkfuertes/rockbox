@@ -436,7 +436,7 @@ static void time_greyscale(void)
 
 void plugin_quit(void)
 {
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     static struct touchbutton button[] = {{
             .action = ACTION_STD_OK,
             .title = "OK",
@@ -484,7 +484,7 @@ enum plugin_status plugin_start(const void* parameter)
     /* standard stuff */
     (void)parameter;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     rb->touchscreen_set_mode(rb->global_settings->touch_mode);
 #endif
 

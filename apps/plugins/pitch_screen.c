@@ -302,7 +302,7 @@ static void pitchscreen_draw(struct screen *display, int max_lines,
         struct viewport *vp = &pitch_viewports[PITCH_TOP];
         last_vp = display->set_viewport(vp);
         display->clear_viewport();
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         /* two arrows in the top row, left and right column */
         char *arrows[] = { "<", ">"};
@@ -327,7 +327,7 @@ static void pitchscreen_draw(struct screen *display, int max_lines,
         display->set_viewport(vp);
         display->clear_viewport();
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         ptr = rb->str(LANG_KBD_OK);
         display->getstringsize(ptr, &w, &h);
@@ -669,7 +669,7 @@ static int32_t pitch_increase_semitone(int32_t pitch,
     return new_semitone;
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
 /*
  * Check for touchscreen presses as per sketch above in this file
@@ -880,7 +880,7 @@ int gui_syncpitchscreen_run(void)
 
         button = rb->get_action(CONTEXT_PITCHSCREEN, HZ);
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #if !(CONFIG_PLATFORM & PLATFORM_ANDROID)
         if (button == ACTION_TOUCHSCREEN)
         {

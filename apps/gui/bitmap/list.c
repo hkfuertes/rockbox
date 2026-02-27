@@ -49,7 +49,7 @@
 /* these are static to make scrolling work */
 static struct viewport list_text[NB_SCREENS], title_text[NB_SCREENS];
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static bool hide_selection;
 #endif
 
@@ -234,7 +234,7 @@ void list_draw(struct screen *display, struct gui_synclist *list)
     start = list_start_item;
     end = start + nb_lines;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* y_pos needs to be clamped now since it can overflow the maximum
      * in some cases, and we have no easy way to prevent this beforehand */
     int max_y_pos = list->nb_items * linedes.height - list_text[screen].height;
@@ -274,7 +274,7 @@ void list_draw(struct screen *display, struct gui_synclist *list)
         {
             struct viewport vp = *list_text_vp;
             vp.width = SCROLLBAR_WIDTH;
-#ifndef HAVE_TOUCHSCREEN
+#if !defined(HAVE_TOUCHSCREEN) || defined(PLATFORM_ANDROID)
             /* touchscreens must use full viewport height
              * due to pixelwise rendering */
             vp.height = linedes.height * nb_lines;
@@ -286,7 +286,7 @@ void list_draw(struct screen *display, struct gui_synclist *list)
                 list_text_vp->x += SCROLLBAR_WIDTH;
             struct viewport *last = display->set_viewport(&vp);
 
-#ifndef HAVE_TOUCHSCREEN
+#if !defined(HAVE_TOUCHSCREEN) || defined(PLATFORM_ANDROID)
             /* button targets go itemwise */
             int scrollbar_items = list->nb_items;
             int scrollbar_min = list_start_item;
@@ -361,7 +361,7 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 
         /* draw the selected line */
         if(
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             /* don't draw it during scrolling */
             !hide_selection &&
 #endif
@@ -445,7 +445,7 @@ void list_draw(struct screen *display, struct gui_synclist *list)
     display->set_viewport(last_vp);
 }
 
-#if defined(HAVE_TOUCHSCREEN)
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 /* This needs to be fixed if we ever get more than 1 touchscreen on a target. */
 
 /* difference in pixels between draws, above it means enough to start scrolling */

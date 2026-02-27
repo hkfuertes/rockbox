@@ -1404,7 +1404,7 @@ const char *get_token_value(struct gui_wps *gwps,
 #endif
 
         case SKIN_TOKEN_MAIN_HOLD:
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             if (data->touchscreen_locked)
                 return "t";
 #endif
@@ -1440,7 +1440,7 @@ const char *get_token_value(struct gui_wps *gwps,
             return NULL;
         case SKIN_TOKEN_LASTTOUCH:
             {
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             long last_touch = touchscreen_last_touch();
             char *skin_base = get_skin_buffer(data);
             struct touchregion_lastpress *data = SKINOFFSETTOPTR(skin_base, token->value.data);
@@ -1456,7 +1456,7 @@ const char *get_token_value(struct gui_wps *gwps,
             }
             return NULL;
         case SKIN_TOKEN_HAVE_TOUCH:
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             return "t";
 #else
             return NULL;

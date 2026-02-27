@@ -82,7 +82,7 @@ static void setoptions (void)
     if(fd < 0 || filesize!=optionssize)
     {
     /* no options to read, set defaults */
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         options.LEFT    = BUTTON_MIDLEFT;
         options.RIGHT   = BUTTON_MIDRIGHT;
 #elif defined(BUTTON_LEFT) && defined(BUTTON_RIGHT)
@@ -498,7 +498,7 @@ static void setoptions (void)
 #error No Keymap Defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         options.UP      = BUTTON_TOPMIDDLE;
         options.DOWN    = BUTTON_BOTTOMMIDDLE;
         options.START   = BUTTON_TOPRIGHT;

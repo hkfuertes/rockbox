@@ -290,8 +290,9 @@ void touchscreen_enable_device(bool en)
     (void)en; /* FIXME: do something smart */
 }
 
-int button_read_device(void)
+int button_read_device(int *data)
 {
+    (void)data;
     int btn = last_btns | pending_buttons;
 
     return btn;

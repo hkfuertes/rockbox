@@ -391,7 +391,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
 
     int old_audio_status = audio_status();
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* plugins possibly have grid mode active. force global settings in lists */
     enum touchscreen_mode tsm = touchscreen_get_mode();
     enum touchscreen_mode old_global_mode = global_settings.touch_mode;
@@ -438,7 +438,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
         /* query audio status to see if it changed */
         redraw_lists = query_audio_status(&old_audio_status);
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         /* need to translate touch actions *first* so the menu callback has
          * a chance to intercept before it hits the list's do_button. */
         if (action == ACTION_TOUCHSCREEN)
@@ -790,7 +790,7 @@ int do_menu(const struct menu_item_ex *start_menu, int *start_selected,
         viewportmanager_theme_undo(i, false);
         skinlist_set_cfg(i, NULL); /* Bugfix dangling reference in skin_draw() */
     }
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* This is needed because this function runs the settings menu and we do
      * not want to switch back to the old mode if the user intentionally went
      * to a different one. This is a very hacky way to do this... */

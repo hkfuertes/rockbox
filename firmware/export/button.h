@@ -115,7 +115,7 @@ int button_apply_acceleration(const unsigned int data);
                                      BUTTON_MULTIMEDIA_REW | \
                                      BUTTON_MULTIMEDIA_FFWD)
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 long touchscreen_last_touch(void);
 
 #if (!defined(BUTTON_TOPLEFT) || !defined(BUTTON_TOPMIDDLE) \
@@ -133,7 +133,7 @@ long touchscreen_last_touch(void);
 #include "touchpad.h"
 #endif
 
-#if (defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)) && !defined(HAS_BUTTON_HOLD)
+#if (defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)) && !defined(HAS_BUTTON_HOLD)
 void button_enable_touch(bool en);
 #endif
 

@@ -39,7 +39,7 @@
 #include "icon.h"
 #include "icons.h"
 #include "option_select.h"
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #include "sound.h"
 #include "misc.h"
 #endif
@@ -301,7 +301,7 @@ void sb_skin_init(void)
     }
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static bool bypass_sb_touchregions = true;
 void sb_bypass_touchregions(bool enable)
 {

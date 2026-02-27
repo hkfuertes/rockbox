@@ -278,6 +278,7 @@
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #define BTN_UP         BUTTON_TOPMIDDLE
 #define BTN_DOWN       BUTTON_BOTTOMMIDDLE
 #define BTN_LEFT       BUTTON_LEFT
@@ -294,6 +295,7 @@
       (CONFIG_KEYPAD != SHANLING_Q1_PAD)
 #define BTN_FIRE       BUTTON_BOTTOMLEFT
 #define BTN_PAUSE      BUTTON_TOPLEFT
+#endif
 #endif
 
 /* HAVE_TOUCHSCREEN */

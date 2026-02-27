@@ -71,7 +71,7 @@ const struct button_mapping pla_remote_ctx[] =
 const struct button_mapping pla_main_ctx[] =
 {
     /* Touchscreens */
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     { PLA_CANCEL,           BUTTON_BOTTOMRIGHT,                 BUTTON_NONE},
     { PLA_SELECT,           BUTTON_CENTER,                      BUTTON_NONE},
     { PLA_SELECT_REL,       BUTTON_CENTER|BUTTON_REL,           BUTTON_NONE},

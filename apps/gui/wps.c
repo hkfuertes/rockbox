@@ -162,7 +162,7 @@ void wps_do_action(enum wps_do_action_type action, bool updatewps)
         update_non_static();
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static int skintouch_to_wps(void)
 {
     int offset = 0;
@@ -333,7 +333,7 @@ static bool ffwd_rew(int button, bool seek_from_end)
         if (!exit)
         {
             button = get_action(CONTEXT_WPS|ALLOW_SOFTLOCK,TIMEOUT_BLOCK);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             if (button == ACTION_TOUCHSCREEN)
                 button = skintouch_to_wps();
 #endif
@@ -562,7 +562,7 @@ static void gwps_leave_wps(bool theme_enabled)
 #endif
     /* unhandle statusbar update delay */
     sb_skin_set_update_delay(DEFAULT_UPDATE_DELAY);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     touchscreen_set_mode(global_settings.touch_mode);
 #endif
 }
@@ -614,7 +614,7 @@ static void gwps_enter_wps(bool theme_enabled)
         skin_update(WPS, i, SKIN_REFRESH_ALL);
 
     }
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     gwps = skin_get_gwps(WPS, SCREEN_MAIN);
     skin_disarm_touchregions(gwps);
     if (gwps->data->touchregions < 0)
@@ -794,7 +794,7 @@ long gui_wps_show(void)
            playlist or if using the sleep timer. */
         if (!(audio_status() & AUDIO_STATUS_PLAY))
             exit = true;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         if (button == ACTION_TOUCHSCREEN)
             button = skintouch_to_wps();
 #endif

@@ -82,7 +82,7 @@ static bool enable_sw_poweroff = true;
 static int lastdata = 0;
 static int button_read(int *data);
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static long last_touchscreen_touch;
 #endif
 
@@ -270,7 +270,7 @@ static void button_tick(void)
                         /* yes we have repeat */
                         if (repeat_speed > REPEAT_INTERVAL_FINISH)
                             repeat_speed--;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
                         if(btn & BUTTON_TOUCHSCREEN)
                             repeat_speed = REPEAT_INTERVAL_TOUCH;
 #endif
@@ -318,7 +318,7 @@ static void button_tick(void)
                         /* initial repeat */
                         count = REPEAT_INTERVAL_START;
                     }
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
                     else if (lastdata != data && btn == lastbtn)
                     {   /* only coordinates changed, post anyway */
                         if (touchscreen_get_mode() == TOUCHSCREEN_POINT)
@@ -412,7 +412,7 @@ void button_init(void)
     set_remote_backlight_filter_keypress(false);
 #endif
 #endif
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     last_touchscreen_touch = -1;
 #endif
     /* Start polling last */
@@ -555,13 +555,13 @@ static int button_read(int *data)
         btn = button_flip(btn); /* swap upside down */
 #endif /* HAVE_LCD_FLIP */
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     if (btn & BUTTON_TOUCHSCREEN)
         last_touchscreen_touch = current_tick;
 #endif
     /* Filter the button status. It is only accepted if we get the same
        status twice in a row. */
-#ifndef HAVE_TOUCHSCREEN
+#if !defined(HAVE_TOUCHSCREEN) || defined(PLATFORM_ANDROID)
     if (btn != last_read)
         retval = lastbtn;
     else
@@ -585,7 +585,7 @@ int button_status_wdata(int *pdata)
 }
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 long touchscreen_last_touch(void)
 {
     return last_touchscreen_touch;
@@ -636,13 +636,13 @@ int button_apply_acceleration(const unsigned int data)
 }
 #endif /* HAVE_WHEEL_ACCELERATION */
 
-#if (defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)) && !defined(HAS_BUTTON_HOLD)
+#if (defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)) && !defined(HAS_BUTTON_HOLD)
 void button_enable_touch(bool en)
 {
 #ifdef HAVE_TOUCHPAD
     touchpad_enable(en);
 #endif
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     touchscreen_enable(en);
 #endif
 }

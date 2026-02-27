@@ -423,6 +423,7 @@
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #ifndef CHC_SETTINGS_OK
 #define CHC_SETTINGS_OK  BUTTON_CENTER
 #endif
@@ -445,7 +446,7 @@
 #define CHC_MENU         BUTTON_TOPRIGHT
 #endif
 #endif
-
+#endif
 
 /* leave first line blank on bitmap display, for pause icon */
 #define FIRST_LINE 1

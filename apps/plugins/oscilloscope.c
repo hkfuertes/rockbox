@@ -568,7 +568,7 @@
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef OSCILLOSCOPE_QUIT
 #define OSCILLOSCOPE_QUIT            BUTTON_TOPLEFT
 #endif

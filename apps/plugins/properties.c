@@ -335,8 +335,10 @@ enum plugin_status plugin_start(const void* parameter)
 {
     static struct dir_stats stats;
     const char *file = parameter;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
+#ifndef PLATFORM_ANDROID
     rb->touchscreen_set_mode(rb->global_settings->touch_mode);
+#endif
 #endif
     int ret = file && determine_props_type(file);
     if (!ret)

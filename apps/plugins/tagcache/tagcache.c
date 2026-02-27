@@ -925,6 +925,7 @@ enum plugin_status plugin_start(const void* parameter)
                 rb->queue_post(&gThread.queue, EV_EXIT, 0);
                 break;
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
             case ACTION_TOUCHSCREEN:
             {
                 gThread.last_useraction_tick = current_tick;
@@ -943,6 +944,7 @@ enum plugin_status plugin_start(const void* parameter)
                     prev_y = y;
                 }
             }
+#endif
 #endif
             default:
                 break;

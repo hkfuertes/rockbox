@@ -618,6 +618,7 @@ enum {
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
+#ifndef PLATFORM_ANDROID
 #ifndef BJACK_DOUBLEDOWN
 #define BJACK_DOUBLEDOWN    BUTTON_MIDLEFT
 #define BJACK_DOUBLE_NAME   "BUTTON_MIDLEFT"
@@ -647,6 +648,7 @@ enum {
 #endif
 #ifndef BJACK_LEFT
 #define BJACK_LEFT          BUTTON_MIDLEFT
+#endif
 #endif
 
 #endif

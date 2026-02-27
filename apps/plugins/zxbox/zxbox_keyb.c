@@ -294,7 +294,7 @@
 
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef KBD_SELECT
 #define KBD_SELECT BUTTON_CENTER
 #endif

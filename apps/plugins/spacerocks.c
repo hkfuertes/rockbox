@@ -388,7 +388,7 @@
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef AST_PAUSE
 #define AST_PAUSE       BUTTON_CENTER
 #endif

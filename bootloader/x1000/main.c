@@ -53,7 +53,7 @@ void main(uint32_t saved_cpm_scratch)
     i2c_init();
     power_init();
     button_init();
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     touchscreen_set_mode(TOUCHSCREEN_BUTTON);
 #endif
     enable_irq();

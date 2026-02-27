@@ -168,7 +168,7 @@ static void toggle_theme(enum screen_type screen, bool force)
     send_event(GUI_EVENT_THEME_CHANGED, NULL);
     FOR_NB_SCREENS(i)
         was_enabled[i] = is_theme_enabled(i);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     sb_bypass_touchregions(!is_theme_enabled(SCREEN_MAIN));
 #endif
     after_boot[screen] = true;
@@ -247,7 +247,7 @@ void viewportmanager_theme_changed(const int which)
     send_event(GUI_EVENT_THEME_CHANGED, NULL);
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 /* check if a point (x and y coordinates) are within a viewport */
 bool viewport_point_within_vp(const struct viewport *vp,
                                const int x, const int y)

@@ -81,7 +81,7 @@ target/hosted/sdl/filesystem-sdl.c
 #endif
 target/hosted/sdl/load_code-sdl.c
 target/hosted/sdl/timer-sdl.c
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 target/hosted/sdl/key_to_touch-sdl.c
 #endif
 #ifdef APPLICATION
@@ -356,7 +356,7 @@ drivers/audio/dac3550a.c
 drivers/serial.c
 #endif
 #endif /* PLATFORM_NATIVE */
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 drivers/touchscreen.c
 #endif
 

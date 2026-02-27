@@ -47,7 +47,7 @@
 #define DEFAULT_MARGIN 6
 #define KBD_BUF_SIZE 500
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #define MIN_GRID_SIZE   16
 #define GRID_SIZE(s, x)   \
         ((s) == SCREEN_MAIN && MIN_GRID_SIZE > (x) ? MIN_GRID_SIZE: (x))
@@ -115,7 +115,7 @@ struct keyboard_parameters
     int x;
     int y;
     bool line_edit;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     bool show_buttons;
 #endif
 };
@@ -392,7 +392,7 @@ static void kbd_draw_picker(struct keyboard_parameters *pm,
                             struct screen *sc, struct edit_state *state);
 static void kbd_draw_edit_line(struct keyboard_parameters *pm,
                                struct screen *sc, struct edit_state *state);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static void kbd_draw_buttons(struct keyboard_parameters *pm, struct screen *sc);
 static int keyboard_touchscreen(struct keyboard_parameters *pm,
                                 struct screen *sc, struct edit_state *state);
@@ -424,7 +424,7 @@ int kbd_input(char* text, int buflen, unsigned short *kbd)
         goto cleanup;
     }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* keyboard is unusuable in pointing mode so force 3x3 for now.
      * TODO - fix properly by using a bigger font and changing the layout */
     enum touchscreen_mode old_mode = touchscreen_get_mode();
@@ -562,7 +562,7 @@ int kbd_input(char* text, int buflen, unsigned short *kbd)
             sc->clear_display();
             kbd_draw_picker(pm, sc, &state);
             kbd_draw_edit_line(pm, sc, &state);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             if (pm->show_buttons)
                 kbd_draw_buttons(pm, sc);
 #endif
@@ -582,7 +582,7 @@ int kbd_input(char* text, int buflen, unsigned short *kbd)
         button_screen = (get_action_statuscode(NULL) & ACTION_REMOTE) ? 1 : 0;
 #endif
         pm = &param[button_screen];
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         if (button == ACTION_TOUCHSCREEN)
         {
             struct screen *sc = &screens[button_screen];
@@ -776,7 +776,7 @@ int kbd_input(char* text, int buflen, unsigned short *kbd)
     if (ret < 0)
         splash(HZ/2, ID2P(LANG_CANCEL));
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     touchscreen_set_mode(old_mode);
 #endif
 
@@ -802,7 +802,7 @@ static void kbd_calc_pm_params(struct keyboard_parameters *pm,
     const unsigned char *p;
     unsigned short ch, *pbuf;
     int i, w;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     pm->show_buttons = (sc->screen_type == SCREEN_MAIN &&
                                 (touchscreen_get_mode() == TOUCHSCREEN_POINT));
 #endif
@@ -818,7 +818,7 @@ static void kbd_calc_pm_params(struct keyboard_parameters *pm,
         font = font_get(FONT_SYSFIXED);
         pm->font_h = font->height;
     }
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     pm->font_h = GRID_SIZE(sc->screen_type, pm->font_h);
 #endif
 
@@ -847,7 +847,7 @@ static void kbd_calc_pm_params(struct keyboard_parameters *pm,
             pm->text_w = w;
     }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     pm->font_w = GRID_SIZE(sc->screen_type, pm->font_w);
 #endif
 
@@ -874,7 +874,7 @@ static void kbd_calc_vp_params(struct keyboard_parameters *pm,
 
     /* calculate pm->pages and pm->lines */
     sc_h = vp->height;/**sc->getheight()**/;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     int button_h = 0;
     bool flippage_button = false;
     /* add space for buttons */
@@ -908,7 +908,7 @@ recalc_param:
 
     pm->pages = (total_lines + pm->lines - 1) / pm->lines;
     pm->lines = (total_lines + pm->pages - 1) / pm->pages;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     if (pm->pages > 1 && pm->show_buttons && !flippage_button)
     {
         /* add space for flip page button */
@@ -922,7 +922,7 @@ recalc_param:
 
     pm->main_y = pm->font_h*pm->lines + pm->keyboard_margin;
     pm->keyboard_margin -= pm->keyboard_margin/2;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     /* flip page button is put between picker and edit line */
     if (flippage_button)
         pm->main_y += button_h;
@@ -1153,7 +1153,7 @@ static void kbd_draw_edit_line(struct keyboard_parameters *pm,
     sc->set_viewport(last);
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static void kbd_draw_buttons(struct keyboard_parameters *pm, struct screen *sc)
 {
     struct viewport vp;

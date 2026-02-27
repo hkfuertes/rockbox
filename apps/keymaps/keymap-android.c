@@ -209,8 +209,3 @@ const struct button_mapping* target_get_context_mapping(int context)
     }
     return button_context_standard;
 }
-
-const struct button_mapping* get_context_mapping(int context)
-{
-    return target_get_context_mapping(context & ~CONTEXT_CUSTOM2);
-}

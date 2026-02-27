@@ -477,7 +477,7 @@
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef SUDOKU_BUTTON_QUIT
 #define SUDOKU_BUTTON_QUIT     BUTTON_TOPLEFT
 #endif

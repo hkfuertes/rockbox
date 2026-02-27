@@ -42,7 +42,7 @@
 #include "settings.h"
 #include "misc.h"
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #include "statusbar-skinned.h"
 #include "viewport.h"
 #endif
@@ -102,7 +102,7 @@ typedef struct
     int     key_remap;
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     bool     ts_short_press;
     int      ts_data;
 #endif
@@ -124,7 +124,7 @@ static action_last_t action_last =
     .key_remap = 0,
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     .ts_data        = 0,
     .ts_short_press = false,
 #endif
@@ -429,7 +429,7 @@ static inline void update_screen_has_lock(action_last_t *last, action_cur_t *cur
 static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur)
 {
 
-#if !defined(HAVE_TOUCHSCREEN)
+#if !defined(HAVE_TOUCHSCREEN) || defined(PLATFORM_ANDROID)
     (void) last;
     (void) cur;
     return false;
@@ -730,7 +730,7 @@ void do_key_lock(bool lock)
     action_last.keys_locked = lock;
     action_last.button = BUTTON_NONE;
     button_clear_queue();
-#if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)
+#if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
  /* disable touch device on keylock if std behavior or selected disable touch */
     if (!has_flag(action_last.softlock_mask, SEL_ACTION_ENABLED) ||
          has_flag(action_last.softlock_mask, SEL_ACTION_NOTOUCH))
@@ -767,7 +767,7 @@ static inline int do_auto_softlock(action_last_t *last, action_cur_t *cur)
     {
         do_key_lock(true);
 
-#if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)
+#if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         /* if the touchpad is supposed to be off and the current buttonpress
          * is from the touchpad, nullify both button and action. */
         if (!has_flag(action_last.softlock_mask, SEL_ACTION_ENABLED) ||
@@ -776,7 +776,7 @@ static inline int do_auto_softlock(action_last_t *last, action_cur_t *cur)
 #if defined(HAVE_TOUCHPAD)
             cur->button = touchpad_filter(cur->button);
 #endif
-#if defined(HAVE_TOUCHSCREEN)
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             const int touch_fakebuttons =
                 BUTTON_TOPLEFT    | BUTTON_TOPMIDDLE    | BUTTON_TOPRIGHT    |
                 BUTTON_MIDLEFT    | BUTTON_CENTER       | BUTTON_MIDRIGHT    |
@@ -1125,7 +1125,7 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
 * EXPORTED ACTION FUNCTIONS ***************************************************
 *******************************************************************************
 */
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 /* return BUTTON_NONE               on error
  *        BUTTON_REPEAT             if repeated press
  *        BUTTON_REPEAT|BUTTON_REL  if release after repeated press
@@ -1223,7 +1223,7 @@ int get_action(int context, int timeout)
 
     int action = get_action_worker(&action_last, &current);
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     if (action == ACTION_TOUCHSCREEN)
     {
         action = sb_touch_to_button(context);

@@ -145,7 +145,7 @@ static cursor_wrap_mode_t cursor_wrap_mode;
 static bool quit_plugin;
 static bool game_finished;
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #include "lib/pluginlib_touchscreen.h"
 /* This uses the touchscreen library functions/structures. */
 
@@ -344,7 +344,7 @@ static void reversi_gui_display_board(void) {
     y = LEGEND_Y(r)+(LEGEND_Y(1)-LEGEND_Y(0))/2-CELL_WIDTH/2;
     rb->lcd_drawrect(x, y, CELL_WIDTH+1, CELL_HEIGHT+1);
 
-#if defined(HAVE_TOUCHSCREEN)
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     touchbutton_draw(reversi_buttons, TOUCHBUTTON_COUNT);
 #endif
 
@@ -588,7 +588,7 @@ static void reversi_gui_move_cursor(int new_row, int new_col) {
 enum plugin_status plugin_start(const void *parameter) {
     bool exit, draw_screen;
     int button;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     int button_x, button_y;
 #endif
 #if defined(REVERSI_BUTTON_MENU_LONGPRESS) || \
@@ -601,7 +601,7 @@ enum plugin_status plugin_start(const void *parameter) {
     /* Initialize Font Width and height */
     rb->lcd_getstringsize("0", &font_width, &font_height);
     
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
 #endif
 
@@ -669,7 +669,7 @@ enum plugin_status plugin_start(const void *parameter) {
         button = rb->button_get(true);
         
         /* The touchscreen buttons can act as true buttons so OR them in */
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
         button |= touchbutton_check_button(button, reversi_buttons, TOUCHBUTTON_COUNT);
 #endif
 
@@ -681,7 +681,7 @@ enum plugin_status plugin_start(const void *parameter) {
             }
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
             if(button&BUTTON_TOUCHSCREEN) {
                 button_x = rb->button_get_data();
                 button_y = button_x & 0xffff;

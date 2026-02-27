@@ -154,7 +154,7 @@ bool set_time_screen(const char* title, struct tm *tm, bool set_date)
     /* speak selection when screen is entered */
     say_time(cursorpos, tm);
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     enum touchscreen_mode old_mode = touchscreen_get_mode();
     touchscreen_set_mode(TOUCHSCREEN_BUTTON);
 #endif
@@ -407,7 +407,7 @@ bool set_time_screen(const char* title, struct tm *tm, bool set_date)
     }
     FOR_NB_SCREENS(s)
         screens[s].scroll_stop_viewport(&viewports[s]);
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     touchscreen_set_mode(old_mode);
 #endif
     return usb;
@@ -1006,7 +1006,7 @@ int view_runtime(void)
     return simplelist_show_list(&info);
 }
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 static int get_sample(struct touchscreen_calibration *cal, int x, int y, int i,
                       struct screen* screen)
 {

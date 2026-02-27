@@ -1295,7 +1295,7 @@ Lyre prototype 1 */
 #define INCLUDE_TIMEOUT_API
 #endif /* HAVE_HEADPHONE_DETECTION */
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 /* Timeout objects required for kinetic list scrolling */
 #define INCLUDE_TIMEOUT_API
 /* Enable skin variable system, may not be the best place for this #define. */

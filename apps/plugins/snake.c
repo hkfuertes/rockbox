@@ -328,7 +328,7 @@ dir is the current direction of the snake - 0=up, 1=right, 2=down, 3=left;
 #error No keymap defined!
 #endif
 
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
 #ifndef SNAKE_QUIT
 #define SNAKE_QUIT      BUTTON_TOPLEFT
 #endif

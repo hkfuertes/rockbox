@@ -117,7 +117,7 @@ static void gui_skin_reset(struct gui_skin *skin)
     skin->data.wps_loaded = false;
     skin->data.buflib_handle = -1;
     skin->data.tree = -1;
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(PLATFORM_ANDROID)
     skin->data.touchregions = -1;
 #endif
 #ifdef HAVE_SKIN_VARIABLES
