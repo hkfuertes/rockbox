@@ -1,4 +1,4 @@
-name: Build latest APK (Unified)
+name: Build latest ROMs
 
 on:
   push:
@@ -87,47 +87,7 @@ jobs:
         fi
         $APKSIGNER sign --key ../platform.pk8 --cert ../platform.x509.pem rockbox_unsigned.apk
         cp rockbox_unsigned.apk rockbox_240p.apk
-    
-    # Build 360p (Type B)
-    - name: build 360p type b
-      run: |
-        cd android/build
-        ../../tools/configure --target=201 --lcdwidth=480 --lcdheight=360 --type=n
-        make clean
-        make
-        make classes
-        make zip
-        make unsigned-apk
-        # Sign APK
-        APKSIGNER=""
-        if command -v apksigner >/dev/null 2>&1; then
-            APKSIGNER="apksigner"
-        elif [ -n "$ANDROID_SDK_PATH" ] && [ -f "$ANDROID_SDK_PATH/build-tools/$(ls -1 "$ANDROID_SDK_PATH/build-tools" | tail -1)/apksigner" ]; then
-            APKSIGNER="$ANDROID_SDK_PATH/build-tools/$(ls -1 "$ANDROID_SDK_PATH/build-tools" | tail -1)/apksigner"
-        fi
-        $APKSIGNER sign --key ../platform.pk8 --cert ../platform.x509.pem rockbox_unsigned.apk
-        cp rockbox_unsigned.apk rockbox_360p_type_b.apk
-    
-    # Build 240p (Type B)
-    - name: build 240p type b
-      run: |
-        cd android/build
-        ../../tools/configure --target=201 --lcdwidth=320 --lcdheight=240 --type=n
-        make clean
-        make
-        make classes
-        make zip
-        make unsigned-apk
-        # Sign APK
-        APKSIGNER=""
-        if command -v apksigner >/dev/null 2>&1; then
-            APKSIGNER="apksigner"
-        elif [ -n "$ANDROID_SDK_PATH" ] && [ -f "$ANDROID_SDK_PATH/build-tools/$(ls -1 "$ANDROID_SDK_PATH/build-tools" | tail -1)/apksigner" ]; then
-            APKSIGNER="$ANDROID_SDK_PATH/build-tools/$(ls -1 "$ANDROID_SDK_PATH/build-tools" | tail -1)/apksigner"
-        fi
-        $APKSIGNER sign --key ../platform.pk8 --cert ../platform.x509.pem rockbox_unsigned.apk
-        cp rockbox_unsigned.apk rockbox_240p_type_b.apk
-    
+      
     - name: bundle update.zip files
       run: |
         cd android/build
@@ -164,7 +124,7 @@ jobs:
         # 360p Type B
         mkdir update_360p_type_b
         cp -r libs update_360p_type_b
-        cp rockbox_360p_type_b.apk update_360p_type_b/.
+        cp rockbox_360p.apk update_360p_type_b/.
         cp ../scripts/install-recovery.sh update_360p_type_b/.
         cp ../scripts/99Y1ButtonScript update_360p_type_b/.
         cp ../scripts/switch-to-stock.sh update_360p_type_b/.
@@ -178,7 +138,7 @@ jobs:
         # 240p Type B
         mkdir update_240p_type_b
         cp -r libs update_240p_type_b
-        cp rockbox_240p_type_b.apk update_240p_type_b/.
+        cp rockbox_240p.apk update_240p_type_b/.
         cp ../scripts/install-recovery.sh update_240p_type_b/.
         cp ../scripts/99Y1ButtonScript update_240p_type_b/.
         cp ../scripts/switch-to-stock.sh update_240p_type_b/.
@@ -315,7 +275,7 @@ jobs:
         sudo cp cacert.pem mount_user/data
 
         sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Rockbox.kl
-        sudo cp ../android/scripts/Stock.kl
+        sudo cp ../android/scripts/Stock.kl mount_sys/usr/keylayout/Stock.kl
         sudo cp ../android/scripts/Rockbox.kl mount_sys/usr/keylayout/Generic.kl
 
         sudo mkdir -p mount_user/data/update
@@ -359,7 +319,7 @@ jobs:
         sudo mount -t ext4 -o loop userdata.img mount_user
         sudo cp com.innioasis.y1_2.7.2.apk mount_user/data/com.innioasis.y1.apk
         sudo cp ../android/scripts/LeanKeyKeyboardPro_v5.2.15_r.apk mount_user/data/LeanKeyKeyboardPro_v5.2.15_r.apk
-        sudo cp ../android/build/rockbox_360p_type_b.apk mount_sys/app/org.rockbox.apk
+        sudo cp ../android/build/rockbox_360p.apk mount_sys/app/org.rockbox.apk
         sudo chmod 644 mount_sys/app/org.rockbox.apk
         sudo chown root:root mount_sys/app/org.rockbox.apk
         sudo mkdir -p mount_sys/lib
@@ -437,7 +397,7 @@ jobs:
         sudo mount -t ext4 -o loop userdata.img mount_user
         sudo cp com.innioasis.y1_2.7.2.apk mount_user/data/com.innioasis.y1.apk
         sudo cp ../android/scripts/LeanKeyKeyboardPro_v5.2.15_r.apk mount_user/data/LeanKeyKeyboardPro_v5.2.15_r.apk
-        sudo cp ../android/build/rockbox_240p_type_b.apk mount_sys/app/org.rockbox.apk
+        sudo cp ../android/build/rockbox_240p.apk mount_sys/app/org.rockbox.apk
         sudo chmod 644 mount_sys/app/org.rockbox.apk
         sudo chown root:root mount_sys/app/org.rockbox.apk
         sudo mkdir -p mount_sys/lib
@@ -534,23 +494,7 @@ jobs:
         asset_path: ./android/build/rockbox_240p.apk
         asset_name: rockbox_240p.apk
         asset_content_type: application/vnd.android.package-archive
-    
-    - name: upload 360p Type B APK
-      uses: shogo82148/actions-upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./android/build/rockbox_360p_type_b.apk
-        asset_name: rockbox_360p_type_b.apk
-        asset_content_type: application/vnd.android.package-archive
-    
-    - name: upload 240p Type B APK
-      uses: shogo82148/actions-upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./android/build/rockbox_240p_type_b.apk
-        asset_name: rockbox_240p_type_b.apk
-        asset_content_type: application/vnd.android.package-archive
-    
+
     - name: upload update_360p.zip
       uses: shogo82148/actions-upload-release-asset@v1
       with:
