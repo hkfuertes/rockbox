@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "plugin.h"
+#include "powermgmt-android.h"
 
 extern JNIEnv *env_ptr;
 extern jclass RockboxService_class;
@@ -133,7 +134,6 @@ char** android_podcast_get_podcast_names(void)
         }
     }
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "Calling getPodcastNames method");
     jstring jstr = (*env_ptr)->CallObjectMethod(env_ptr, RockboxService_instance, podcast_method);
     
     if ((*env_ptr)->ExceptionCheck(env_ptr)) {
@@ -154,8 +154,6 @@ char** android_podcast_get_podcast_names(void)
         return NULL;
     }
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "getPodcastNames returned string: %s", cstr);
-    
     // Split the string into array
     int count;
     char** result = split_string_newline(cstr, &count);
@@ -164,7 +162,6 @@ char** android_podcast_get_podcast_names(void)
     (*env_ptr)->ReleaseStringUTFChars(env_ptr, jstr, cstr);
     (*env_ptr)->DeleteLocalRef(env_ptr, jstr);
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "Split into %d podcasts", count);
     return result;
 }
 
@@ -184,7 +181,6 @@ char** android_podcast_get_episode_list(int podcast_num)
         }
     }
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "Calling getEpisodeList method");
     jstring jstr = (*env_ptr)->CallObjectMethod(env_ptr, RockboxService_instance, podcast_method, podcast_num);
     
     if ((*env_ptr)->ExceptionCheck(env_ptr)) {
@@ -205,8 +201,6 @@ char** android_podcast_get_episode_list(int podcast_num)
         return NULL;
     }
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "getEpisodeList returned string: %s", cstr);
-    
     // Split the string into array
     int count;
     char** result = split_string_newline(cstr, &count);
@@ -215,7 +209,6 @@ char** android_podcast_get_episode_list(int podcast_num)
     (*env_ptr)->ReleaseStringUTFChars(env_ptr, jstr, cstr);
     (*env_ptr)->DeleteLocalRef(env_ptr, jstr);
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "Split into %d episodes", count);
     return result;
 }
 
@@ -235,7 +228,6 @@ const const char* android_podcast_get_episode_path(int podcast_num, int num)
         }
     }
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "Calling getEpisodePath method");
     jstring jstr = (*env_ptr)->CallObjectMethod(env_ptr, RockboxService_instance, podcast_method, podcast_num, num);
     
     if ((*env_ptr)->ExceptionCheck(env_ptr)) {
@@ -273,6 +265,7 @@ int android_podcast_get_list_count(char** array) {
 extern const char* android_podcast_connect_wifi(void);
 const char* android_podcast_connect_wifi(void)
 {
+    android_acquire_wakelock();
     if (env_ptr == NULL || RockboxService_instance == NULL) {
         return NULL;
     }
@@ -286,7 +279,6 @@ const char* android_podcast_connect_wifi(void)
         }
     }
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "Calling connectWifi method");
     jstring jstr = (*env_ptr)->CallObjectMethod(env_ptr, RockboxService_instance, podcast_method);
     
     if ((*env_ptr)->ExceptionCheck(env_ptr)) {
@@ -307,13 +299,13 @@ const char* android_podcast_connect_wifi(void)
         return NULL;
     }
     
-    __android_log_print(ANDROID_LOG_DEBUG, "RockboxService", "connectWifi returned string: %s", cstr);
     return cstr;
 }
 
 extern int android_podcast_disconnect_wifi(void);
 int android_podcast_disconnect_wifi(void)
 {
+    android_release_wakelock();
     if (env_ptr == NULL || RockboxService_instance == NULL) {
         return -1;
     }

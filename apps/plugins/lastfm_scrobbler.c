@@ -513,9 +513,14 @@ static int sbl_create_entry(struct scrobbler_entry *entry, int output_fd)
         if (ret){
             return SCROBBLER_LOG_OK;
         } else {
-            __android_log_print(ANDROID_LOG_DEBUG, "RockboxLastfm", "upload failed");
-            rb->splash(HZ, "Upload failed.");
-            return SCROBBLER_LOG_SKIPTRACK;
+            __android_log_print(ANDROID_LOG_DEBUG, "RockboxLastfm", "upload failed, retrying...");
+            ret = rb->upload_scrobble(artist, id->title, id->album, timestamp, (long)entry->length);
+            if (ret){
+                return SCROBBLER_LOG_OK;
+            } else {
+                rb->splash(HZ, "Upload failed.");
+                return SCROBBLER_LOG_SKIPTRACK;
+            }
         }
     }
     return SCROBBLER_LOG_OK;

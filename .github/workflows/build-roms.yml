@@ -42,6 +42,10 @@ jobs:
         git clone https://codeberg.org/rockbox-y1/download-podcast.git
         cd download-podcast
         git checkout patches
+        git clone https://github.com/rockbox-y1/id3-go.git
+        cd id3-go
+        git checkout patches
+        cd ..
         go build -o poddl
     
     # Build 360p (Type A)
