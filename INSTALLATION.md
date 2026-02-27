@@ -1,7 +1,7 @@
 # Installation and Updating
 ## Update Rockbox
-1. Download the latest Rockbox `update.zip` here: https://github.com/rockbox-y1/rockbox/releases
-2. Connect your Y1 and copy `update.zip` to `.rockbox/update.zip`
+1. Download the latest Rockbox `update_\[360p|240p\].zip` here: https://github.com/rockbox-y1/rockbox/releases
+2. Connect your Y1 and copy `update_\[360p|240p\].zip` to `.rockbox/update.zip` (make sure it is renamed to `update.zip`)
 3. Safely disconnect your Y1
 4. Go to `Main Menu > System` and click `Firmware Update`
 5. The update process will now run in the background and automatically restart the device once it is done
@@ -12,11 +12,11 @@
 ### MTKClient
 
 1. Install MTKClient: https://github.com/bkerler/mtkclient
-2. Download the latest Rockbox included firmware (rom.zip) here: https://github.com/rockbox-y1/rockbox/releases 
+2. Download the latest Rockbox included firmware (rom_\[360p|240p\].zip) here: https://github.com/rockbox-y1/rockbox/releases/latest 
 3. Unpack the archive:
 ```
 mkdir rom && cd rom
-unzip ../rom.zip
+unzip ../rom_[360p|240p].zip
 ```
 4. Turn of the device, disconnect from the PC
 5. Start the flashing process:
@@ -30,11 +30,11 @@ python ../mtk.py w logo,uboot,bootimg,recovery,android,usrdata logo.bin,lk.bin,b
 
 ### SPFlash Tool
 
-1. Download the latest Rockbox included firmware (rom.zip) here: https://github.com/rockbox-y1/rockbox/releases
+1. Download the latest Rockbox included firmware (rom_\[360p|240p\].zip) here: https://github.com/rockbox-y1/rockbox/releases/latest
 2. Unpack the archive
 3. Install SP Flash Tool v5.1904: https://spflashtool.com/download/
 4. Start SP Flash Tool
-5. Follow the [official firmware flashing instructions](https://support.innioasis.com/download/flashing_tutorial/Flashing_tutorial-Y1_EN%20v2.0.7-20241021.pdf) but use the MT6572_Android_scatter.txt from the rom.zip file
+5. Follow the [official firmware flashing instructions](https://support.innioasis.com/download/flashing_tutorial/Flashing_tutorial-Y1_EN%20v2.0.7-20241021.pdf) but use the MT6572_Android_scatter.txt from the rom_\[360p|240p\].zip file
 
 ## Manual installation (for developers)
 
@@ -67,7 +67,7 @@ adb shell chmod 644 /system/usr/keylayout/Generic.kl
 adb reboot
 ```
 - Download the latest Rockbox release APK from the sidebar
-- Download the latest Rockbox libs.tar.gz and unpack it (`tar -xzf libs.tar.gz`) such that there is a folder called `libs/armeabi`
+- Download the latest Rockbox `update_\[360p|240p\].zip` and unpack it such that there is a folder called `update/libs/armeabi`
 - Either use one of the preinstalled themes or supply your own in the .rockbox folder on the SD card
 - Uninstall any apps you do not want
 ```
@@ -88,12 +88,12 @@ adb remount
 adb push rockbox-[release].apk /system/app/org.rockbox.apk
 adb shell chmod 644 /system/app/org.rockbox.apk
 adb shell chown root:root /system/app/org.rockbox.apk
-adb push libs/armeabi/librockbox.so /system/lib/
+adb push update/libs/armeabi/librockbox.so /system/lib/
 adb shell chmod 644 /system/lib/librockbox.so
 adb shell chown root:root /system/lib/librockbox.so
 adb shell rm -rf /data/data/org.rockbox/lib
 adb shell mkdir /data/data/org.rockbox/lib
-adb push libs/armeabi/* /data/data/org.rockbox/lib/.
+adb push update/libs/armeabi/* /data/data/org.rockbox/lib/.
 ```
 - Restart the device, choose Rockbox as launcher when asked
 ```
