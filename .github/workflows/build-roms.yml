@@ -67,6 +67,7 @@ jobs:
         fi
         $APKSIGNER sign --key ../platform.pk8 --cert ../platform.x509.pem rockbox_unsigned.apk
         cp rockbox_unsigned.apk rockbox_360p.apk
+        cp -r libs libs_360p
     
     # Build 240p (Type A)
     - name: build 240p
@@ -87,6 +88,7 @@ jobs:
         fi
         $APKSIGNER sign --key ../platform.pk8 --cert ../platform.x509.pem rockbox_unsigned.apk
         cp rockbox_unsigned.apk rockbox_240p.apk
+        cp -r libs libs_240p
       
     - name: bundle update.zip files
       run: |
@@ -94,7 +96,7 @@ jobs:
         # 360p Type A
         mkdir update_360p
         wget https://github.com/rockbox-y1/rockbox/releases/download/stock-menu/com.innioasis.y1_2.7.2.apk
-        cp -r libs update_360p
+        cp -r libs_360p update_360p/libs
         cp com.innioasis*.apk update_360p/.
         cp rockbox_360p.apk update_360p/.
         cp ../scripts/install-recovery.sh update_360p/.
@@ -105,12 +107,15 @@ jobs:
         cp ../scripts/Stock.kl update_360p/.
         cp gocurl/gocurl update_360p/.
         cp download-podcast/poddl update_360p/.
-        zip -r update_360p.zip update_360p/*
+        mv update_360p update
+        zip -r update_360p.zip update/*
+        rm -rf update
         
         # 240p Type A
         mkdir update_240p
-        cp -r libs update_240p
+        cp -r libs_240p update_240p/libs
         cp rockbox_240p.apk update_240p/.
+        cp com.innioasis*.apk update_240p/.
         cp ../scripts/install-recovery.sh update_240p/.
         cp ../scripts/99Y1ButtonScript update_240p/.
         cp ../scripts/switch-to-stock.sh update_240p/.
@@ -119,12 +124,15 @@ jobs:
         cp ../scripts/Stock.kl update_240p/.
         cp gocurl/gocurl update_240p/.
         cp download-podcast/poddl update_240p/.
-        zip -r update_240p.zip update_240p/*
+        mv update_240p update
+        zip -r update_240p.zip update/*
+        rm -rf update
         
         # 360p Type B
         mkdir update_360p_type_b
-        cp -r libs update_360p_type_b
+        cp -r libs_360p update_360p_type_b/libs
         cp rockbox_360p.apk update_360p_type_b/.
+        cp com.innioasis*.apk update_360p_type_b/.
         cp ../scripts/install-recovery.sh update_360p_type_b/.
         cp ../scripts/99Y1ButtonScript update_360p_type_b/.
         cp ../scripts/switch-to-stock.sh update_360p_type_b/.
@@ -133,12 +141,15 @@ jobs:
         cp ../scripts/Stock.kl update_360p_type_b/.
         cp gocurl/gocurl update_360p_type_b/.
         cp download-podcast/poddl update_360p_type_b/.
-        zip -r update_360p_type_b.zip update_360p_type_b/*
+        mv update_360p_type_b update
+        zip -r update_360p_type_b.zip update/*
+        rm -rf update
         
         # 240p Type B
         mkdir update_240p_type_b
-        cp -r libs update_240p_type_b
+        cp -r libs_240p update_240p_type_b/libs
         cp rockbox_240p.apk update_240p_type_b/.
+        cp com.innioasis*.apk update_240p_type_b/.
         cp ../scripts/install-recovery.sh update_240p_type_b/.
         cp ../scripts/99Y1ButtonScript update_240p_type_b/.
         cp ../scripts/switch-to-stock.sh update_240p_type_b/.
@@ -147,7 +158,9 @@ jobs:
         cp ../scripts/Stock.kl update_240p_type_b/.
         cp gocurl/gocurl update_240p_type_b/.
         cp download-podcast/poddl update_240p_type_b/.
-        zip -r update_240p_type_b.zip update_240p_type_b/*
+        mv update_240p_type_b update
+        zip -r update_240p_type_b.zip update/*
+        rm -rf update
     
     - name: bundle ROMs
       run: |
@@ -167,17 +180,17 @@ jobs:
         sudo chmod 644 mount_sys/app/org.rockbox.apk
         sudo chown root:root mount_sys/app/org.rockbox.apk
         sudo mkdir -p mount_sys/lib
-        sudo cp ../android/build/libs/armeabi/librockbox.so mount_sys/lib/.
+        sudo cp ../android/build/libs_360p/armeabi/librockbox.so mount_sys/lib/.
         sudo chmod 644 mount_sys/lib/librockbox.so
         sudo chown root:root mount_sys/lib/librockbox.so
         sudo rm -rf mount_user/data/org.rockbox/lib
         sudo mkdir -p mount_user/data/org.rockbox/lib
-        sudo cp ../android/build/libs/armeabi/* mount_user/data/org.rockbox/lib/.
+        sudo cp ../android/build/libs_360p/armeabi/* mount_user/data/org.rockbox/lib/.
         sudo chmod 777 mount_user/data/org.rockbox/lib/*
         sudo mkdir -p mount_user/data/org.rockbox/app_rockbox/rockbox/docs
         sudo cp ../docs/COPYING mount_user/data/org.rockbox/app_rockbox/rockbox/docs/COPYING.txt
         sudo cp ../docs/LICENSES mount_user/data/org.rockbox/app_rockbox/rockbox/docs/LICENSES.txt
-        unzip ../android/build/libs/armeabi/libmisc.so
+        unzip ../android/build/libs_360p/armeabi/libmisc.so
         for f in .rockbox/*; do
           sudo cp -rf "$f" mount_user/data/org.rockbox/app_rockbox/rockbox/
         done
@@ -323,17 +336,17 @@ jobs:
         sudo chmod 644 mount_sys/app/org.rockbox.apk
         sudo chown root:root mount_sys/app/org.rockbox.apk
         sudo mkdir -p mount_sys/lib
-        sudo cp ../android/build/libs/armeabi/librockbox.so mount_sys/lib/.
+        sudo cp ../android/build/libs_360p/armeabi/librockbox.so mount_sys/lib/.
         sudo chmod 644 mount_sys/lib/librockbox.so
         sudo chown root:root mount_sys/lib/librockbox.so
         sudo rm -rf mount_user/data/org.rockbox/lib
         sudo mkdir -p mount_user/data/org.rockbox/lib
-        sudo cp ../android/build/libs/armeabi/* mount_user/data/org.rockbox/lib/.
+        sudo cp ../android/build/libs_360p/armeabi/* mount_user/data/org.rockbox/lib/.
         sudo chmod 777 mount_user/data/org.rockbox/lib/*
         sudo mkdir -p mount_user/data/org.rockbox/app_rockbox/rockbox/docs
         sudo cp ../docs/COPYING mount_user/data/org.rockbox/app_rockbox/rockbox/docs/COPYING.txt
         sudo cp ../docs/LICENSES mount_user/data/org.rockbox/app_rockbox/rockbox/docs/LICENSES.txt
-        unzip ../android/build/libs/armeabi/libmisc.so
+        unzip ../android/build/libs_360p/armeabi/libmisc.so
         for f in .rockbox/*; do
           sudo cp -rf "$f" mount_user/data/org.rockbox/app_rockbox/rockbox/
         done
@@ -401,17 +414,17 @@ jobs:
         sudo chmod 644 mount_sys/app/org.rockbox.apk
         sudo chown root:root mount_sys/app/org.rockbox.apk
         sudo mkdir -p mount_sys/lib
-        sudo cp ../android/build/libs/armeabi/librockbox.so mount_sys/lib/.
+        sudo cp ../android/build/libs_240p/armeabi/librockbox.so mount_sys/lib/.
         sudo chmod 644 mount_sys/lib/librockbox.so
         sudo chown root:root mount_sys/lib/librockbox.so
         sudo rm -rf mount_user/data/org.rockbox/lib
         sudo mkdir -p mount_user/data/org.rockbox/lib
-        sudo cp ../android/build/libs/armeabi/* mount_user/data/org.rockbox/lib/.
+        sudo cp ../android/build/libs_240p/armeabi/* mount_user/data/org.rockbox/lib/.
         sudo chmod 777 mount_user/data/org.rockbox/lib/*
         sudo mkdir -p mount_user/data/org.rockbox/app_rockbox/rockbox/docs
         sudo cp ../docs/COPYING mount_user/data/org.rockbox/app_rockbox/rockbox/docs/COPYING.txt
         sudo cp ../docs/LICENSES mount_user/data/org.rockbox/app_rockbox/rockbox/docs/LICENSES.txt
-        unzip ../android/build/libs/armeabi/libmisc.so
+        unzip ../android/build/libs_240p/armeabi/libmisc.so
         for f in .rockbox/*; do
           sudo cp -rf "$f" mount_user/data/org.rockbox/app_rockbox/rockbox/
         done
