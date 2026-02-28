@@ -98,7 +98,7 @@ jobs:
         wget https://github.com/rockbox-y1/rockbox/releases/download/stock-menu/com.innioasis.y1_2.7.2.apk
         cp -r libs_360p update_360p/libs
         cp com.innioasis*.apk update_360p/.
-        cp rockbox_360p.apk update_360p/.
+        cp rockbox_360p.apk update_360p/rockbox.apk
         cp ../scripts/install-recovery.sh update_360p/.
         cp ../scripts/99Y1ButtonScript update_360p/.
         cp ../scripts/switch-to-stock.sh update_360p/.
@@ -114,7 +114,7 @@ jobs:
         # 240p Type A
         mkdir update_240p
         cp -r libs_240p update_240p/libs
-        cp rockbox_240p.apk update_240p/.
+        cp rockbox_240p.apk update_240p/rockbox.apk
         cp com.innioasis*.apk update_240p/.
         cp ../scripts/install-recovery.sh update_240p/.
         cp ../scripts/99Y1ButtonScript update_240p/.
@@ -131,7 +131,7 @@ jobs:
         # 360p Type B
         mkdir update_360p_type_b
         cp -r libs_360p update_360p_type_b/libs
-        cp rockbox_360p.apk update_360p_type_b/.
+        cp rockbox_360p.apk update_360p_type_b/rockbox.apk
         cp com.innioasis*.apk update_360p_type_b/.
         cp ../scripts/install-recovery.sh update_360p_type_b/.
         cp ../scripts/99Y1ButtonScript update_360p_type_b/.
@@ -148,7 +148,7 @@ jobs:
         # 240p Type B
         mkdir update_240p_type_b
         cp -r libs_240p update_240p_type_b/libs
-        cp rockbox_240p.apk update_240p_type_b/.
+        cp rockbox_240p.apk update_240p_type_b/rockbox.apk
         cp com.innioasis*.apk update_240p_type_b/.
         cp ../scripts/install-recovery.sh update_240p_type_b/.
         cp ../scripts/99Y1ButtonScript update_240p_type_b/.
