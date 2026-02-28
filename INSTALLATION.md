@@ -1,7 +1,7 @@
 # Installation and Updating
 ## Update Rockbox
-1. Download the latest Rockbox `update_\[360p|240p\].zip` here: https://github.com/rockbox-y1/rockbox/releases
-2. Connect your Y1 and copy `update_\[360p|240p\].zip` to `.rockbox/update.zip` (make sure it is renamed to `update.zip`)
+1. Download the latest Rockbox `update_[360p|240p].zip` here: https://github.com/rockbox-y1/rockbox/releases
+2. Connect your Y1 and copy `update_[360p|240p].zip` to `.rockbox/update.zip` (make sure it is renamed to `update.zip`)
 3. Safely disconnect your Y1
 4. Go to `Main Menu > System` and click `Firmware Update`
 5. The update process will now run in the background and automatically restart the device once it is done
