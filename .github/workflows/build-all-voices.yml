@@ -54,6 +54,7 @@ jobs:
       run: |
         pip install piper-tts
         pip install onnxruntime
+        pip install pathvalidate
         
     - name: Download Piper models
       run: |
