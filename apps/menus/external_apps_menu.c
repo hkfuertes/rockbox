@@ -59,33 +59,14 @@ static int external_apps_action_callback(int action, struct gui_synclist *lists)
 
         case ACTION_STD_CANCEL:
             return action;
-
-        case ACTION_STD_CONTEXT:
-            /* Show context menu for the selected app */
-            {
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-                const char* app_name = android_external_apps_get_name(selected);
-                const char* package_name = android_external_apps_get_package_name(selected);
-
-                if (app_name != NULL && package_name != NULL) {
-                    char message[256];
-                    snprintf(message, sizeof(message), "Launch %s?", app_name);
-
-                    if (yesno_pop_confirm(message)) {
-                        if (android_external_apps_launch(selected)) {
-                            return ACTION_EXIT_MENUITEM;
-                        } else {
-                            splash(HZ*2, "Failed to launch app");
-                        }
-                    }
-                }
-#endif
-            }
+            break;
+        case ACTION_STD_MENU:
+            return ACTION_STD_CANCEL;
             break;
     }
-
     return action;
 }
+
 
 /* Main external apps menu function */
 static int show_external_apps(void)
