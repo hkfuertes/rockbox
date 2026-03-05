@@ -55,7 +55,7 @@ public class RockboxFramebuffer extends SurfaceView
     private final Paint sharpPaint = new Paint();
 
     private static final int[] duration_mapping = {
-        0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50
+        0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50
     };
 
     private static final int CENTER_KEYCODE = KeyEvent.KEYCODE_ENTER;
@@ -323,49 +323,25 @@ public class RockboxFramebuffer extends SurfaceView
 
     /* Trigger vibration for button feedback */
     public static void triggerVibration(Context context, int baseDuration, int boostDuration, boolean hapticImmediate) {
-        if (hapticImmediate){
-            final String duration = String.valueOf(baseDuration);
-                new Thread(new Runnable() {
-                    public void run() {
-                    try {
-                        FileOutputStream f = null;
-                        try {
-                            f = new FileOutputStream(new File("/sys/class/timed_output/vibrator/enable"));
-                            f.write(duration.getBytes());
-                            f.flush();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } finally {
-                            if (f != null) {
-                                try {
-                                    f.close();
-                                } catch (IOException e) {
-                                    Log.e("RockboxFramebuffer", "Failed to send vibration: " + e.getMessage());
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        Log.e("RockboxFramebuffer", "Failed to send vibration: " + e.getMessage());
-                        e.printStackTrace();
-                    }
-                    }
-                }).start();
-        } else {
-            try {
-                Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-                if (vibrator != null) {
-                    int base_ms = duration_mapping[baseDuration];
-                    int boost_ms = boostDuration;
-                    int total_ms = base_ms + boost_ms;
-                    vibrator.vibrate(total_ms);
+        try {
+            Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+            if (vibrator != null) {
+                int base_ms = duration_mapping[baseDuration];
+                int boost_ms = boostDuration;
+                int total_ms;
+                if (hapticImmediate){
+                    total_ms = base_ms;
                 } else {
-                    android.util.Log.e("RockboxFramebuffer", "Vibrator is null");
+                    total_ms = base_ms + boost_ms;
                 }
-            } catch (Exception e) {
-                android.util.Log.e("RockboxFramebuffer", "Vibration error: " + e.getMessage());
+                vibrator.vibrate(total_ms);
+            } else {
+                android.util.Log.e("RockboxFramebuffer", "Vibrator is null");
             }
+        } catch (Exception e) {
+            android.util.Log.e("RockboxFramebuffer", "Vibration error: " + e.getMessage());
         }
+        
     }
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
