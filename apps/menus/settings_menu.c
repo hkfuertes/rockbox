@@ -138,6 +138,13 @@ static void tagcache_update_with_splash(void)
 {
     tagcache_update();
     splash(HZ*2, ID2P(LANG_TAGCACHE_FORCE_UPDATE_SPLASH));
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+    splash(HZ, "Restarting Rockbox to apply...");
+    list_stop_handler();
+    sleep(1);
+    system("am force-stop org.rockbox");
+    system("monkey -p org.rockbox -c android.intent.category.LAUNCHER 1");
+#endif
 }
 
 static int dirs_to_scan(void)
