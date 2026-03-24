@@ -20,6 +20,13 @@ Exceptions:
 - Center (Very Long): Turn Off Screen
 - Play/Pause (Short, Text Input): Open Keyboard
 - Holding Next + Previous (>10 seconds): Restart Rockbox (Thanks, u/thinkVHS!)
+- FM Radio App:
+  - Back/Menu: Return to Rockbox
+  - Previous: Left
+  - Next: Right
+  - Play/Pause (Short): Down
+  - Play/Pause (Long): Up
+  - Touch Wheel: Volume
 
 ## Dual Boot: How to switch between Rockbox and Stock
 ### In Rockbox
