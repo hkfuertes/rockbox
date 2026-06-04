@@ -3,6 +3,7 @@
 /sim*
 /output
 /.docker-home
+/issues/
 *.elf
 *.exe
 *.so
