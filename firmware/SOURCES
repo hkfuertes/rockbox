@@ -2024,6 +2024,7 @@ target/hosted/android/shutdown-android.c
 target/hosted/android/reset-bluetooth-android.c
 target/hosted/android/update-android.c
 target/hosted/android/connectivity-android.c
+target/hosted/android/connectivity-link-android.c
 target/hosted/android/podcast-android.c
 target/hosted/android/wifi-android.c
 target/hosted/android/request-android.c

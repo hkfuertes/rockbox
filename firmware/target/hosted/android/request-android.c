@@ -114,7 +114,7 @@ static int finalize_download_result(const char *status_text,
     if (status_text != NULL)
         *status_out = atoi(status_text);
 
-    rc = (*status_out == 0 && error_text != NULL && error_text[0] != '\0') ?
+    rc = (error_text != NULL && error_text[0] != '\0') ?
         ANDROID_REQUEST_JNI_EXCEPTION : ANDROID_REQUEST_OK;
 
     if (copy_to_buffer(error_buf, error_len, error_text) == ANDROID_REQUEST_TRUNCATED)
