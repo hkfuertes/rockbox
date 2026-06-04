@@ -2,6 +2,7 @@
 /build*
 /sim*
 /output
+/.docker-home
 *.elf
 *.exe
 *.so
@@ -28,6 +29,7 @@ __pycache__
 
 # android: java build system
 /android/bin
+/android/build
 /android/data
 /android/gen
 /android/libs

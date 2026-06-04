@@ -1,0 +1,41 @@
+FROM --platform=linux/amd64 ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ANDROID_SDK_PATH=/opt/android/android-sdk
+ENV ANDROID_NDK_PATH=/opt/android/android-ndk-r10e
+ENV ANDROID_NDK_ROOT=/opt/android/android-ndk-r10e
+ENV GO_VERSION=1.23.0
+ENV PATH=/usr/local/go/bin:/opt/android/android-sdk/cmdline-tools/latest/bin:/opt/android/android-sdk/platform-tools:/opt/android/android-sdk/build-tools/35.0.0:$PATH
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    unzip \
+    zip \
+    git \
+    make \
+    build-essential \
+    lib32z1 \
+    lib32stdc++6 \
+    openjdk-17-jdk \
+    python3 \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN wget -q "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tgz \
+ && rm -rf /usr/local/go \
+ && tar -C /usr/local -xzf /tmp/go.tgz \
+ && rm /tmp/go.tgz \
+ && go version
+
+COPY android/installToolchain.sh /tmp/installToolchain.sh
+RUN chmod +x /tmp/installToolchain.sh \
+ && mkdir -p /opt/android /tmp/android-downloads \
+ && yes | INSTALL_PREFIX=/opt/android DOWNLOAD_DIR=/tmp/android-downloads /tmp/installToolchain.sh \
+ && yes | "$ANDROID_SDK_PATH/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_PATH" --licenses >/dev/null \
+ && "$ANDROID_SDK_PATH/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_PATH" "build-tools;35.0.0" \
+ && chmod -R a+rX "$ANDROID_NDK_PATH" \
+ && find "$ANDROID_NDK_PATH" -type f -path '*/bin/*' -exec chmod a+rx {} + \
+ && rm -rf /tmp/android-downloads /tmp/installToolchain.sh
+
+WORKDIR /work
