@@ -78,6 +78,8 @@ int android_podcast_get_list_count(char** array);
 const char* android_podcast_connect_wifi(void);
 int android_podcast_disconnect_wifi(void);
 void free_array(char** array);
+const char* android_connect_wifi(void);
+int android_disconnect_wifi(void);
 #else
 extern unsigned char pluginbuf[];
 #include "bitswap.h"
@@ -870,6 +872,8 @@ static const struct plugin_api rockbox_api = {
     .android_podcast_connect_wifi = android_podcast_connect_wifi,
     .android_podcast_disconnect_wifi = android_podcast_disconnect_wifi,
     .free_array = free_array,
+    .android_connect_wifi = android_connect_wifi,
+    .android_disconnect_wifi = android_disconnect_wifi,
 #endif
 };
 

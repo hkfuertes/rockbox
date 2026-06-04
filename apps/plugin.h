@@ -176,7 +176,7 @@ int plugin_open(const char *plugin, const char *parameter);
  * when this happens please take the opportunity to sort in
  * any new functions "waiting" at the end of the list.
  */
-#define PLUGIN_API_VERSION 273
+#define PLUGIN_API_VERSION 274
 
 /* 239 Marks the removal of ARCHOS HWCODEC and CHARCELL */
 
@@ -1008,6 +1008,8 @@ struct plugin_api {
     const char* (*android_podcast_connect_wifi)(void);
     int (*android_podcast_disconnect_wifi)(void);
     void (*free_array)(char** array);
+    const char* (*android_connect_wifi)(void);
+    int (*android_disconnect_wifi)(void);
 };
 
 /* plugin header */
