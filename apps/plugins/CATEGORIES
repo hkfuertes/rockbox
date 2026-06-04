@@ -63,6 +63,8 @@ lua,viewers
 fractals,demos
 main_menu_config,apps
 podcast_downloader,apps
+android_request_probe,apps
+android_download_probe,apps
 matrix,demos
 maze,games
 mazezam,games

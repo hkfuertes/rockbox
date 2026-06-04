@@ -595,6 +595,10 @@ public class RockboxService extends Service
         return Connectivity.performSynchronousRequest(method, url, headers, body);
     }
 
+    public String[] performSynchronousDownload(String url, String headers, String destinationPath) {
+        return Connectivity.performSynchronousDownload(url, headers, destinationPath);
+    }
+
     public void loadConfig() {
         String configPath = "/sdcard/.rockbox/wifi.cfg";
         try (BufferedReader reader = new BufferedReader(new FileReader(configPath))) {

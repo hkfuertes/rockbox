@@ -176,7 +176,7 @@ int plugin_open(const char *plugin, const char *parameter);
  * when this happens please take the opportunity to sort in
  * any new functions "waiting" at the end of the list.
  */
-#define PLUGIN_API_VERSION 275
+#define PLUGIN_API_VERSION 276
 
 /* 239 Marks the removal of ARCHOS HWCODEC and CHARCELL */
 
@@ -1029,6 +1029,12 @@ struct plugin_api {
                            int *status_out,
                            char *error_buf,
                            size_t error_len);
+    int (*android_download)(const char *url,
+                            const char *headers,
+                            const char *destination_path,
+                            int *status_out,
+                            char *error_buf,
+                            size_t error_len);
 };
 
 /* plugin header */

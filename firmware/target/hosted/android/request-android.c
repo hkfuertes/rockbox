@@ -103,6 +103,26 @@ static int finalize_request_result(const char *status_text,
     return rc;
 }
 
+static int finalize_download_result(const char *status_text,
+                                    const char *error_text,
+                                    int *status_out,
+                                    char *error_buf,
+                                    size_t error_len)
+{
+    int rc;
+
+    if (status_text != NULL)
+        *status_out = atoi(status_text);
+
+    rc = (*status_out == 0 && error_text != NULL && error_text[0] != '\0') ?
+        ANDROID_REQUEST_JNI_EXCEPTION : ANDROID_REQUEST_OK;
+
+    if (copy_to_buffer(error_buf, error_len, error_text) == ANDROID_REQUEST_TRUNCATED)
+        rc = ANDROID_REQUEST_TRUNCATED;
+
+    return rc;
+}
+
 int android_request(const char *method,
                     const char *url,
                     const char *headers,
@@ -241,6 +261,127 @@ cleanup:
         (*env_ptr)->DeleteLocalRef(env_ptr, headers_j);
     if (body_j != NULL)
         (*env_ptr)->DeleteLocalRef(env_ptr, body_j);
+
+    return rc;
+}
+
+int android_download(const char *url,
+                     const char *headers,
+                     const char *destination_path,
+                     int *status_out,
+                     char *error_buf,
+                     size_t error_len)
+{
+    static jmethodID download_method = NULL;
+    jstring url_j = NULL;
+    jstring headers_j = NULL;
+    jstring destination_j = NULL;
+    jobjectArray result_array = NULL;
+    char *status_text = NULL;
+    char *error_text = NULL;
+    int rc = ANDROID_REQUEST_OK;
+    jsize result_len;
+
+    if (error_buf != NULL && error_len > 0)
+        error_buf[0] = '\0';
+    if (status_out != NULL)
+        *status_out = 0;
+
+    if (url == NULL || url[0] == '\0' ||
+        destination_path == NULL || destination_path[0] == '\0' ||
+        status_out == NULL ||
+        error_buf == NULL || error_len == 0)
+    {
+        return fail_request(ANDROID_REQUEST_INVALID_PARAM, error_buf, error_len,
+                            "invalid parameters: url, destination, status and error outputs are required");
+    }
+
+    if (env_ptr == NULL || RockboxService_instance == NULL || RockboxService_class == NULL)
+        return fail_request(ANDROID_REQUEST_JNI_UNAVAILABLE, error_buf, error_len,
+                            "android download bridge unavailable: JNI service not ready");
+
+    if (download_method == NULL)
+    {
+        download_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class,
+            "performSynchronousDownload",
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+        if (download_method == NULL)
+        {
+            if ((*env_ptr)->ExceptionCheck(env_ptr))
+                (*env_ptr)->ExceptionClear(env_ptr);
+            return fail_request(ANDROID_REQUEST_JNI_METHOD_MISSING, error_buf, error_len,
+                                "android download bridge unavailable: missing JNI method performSynchronousDownload");
+        }
+    }
+
+    url_j = (*env_ptr)->NewStringUTF(env_ptr, url);
+    headers_j = (*env_ptr)->NewStringUTF(env_ptr, headers != NULL ? headers : "");
+    destination_j = (*env_ptr)->NewStringUTF(env_ptr, destination_path);
+    if (url_j == NULL || headers_j == NULL || destination_j == NULL)
+    {
+        if ((*env_ptr)->ExceptionCheck(env_ptr))
+            (*env_ptr)->ExceptionClear(env_ptr);
+        rc = fail_request(ANDROID_REQUEST_JNI_EXCEPTION, error_buf, error_len,
+                          "android download bridge failed: could not allocate JNI strings");
+        goto cleanup_download;
+    }
+
+    result_array = (jobjectArray)(*env_ptr)->CallObjectMethod(env_ptr,
+        RockboxService_instance, download_method, url_j, headers_j, destination_j);
+    if ((*env_ptr)->ExceptionCheck(env_ptr))
+    {
+        (*env_ptr)->ExceptionClear(env_ptr);
+        rc = fail_request(ANDROID_REQUEST_JNI_EXCEPTION, error_buf, error_len,
+                          "android download bridge failed: Java exception during download");
+        goto cleanup_download;
+    }
+
+    if (result_array == NULL)
+    {
+        rc = fail_request(ANDROID_REQUEST_JNI_EXCEPTION, error_buf, error_len,
+                          "android download bridge failed: Java returned no result");
+        goto cleanup_download;
+    }
+
+    result_len = (*env_ptr)->GetArrayLength(env_ptr, result_array);
+    if (result_len < 2)
+    {
+        rc = fail_request(ANDROID_REQUEST_JNI_EXCEPTION, error_buf, error_len,
+                          "android download bridge failed: malformed Java result");
+        goto cleanup_download;
+    }
+
+    rc = get_array_string(result_array, 0, &status_text);
+    if (rc != ANDROID_REQUEST_OK)
+    {
+        rc = fail_request(rc, error_buf, error_len,
+                          "android download bridge failed: could not read status");
+        goto cleanup_download;
+    }
+
+    rc = get_array_string(result_array, 1, &error_text);
+    if (rc != ANDROID_REQUEST_OK)
+    {
+        rc = fail_request(rc, error_buf, error_len,
+                          "android download bridge failed: could not read error text");
+        goto cleanup_download;
+    }
+
+    rc = finalize_download_result(status_text, error_text,
+                                  status_out, error_buf, error_len);
+
+cleanup_download:
+    free(status_text);
+    free(error_text);
+
+    if (result_array != NULL)
+        (*env_ptr)->DeleteLocalRef(env_ptr, result_array);
+    if (url_j != NULL)
+        (*env_ptr)->DeleteLocalRef(env_ptr, url_j);
+    if (headers_j != NULL)
+        (*env_ptr)->DeleteLocalRef(env_ptr, headers_j);
+    if (destination_j != NULL)
+        (*env_ptr)->DeleteLocalRef(env_ptr, destination_j);
 
     return rc;
 }
