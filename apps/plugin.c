@@ -80,6 +80,9 @@ int android_podcast_disconnect_wifi(void);
 void free_array(char** array);
 const char* android_connect_wifi(void);
 int android_disconnect_wifi(void);
+int android_request(const char *method, const char *url, const char *headers,
+                    const char *body, char *response_buf, size_t response_len,
+                    int *status_out, char *error_buf, size_t error_len);
 #else
 extern unsigned char pluginbuf[];
 #include "bitswap.h"
@@ -874,6 +877,7 @@ static const struct plugin_api rockbox_api = {
     .free_array = free_array,
     .android_connect_wifi = android_connect_wifi,
     .android_disconnect_wifi = android_disconnect_wifi,
+    .android_request = android_request,
 #endif
 };
 

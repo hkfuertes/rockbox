@@ -231,6 +231,72 @@ public class Connectivity{
         }
     }
 
+    private static String safeString(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static int countNonEmptyLines(String value) {
+        String[] lines;
+        int count = 0;
+
+        value = safeString(value).trim();
+        if (value.length() == 0) {
+            return 0;
+        }
+
+        lines = value.split("\\n");
+        for (String line : lines) {
+            if (line.trim().length() > 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static String preview(String value, int limit) {
+        value = safeString(value).replace('\r', ' ').replace('\n', ' ');
+        if (value.length() <= limit) {
+            return value;
+        }
+        return value.substring(0, limit) + "...";
+    }
+
+    public static String[] performSynchronousRequest(String method, String url, String headers, String body) {
+        String safeMethod = safeString(method).trim();
+        String safeUrl = safeString(url).trim();
+        String safeHeaders = safeString(headers);
+        String safeBody = safeString(body);
+        String responseBody;
+        String errorText = "";
+        int status = 200;
+
+        if (safeMethod.length() == 0) {
+            return new String[]{"0", "", "invalid parameter: method is required"};
+        }
+
+        if (safeUrl.length() == 0) {
+            return new String[]{"0", "", "invalid parameter: url is required"};
+        }
+
+        if (safeUrl.startsWith("http://")) {
+            return new String[]{"0", "", "plain HTTP is not allowed in the Android request probe"};
+        }
+
+        if (safeUrl.indexOf("force_error") >= 0 || safeMethod.equalsIgnoreCase("FAIL")) {
+            return new String[]{"0", "", "trace failure requested by probe input"};
+        }
+
+        responseBody = "android_request_probe\n"
+                + "method=" + safeMethod + "\n"
+                + "url=" + safeUrl + "\n"
+                + "header_count=" + String.valueOf(countNonEmptyLines(safeHeaders)) + "\n"
+                + "body_length=" + String.valueOf(safeBody.length()) + "\n"
+                + "headers_preview=" + preview(safeHeaders, 120) + "\n"
+                + "body_preview=" + preview(safeBody, 120);
+
+        return new String[]{String.valueOf(status), responseBody, errorText};
+    }
+
     public static boolean downloadPodcast(String podcastUrl, String outputPath, int episode) {
         String command = "/data/data/poddl -ca-cert /data/data/cacert.pem"+
                                          " -write-tag"+ 

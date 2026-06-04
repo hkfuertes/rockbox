@@ -589,7 +589,12 @@ public class RockboxService extends Service
 
     public void disconnectWifi(){
         Connectivity.disconnectWifi();
-    } 
+    }
+
+    public String[] performSynchronousRequest(String method, String url, String headers, String body) {
+        return Connectivity.performSynchronousRequest(method, url, headers, body);
+    }
+
     public void loadConfig() {
         String configPath = "/sdcard/.rockbox/wifi.cfg";
         try (BufferedReader reader = new BufferedReader(new FileReader(configPath))) {
