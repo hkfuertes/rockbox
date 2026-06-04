@@ -68,6 +68,41 @@ static int get_array_string(jobjectArray array, jsize index,
     return *out_copy != NULL ? ANDROID_REQUEST_OK : ANDROID_REQUEST_JNI_EXCEPTION;
 }
 
+static int finalize_request_result(const char *status_text,
+                                   const char *response_text,
+                                   const char *error_text,
+                                   char *response_buf,
+                                   size_t response_len,
+                                   int *status_out,
+                                   char *error_buf,
+                                   size_t error_len)
+{
+    int rc;
+
+    if (status_text != NULL)
+        *status_out = atoi(status_text);
+
+    rc = (*status_out == 0 && error_text != NULL && error_text[0] != '\0') ?
+        ANDROID_REQUEST_JNI_EXCEPTION : ANDROID_REQUEST_OK;
+
+    if (copy_to_buffer(response_buf, response_len, response_text) == ANDROID_REQUEST_TRUNCATED)
+    {
+        rc = ANDROID_REQUEST_TRUNCATED;
+        if (error_text == NULL || error_text[0] == '\0')
+        {
+            if (copy_to_buffer(error_buf, error_len,
+                               "response truncated to fit caller buffer") == ANDROID_REQUEST_TRUNCATED)
+                rc = ANDROID_REQUEST_TRUNCATED;
+        }
+        else if (copy_to_buffer(error_buf, error_len, error_text) == ANDROID_REQUEST_TRUNCATED)
+            rc = ANDROID_REQUEST_TRUNCATED;
+    }
+    else if (copy_to_buffer(error_buf, error_len, error_text) == ANDROID_REQUEST_TRUNCATED)
+        rc = ANDROID_REQUEST_TRUNCATED;
+
+    return rc;
+}
+
 int android_request(const char *method,
                     const char *url,
                     const char *headers,
@@ -187,12 +222,9 @@ int android_request(const char *method,
         goto cleanup;
     }
 
-    if (status_text != NULL)
-        *status_out = atoi(status_text);
-
-    rc = copy_to_buffer(response_buf, response_len, response_text);
-    if (copy_to_buffer(error_buf, error_len, error_text) == ANDROID_REQUEST_TRUNCATED)
-        rc = ANDROID_REQUEST_TRUNCATED;
+    rc = finalize_request_result(status_text, response_text, error_text,
+                                 response_buf, response_len, status_out,
+                                 error_buf, error_len);
 
 cleanup:
     free(status_text);

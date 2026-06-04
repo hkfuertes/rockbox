@@ -12,12 +12,17 @@ import android.net.NetworkInfo;
 import java.io.BufferedReader;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import android.util.Base64;
 import org.json.JSONObject;
 import org.json.JSONException;
 import java.util.ArrayList;
@@ -231,34 +236,241 @@ public class Connectivity{
         }
     }
 
+    private static final String GO_CURL_PATH = "/data/data/gocurl";
+    private static final String CA_CERT_PATH = "/data/data/cacert.pem";
+    private static final int GO_CURL_CONNECT_TIMEOUT_SECONDS = 10;
+    private static final int GO_CURL_TOTAL_TIMEOUT_SECONDS = 30;
+    private static final int STREAM_CAPTURE_LIMIT_BYTES = 1024 * 1024;
+    private static final long PROCESS_CLEANUP_GRACE_MS = 1000L;
+    private static final long STREAM_JOIN_GRACE_MS = 1000L;
+    private static final Charset UTF8 = Charset.forName("UTF-8");
+
+    private static final class ShellResult {
+        public int exitCode;
+        public boolean timedOut;
+        public boolean stdoutTruncated;
+        public boolean stderrTruncated;
+        public String stdout = "";
+        public String stderr = "";
+    }
+
     private static String safeString(String value) {
         return value == null ? "" : value;
     }
 
-    private static int countNonEmptyLines(String value) {
-        String[] lines;
-        int count = 0;
-
-        value = safeString(value).trim();
-        if (value.length() == 0) {
-            return 0;
-        }
-
-        lines = value.split("\\n");
-        for (String line : lines) {
-            if (line.trim().length() > 0) {
-                count++;
-            }
-        }
-        return count;
+    private static String shellQuote(String value) {
+        return "'" + safeString(value).replace("'", "'\\''") + "'";
     }
 
-    private static String preview(String value, int limit) {
-        value = safeString(value).replace('\r', ' ').replace('\n', ' ');
-        if (value.length() <= limit) {
-            return value;
+    private static String buildGocurlCommand(String method, String url, String headers, String body) {
+        StringBuilder command = new StringBuilder();
+        String[] headerLines;
+
+        command.append(shellQuote(GO_CURL_PATH));
+        command.append(" --cacert ").append(shellQuote(CA_CERT_PATH));
+        command.append(" --connect-timeout ").append(String.valueOf(GO_CURL_CONNECT_TIMEOUT_SECONDS));
+        command.append(" --json-output");
+        command.append(" -X ").append(shellQuote(method));
+
+        headerLines = safeString(headers).split("\\n");
+        for (String headerLine : headerLines) {
+            String trimmed = headerLine.trim();
+            if (trimmed.length() > 0) {
+                command.append(" -H ").append(shellQuote(trimmed));
+            }
         }
-        return value.substring(0, limit) + "...";
+
+        if (body != null && body.length() > 0) {
+            command.append(" -d ").append(shellQuote(body));
+        }
+
+        command.append(" --url ").append(shellQuote(url));
+        return command.toString();
+    }
+
+    private static Thread drainStream(final InputStream stream,
+                                      final ByteArrayOutputStream output,
+                                      final int limit,
+                                      final boolean[] truncatedFlag) {
+        Thread thread = new Thread(new Runnable() {
+            public void run() {
+                byte[] buffer = new byte[4096];
+                int read;
+                int total = 0;
+
+                try {
+                    while ((read = stream.read(buffer)) != -1) {
+                        if (total < limit) {
+                            int remaining = limit - total;
+                            int copy = read < remaining ? read : remaining;
+                            output.write(buffer, 0, copy);
+                            total += copy;
+                            if (copy < read) {
+                                truncatedFlag[0] = true;
+                            }
+                        } else {
+                            truncatedFlag[0] = true;
+                        }
+                    }
+                } catch (IOException e) {
+                    truncatedFlag[0] = true;
+                } finally {
+                    try {
+                        stream.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+        }, "rockbox-stream-drain");
+        thread.start();
+        return thread;
+    }
+
+    private static void closeQuietly(Closeable closeable) {
+        if (closeable == null) {
+            return;
+        }
+
+        try {
+            closeable.close();
+        } catch (IOException e) {
+        }
+    }
+
+    private static boolean joinQuietly(Thread thread, long timeoutMs) {
+        if (thread == null) {
+            return true;
+        }
+
+        try {
+            thread.join(timeoutMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+
+        return !thread.isAlive();
+    }
+
+    private static void closeProcessStreams(Process process) {
+        if (process == null) {
+            return;
+        }
+
+        closeQuietly(process.getInputStream());
+        closeQuietly(process.getErrorStream());
+        closeQuietly(process.getOutputStream());
+    }
+
+    private static void destroyProcessQuietly(Process process) {
+        if (process == null) {
+            return;
+        }
+
+        try {
+            process.destroy();
+        } catch (Exception e) {
+        }
+    }
+
+    private static String summarizeHelperFailure(String detail, String fallback) {
+        String normalized = safeString(detail).trim().toLowerCase();
+
+        if (normalized.length() == 0) {
+            return fallback;
+        }
+        if (normalized.contains("timed out") || normalized.contains("timeout")) {
+            return "request timed out";
+        }
+        if (normalized.contains("certificate") || normalized.contains("x509") || normalized.contains("tls") || normalized.contains("ssl")) {
+            return "tls/certificate validation failed";
+        }
+        if (normalized.contains("no such host") || normalized.contains("unknown host") || normalized.contains("name resolution") || normalized.contains("resolve")) {
+            return "dns resolution failed";
+        }
+        if (normalized.contains("connection refused")) {
+            return "connection refused";
+        }
+        if (normalized.contains("network is unreachable") || normalized.contains("no route to host")) {
+            return "network unreachable";
+        }
+        if (normalized.contains("connection reset") || normalized.contains("broken pipe") || normalized.contains("unexpected eof")) {
+            return "connection interrupted";
+        }
+        if (normalized.contains("malformed") || normalized.contains("invalid url") || normalized.contains("unsupported protocol") || normalized.contains("parse")) {
+            return "invalid request parameters";
+        }
+
+        return fallback;
+    }
+
+    private static ShellResult execShellForRequest(String command, int timeoutSeconds) {
+        ShellResult result = new ShellResult();
+        Process process = null;
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        boolean[] stdoutTruncated = new boolean[]{false};
+        boolean[] stderrTruncated = new boolean[]{false};
+        Thread stdoutThread = null;
+        Thread stderrThread = null;
+        long deadlineMs = System.currentTimeMillis() + (timeoutSeconds * 1000L);
+
+        try {
+            process = new ProcessBuilder("su", "-u", "root", "-c", command).start();
+            stdoutThread = drainStream(process.getInputStream(), stdout,
+                                       STREAM_CAPTURE_LIMIT_BYTES, stdoutTruncated);
+            stderrThread = drainStream(process.getErrorStream(), stderr,
+                                       STREAM_CAPTURE_LIMIT_BYTES, stderrTruncated);
+
+            while (true) {
+                try {
+                    result.exitCode = process.exitValue();
+                    break;
+                } catch (IllegalThreadStateException e) {
+                    if (System.currentTimeMillis() >= deadlineMs) {
+                        result.timedOut = true;
+                        destroyProcessQuietly(process);
+                        closeProcessStreams(process);
+                        break;
+                    }
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        result.timedOut = true;
+                        destroyProcessQuietly(process);
+                        closeProcessStreams(process);
+                        break;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            result.exitCode = -1;
+            result.stderr = "unable to start helper process";
+            return result;
+        } finally {
+            long joinTimeoutMs = STREAM_JOIN_GRACE_MS;
+
+            if (result.timedOut) {
+                joinTimeoutMs = PROCESS_CLEANUP_GRACE_MS;
+            }
+
+            if (!joinQuietly(stdoutThread, joinTimeoutMs)) {
+                stdoutTruncated[0] = true;
+            }
+            if (!joinQuietly(stderrThread, joinTimeoutMs)) {
+                stderrTruncated[0] = true;
+            }
+
+            closeProcessStreams(process);
+            destroyProcessQuietly(process);
+        }
+
+        result.stdout = new String(stdout.toByteArray(), UTF8);
+        result.stderr = new String(stderr.toByteArray(), UTF8);
+        result.stdoutTruncated = stdoutTruncated[0];
+        result.stderrTruncated = stderrTruncated[0];
+        return result;
     }
 
     public static String[] performSynchronousRequest(String method, String url, String headers, String body) {
@@ -266,9 +478,12 @@ public class Connectivity{
         String safeUrl = safeString(url).trim();
         String safeHeaders = safeString(headers);
         String safeBody = safeString(body);
-        String responseBody;
+        String command;
+        ShellResult shellResult;
+        JSONObject jsonObject;
         String errorText = "";
-        int status = 200;
+        String responseBody = "";
+        int status = 0;
 
         if (safeMethod.length() == 0) {
             return new String[]{"0", "", "invalid parameter: method is required"};
@@ -278,21 +493,66 @@ public class Connectivity{
             return new String[]{"0", "", "invalid parameter: url is required"};
         }
 
-        if (safeUrl.startsWith("http://")) {
-            return new String[]{"0", "", "plain HTTP is not allowed in the Android request probe"};
+        command = buildGocurlCommand(safeMethod, safeUrl, safeHeaders, safeBody);
+        shellResult = execShellForRequest(command, GO_CURL_TOTAL_TIMEOUT_SECONDS);
+
+        if (shellResult.timedOut) {
+            return new String[]{"0", "", "gocurl request timed out after " + String.valueOf(GO_CURL_TOTAL_TIMEOUT_SECONDS) + " seconds"};
         }
 
-        if (safeUrl.indexOf("force_error") >= 0 || safeMethod.equalsIgnoreCase("FAIL")) {
-            return new String[]{"0", "", "trace failure requested by probe input"};
+        if (shellResult.stdoutTruncated || shellResult.stderrTruncated) {
+            errorText = "gocurl response exceeded Java capture limit";
+            if (shellResult.stderrTruncated) {
+                errorText += " (stderr truncated)";
+            }
+            if (shellResult.stdoutTruncated) {
+                errorText += shellResult.stderrTruncated ? " and stdout truncated" : " (stdout truncated)";
+            }
+            return new String[]{"0", "", errorText};
         }
 
-        responseBody = "android_request_probe\n"
-                + "method=" + safeMethod + "\n"
-                + "url=" + safeUrl + "\n"
-                + "header_count=" + String.valueOf(countNonEmptyLines(safeHeaders)) + "\n"
-                + "body_length=" + String.valueOf(safeBody.length()) + "\n"
-                + "headers_preview=" + preview(safeHeaders, 120) + "\n"
-                + "body_preview=" + preview(safeBody, 120);
+        if (shellResult.stdout.trim().length() == 0) {
+            errorText = "gocurl produced no JSON output";
+            if (shellResult.exitCode != 0) {
+                errorText += " (" + summarizeHelperFailure(shellResult.stderr, "helper process failed") + ")";
+            }
+            return new String[]{"0", "", errorText};
+        }
+
+        try {
+            jsonObject = new JSONObject(shellResult.stdout);
+        } catch (JSONException e) {
+            errorText = "gocurl returned malformed JSON";
+            if (shellResult.exitCode != 0) {
+                errorText += " (" + summarizeHelperFailure(shellResult.stderr, "helper process failed") + ")";
+            }
+            return new String[]{"0", "", errorText};
+        }
+
+        if (jsonObject.has("error")) {
+            errorText = "gocurl request failed: "
+                + summarizeHelperFailure(jsonObject.optString("error"), "request failed");
+            if (shellResult.exitCode != 0) {
+                errorText += " (exit " + String.valueOf(shellResult.exitCode) + ")";
+            }
+            return new String[]{"0", "", errorText};
+        }
+
+        status = jsonObject.optInt("status_code", 0);
+        responseBody = safeString(jsonObject.optString("body_base64", ""));
+        if (responseBody.length() > 0) {
+            try {
+                responseBody = new String(Base64.decode(responseBody, Base64.DEFAULT), UTF8);
+            } catch (IllegalArgumentException e) {
+                return new String[]{"0", "", "gocurl returned invalid response body encoding"};
+            }
+        } else {
+            responseBody = "";
+        }
+
+        if (shellResult.exitCode != 0) {
+            errorText = "gocurl exited with code " + String.valueOf(shellResult.exitCode);
+        }
 
         return new String[]{String.valueOf(status), responseBody, errorText};
     }
