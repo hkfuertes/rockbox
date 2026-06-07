@@ -18,6 +18,12 @@ for f in /sdcard/.rockbox/update/libs/armeabi/*; do
 done
 chmod 777 /data/data/org.rockbox/lib/*
 unzip libs/armeabi/libmisc.so
+mkdir -p /data/data/org.rockbox/app_rockbox/rockbox
+if [ -d .rockbox/rocks ]; then
+  rm -rf /data/data/org.rockbox/app_rockbox/rockbox/rocks
+  cp -rf .rockbox/rocks /data/data/org.rockbox/app_rockbox/rockbox/
+  chmod -R 755 /data/data/org.rockbox/app_rockbox/rockbox/rocks
+fi
 for f in .rockbox/*; do
   cp -rf "$f" /sdcard/.rockbox/
 done
