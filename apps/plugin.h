@@ -176,7 +176,7 @@ int plugin_open(const char *plugin, const char *parameter);
  * when this happens please take the opportunity to sort in
  * any new functions "waiting" at the end of the list.
  */
-#define PLUGIN_API_VERSION 273
+#define PLUGIN_API_VERSION 276
 
 /* 239 Marks the removal of ARCHOS HWCODEC and CHARCELL */
 
@@ -197,6 +197,16 @@ enum plugin_tsr_status {
     PLUGIN_TSR_CONTINUE = 0, /* TSR continues running */
     PLUGIN_TSR_SUSPEND,      /* TSR exits but will restart later */
     PLUGIN_TSR_TERMINATE,    /* TSR exits and will not be restarted */
+};
+
+/* Android hosted request bridge return codes */
+enum android_request_status {
+    ANDROID_REQUEST_OK = 0,
+    ANDROID_REQUEST_INVALID_PARAM = -1,
+    ANDROID_REQUEST_JNI_UNAVAILABLE = -2,
+    ANDROID_REQUEST_JNI_METHOD_MISSING = -3,
+    ANDROID_REQUEST_JNI_EXCEPTION = -4,
+    ANDROID_REQUEST_TRUNCATED = -5,
 };
 
 /* NOTE: To support backwards compatibility, only add new functions at
@@ -1008,6 +1018,23 @@ struct plugin_api {
     const char* (*android_podcast_connect_wifi)(void);
     int (*android_podcast_disconnect_wifi)(void);
     void (*free_array)(char** array);
+    const char* (*android_connect_wifi)(void);
+    int (*android_disconnect_wifi)(void);
+    int (*android_request)(const char *method,
+                           const char *url,
+                           const char *headers,
+                           const char *body,
+                           char *response_buf,
+                           size_t response_len,
+                           int *status_out,
+                           char *error_buf,
+                           size_t error_len);
+    int (*android_download)(const char *url,
+                            const char *headers,
+                            const char *destination_path,
+                            int *status_out,
+                            char *error_buf,
+                            size_t error_len);
 };
 
 /* plugin header */

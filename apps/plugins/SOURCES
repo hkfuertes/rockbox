@@ -23,6 +23,10 @@ lrcplayer.c
 mosaique.c
 main_menu_config.c
 podcast_downloader.c
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+android_request_probe.c
+android_download_probe.c
+#endif
 playing_time.c
 properties.c
 random_folder_advance_config.c
