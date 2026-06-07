@@ -1,6 +1,7 @@
 #include "request-android.h"
 
 #include <jni.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -68,6 +69,12 @@ static int get_array_string(jobjectArray array, jsize index,
     return *out_copy != NULL ? ANDROID_REQUEST_OK : ANDROID_REQUEST_JNI_EXCEPTION;
 }
 
+static bool error_indicates_truncation(const char *error_text)
+{
+    return error_text != NULL &&
+           strstr(error_text, "exceeded Java capture limit") != NULL;
+}
+
 static int finalize_request_result(const char *status_text,
                                    const char *response_text,
                                    const char *error_text,
@@ -82,8 +89,11 @@ static int finalize_request_result(const char *status_text,
     if (status_text != NULL)
         *status_out = atoi(status_text);
 
-    rc = (*status_out == 0 && error_text != NULL && error_text[0] != '\0') ?
-        ANDROID_REQUEST_JNI_EXCEPTION : ANDROID_REQUEST_OK;
+    if (*status_out == 0 && error_text != NULL && error_text[0] != '\0')
+        rc = error_indicates_truncation(error_text) ?
+            ANDROID_REQUEST_TRUNCATED : ANDROID_REQUEST_JNI_EXCEPTION;
+    else
+        rc = ANDROID_REQUEST_OK;
 
     if (copy_to_buffer(response_buf, response_len, response_text) == ANDROID_REQUEST_TRUNCATED)
     {
