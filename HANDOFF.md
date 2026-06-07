@@ -195,54 +195,155 @@ apps/plugins/podcast_downloader.c
 
 They are not JNI libraries.
 
-## Direction for a generic gocurl/JNI helper
+## Implemented generic Android network API for first plugin work
 
-Interpret user's “para usarlo en cualquier app” as “usable by any Rockbox plugin/app in this Rockbox process”, unless they clarify they mean arbitrary third-party Android apps.
+Status: merged into local/remote `main` via PR #1. The old “generic gocurl helper” direction has been implemented as a structured Android plugin API, not as raw shell/gocurl passthrough.
 
-Recommended path:
+### Plugin-facing functions
 
-1. Add plugin API entry:
-   - `apps/plugin.h`
-   - `apps/plugin.c`
+Available from any Rockbox plugin via `rb->...` on Android/Y1 builds:
 
-2. Add C/JNI bridge:
-   - either extend `firmware/target/hosted/android/connectivity-android.c`
-   - or create cleaner file `firmware/target/hosted/android/gocurl-android.c`
+```c
+const char *rb->android_connect_wifi(void);
+int rb->android_disconnect_wifi(void);
 
-3. If creating a new C file, add it to Android block in:
-   - `firmware/SOURCES`
+int rb->android_request(const char *method,
+                        const char *url,
+                        const char *headers,
+                        const char *body,
+                        char *response_buf,
+                        size_t response_len,
+                        int *status_out,
+                        char *error_buf,
+                        size_t error_len);
 
-4. Add Java method wrapper in:
-   - `android/src/org/rockbox/RockboxService.java`
+int rb->android_download(const char *url,
+                         const char *headers,
+                         const char *destination_path,
+                         int *status_out,
+                         char *error_buf,
+                         size_t error_len);
+```
 
-5. Add actual executor/helper in:
-   - `android/src/org/rockbox/Helper/Connectivity.java`
+Return codes for request/download are in `apps/plugin.h`:
 
-Potential shape:
+```c
+ANDROID_REQUEST_OK = 0
+ANDROID_REQUEST_INVALID_PARAM = -1
+ANDROID_REQUEST_JNI_UNAVAILABLE = -2
+ANDROID_REQUEST_JNI_METHOD_MISSING = -3
+ANDROID_REQUEST_JNI_EXCEPTION = -4
+ANDROID_REQUEST_TRUNCATED = -5
+```
+
+`status_out` is the HTTP status. A non-zero bridge return means JNI/helper/capture/truncation failure; an HTTP 4xx/5xx with bridge return 0 means the bridge worked and the server returned an error.
+
+### Header/body format
+
+`headers` is either `NULL` or newline-separated header lines:
+
+```text
+Authorization: Bearer TOKEN
+Accept: application/json
+Content-Type: application/json
+```
+
+`body` is either `NULL` or the exact request body string. For JSON POST/PATCH, pass `Content-Type: application/json` in `headers` and JSON in `body`.
+
+### Minimal request example
+
+```c
+char response[2048];
+char error[256];
+int http_status = 0;
+int rc;
+
+rb->android_connect_wifi();
+
+rc = rb->android_request("GET",
+                         "https://example.com/api/me",
+                         "Accept: application/json\nAuthorization: Bearer REPLACE_ME",
+                         NULL,
+                         response,
+                         sizeof(response),
+                         &http_status,
+                         error,
+                         sizeof(error));
+
+rb->android_disconnect_wifi();
+
+if (rc == ANDROID_REQUEST_OK && http_status >= 200 && http_status < 300) {
+    /* parse response */
+} else {
+    /* show rc/http_status/error; redact tokens */
+}
+```
+
+### Minimal download example
+
+```c
+char error[256];
+int http_status = 0;
+int rc;
+
+rb->android_connect_wifi();
+
+rc = rb->android_download("https://example.com/file.mp3",
+                          "Authorization: Bearer REPLACE_ME",
+                          "/sdcard/.rockbox/audiobookshelf/downloads/file.mp3",
+                          &http_status,
+                          error,
+                          sizeof(error));
+
+rb->android_disconnect_wifi();
+```
+
+Download destination paths are intentionally constrained by the Java helper to Rockbox-controlled storage. Use `/sdcard/.rockbox/...` paths for plugin downloads.
+
+### Implementation call chain
 
 ```text
 plugin C
-  -> rb->android_gocurl(...)
-  -> C/JNI bridge
-  -> RockboxService.gocurl(...)
-  -> Connectivity.gocurl(...)
-  -> /data/data/gocurl
+  -> rb->android_connect_wifi / android_request / android_download
+  -> apps/plugin.h / apps/plugin.c plugin API table
+  -> firmware/target/hosted/android/wifi-android.c or request-android.c
+  -> JNI call into RockboxService
+  -> android/src/org/rockbox/RockboxService.java
+  -> android/src/org/rockbox/Helper/Connectivity.java
+  -> /data/data/gocurl with structured, shell-quoted arguments
 ```
 
-Design warning: avoid exposing a fully raw `gocurl(args)` if possible, because current execution uses shell/root:
+Important source files:
 
-```java
-Runtime.getRuntime().exec("su -u root -c " + command)
-```
+- `apps/plugin.h` — plugin API signatures and `enum android_request_status`.
+- `apps/plugin.c` — plugin API table wiring.
+- `firmware/target/hosted/android/wifi-android.c` — generic WiFi aliases delegating to existing Y1/podcast WiFi path without modifying podcast downloader.
+- `firmware/target/hosted/android/request-android.c` / `.h` — JNI bridge for request/download.
+- `android/src/org/rockbox/RockboxService.java` — Java methods called from JNI.
+- `android/src/org/rockbox/Helper/Connectivity.java` — command building, gocurl execution, output parsing, download path safety.
+- `apps/plugins/android_request_probe.c` and `android_download_probe.c` — small examples/smoke tests.
 
-A generic raw args string risks command injection. Prefer structured helpers such as:
+### On-device caveats discovered during validation
+
+- TLS requires a sane Y1 system clock. Device was stuck in 2022 and gocurl failed certificate validation until fixed with BusyBox date.
+- `/data/data/cacert.pem` must exist; current helper passes `--cacert /data/data/cacert.pem` to gocurl.
+- Rockbox Android lists plugins from internal app storage: `/data/data/org.rockbox/app_rockbox/rockbox/rocks/apps`. The updater now copies packaged `.rockbox/rocks` there automatically so new probe/plugin `.rock` files appear under `Plugins -> Applications` after update.
+- Do not expose raw `gocurl` args from a plugin. Keep using `android_request` / `android_download`; Java side shell-quotes structured fields.
+
+### Smoke-test plugin locations
+
+After a correct update, probes should appear in:
 
 ```text
-android_http_get(url)
-android_http_post_json(url, headers/auth, body)
+Plugins -> Applications -> android_request_probe
+Plugins -> Applications -> android_download_probe
 ```
 
-or at least carefully quote/sanitize all shell args before passing them to `execShell`.
+Their source is in `apps/plugins/`. The download probe reads config from:
+
+```text
+/sdcard/.rockbox/android_download_probe.cfg
+```
 
 ## Suggested next-session skills
 
@@ -251,12 +352,10 @@ or at least carefully quote/sanitize all shell args before passing them to `exec
 
 ## Immediate next step
 
-Run APK build under the Rosetta Colima profile:
+Start the first real plugin (likely Audiobookshelf) on top of the implemented generic Android API:
 
-```bash
-cd ~/projects/rockbox
-rm -rf android/build
-./tools/docker-local-build-y1.sh 240p
-```
-
-If it succeeds, install/test the APK on device, then begin JNI/plugin changes at the paths above.
+1. Create plugin scaffold under `apps/plugins/` and register it in `apps/plugins/SOURCES` + `apps/plugins/CATEGORIES`.
+2. Load plugin config from `/sdcard/.rockbox/audiobookshelf.cfg`.
+3. Use `rb->android_connect_wifi()` then `rb->android_request()` for diagnostics/auth/list APIs.
+4. Use `rb->android_download()` for file downloads into `/sdcard/.rockbox/audiobookshelf/...`.
+5. Always redact API tokens in UI/errors and remember TLS depends on valid Y1 date + `/data/data/cacert.pem`.
