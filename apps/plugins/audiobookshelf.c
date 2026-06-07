@@ -37,6 +37,7 @@
 
 #define LIBRARIES_RESPONSE_SIZE 4096
 #define ITEMS_RESPONSE_SIZE     16384
+#define DETAIL_RESPONSE_SIZE    32768
 #define JSON_TOKEN_COUNT        1024
 #define MAX_LIBRARIES           32
 #define LIBRARY_NAME_SIZE       64
@@ -45,12 +46,18 @@
 #define BOOK_TITLE_SIZE         160
 #define BOOK_ID_SIZE            128
 #define BOOK_META_SIZE          64
+#define DETAIL_LINE_SIZE        192
+#define MAX_DETAIL_LINES        10
 #define LIST_TITLE_SIZE         96
 
 #define BOOK_PICKER_CANCEL      (-1)
 #define BOOK_PICKER_USB         (-2)
 #define BOOK_PICKER_PREV_PAGE   (-3)
 #define BOOK_PICKER_NEXT_PAGE   (-4)
+
+#define DETAIL_ACTION_BACK      0
+#define DETAIL_ACTION_DOWNLOAD  1
+#define DETAIL_ACTION_USB      -2
 
 /* ---- config --------------------------------------------------------------- */
 struct abs_config {
@@ -75,7 +82,25 @@ static int       g_book_limit;
 static int       g_book_total;
 static bool      g_book_has_next;
 static char      g_items_response[ITEMS_RESPONSE_SIZE];
+static char      g_detail_response[DETAIL_RESPONSE_SIZE];
 static char      g_list_title[LIST_TITLE_SIZE];
+
+struct abs_book_detail {
+    char item_id[BOOK_ID_SIZE];
+    char title[BOOK_TITLE_SIZE];
+    char author[BOOK_META_SIZE];
+    char series[BOOK_META_SIZE];
+    char narrator[BOOK_META_SIZE];
+    char published_year[16];
+    int duration_seconds;
+    int audio_file_count;
+    bool has_audio_files;
+};
+
+static struct abs_book_detail g_book_detail;
+static char      g_detail_lines[MAX_DETAIL_LINES][DETAIL_LINE_SIZE];
+static int       g_detail_line_count;
+static int       g_detail_action_start;
 
 static jsmntok_t g_tokens[JSON_TOKEN_COUNT];
 
@@ -193,6 +218,38 @@ static void build_book_title(char *dest, size_t dest_len,
     } else {
         rb->strlcpy(dest, base, dest_len);
     }
+}
+
+static void format_duration(int seconds, char *buf, size_t buf_len)
+{
+    int hours;
+    int minutes;
+
+    if (seconds <= 0) {
+        buf[0] = '\0';
+        return;
+    }
+
+    hours = seconds / 3600;
+    minutes = (seconds % 3600) / 60;
+    seconds %= 60;
+
+    if (hours > 0) {
+        rb->snprintf(buf, buf_len, "%d:%02d:%02d", hours, minutes, seconds);
+    } else {
+        rb->snprintf(buf, buf_len, "%d:%02d", minutes, seconds);
+    }
+}
+
+static void add_detail_line(const char *label, const char *value)
+{
+    if (!value || value[0] == '\0' || g_detail_line_count >= MAX_DETAIL_LINES)
+        return;
+
+    rb->snprintf(g_detail_lines[g_detail_line_count],
+                 sizeof(g_detail_lines[g_detail_line_count]),
+                 "%s: %s", label, value);
+    g_detail_line_count++;
 }
 
 /* ---- config parsing ------------------------------------------------------- */
@@ -554,6 +611,120 @@ static int parse_books(int json_len, int requested_page, int requested_limit,
     return g_book_count;
 }
 
+static bool parse_book_detail(int json_len,
+                              const char *requested_item_id,
+                              char *error_buf, size_t error_len)
+{
+    jsmn_parser parser;
+    int r;
+    int title_idx;
+    int media_idx;
+    int metadata_idx = -1;
+    int author_idx = -1;
+    int series_idx = -1;
+    int narrator_idx = -1;
+    int published_idx = -1;
+    int duration_idx = -1;
+    int audio_files_idx = -1;
+
+    rb->memset(&g_book_detail, 0, sizeof(g_book_detail));
+    if (requested_item_id)
+        rb->strlcpy(g_book_detail.item_id, requested_item_id,
+                    sizeof(g_book_detail.item_id));
+
+    jsmn_init(&parser);
+    r = jsmn_parse(&parser, g_detail_response, (size_t)json_len,
+                   g_tokens, JSON_TOKEN_COUNT);
+
+    if (r == JSMN_ERROR_NOMEM) {
+        rb->snprintf(error_buf, error_len,
+                     "Book detail JSON has more than %d tokens.",
+                     JSON_TOKEN_COUNT);
+        return false;
+    }
+    if (r == JSMN_ERROR_PART) {
+        rb->snprintf(error_buf, error_len,
+                     "Book detail response appears truncated (incomplete JSON).");
+        return false;
+    }
+    if (r < 0) {
+        rb->snprintf(error_buf, error_len,
+                     "Malformed book detail JSON (parse error %d). "
+                     "Response starts: %.40s",
+                     r, g_detail_response[0] ? g_detail_response : "(empty)");
+        return false;
+    }
+    if (r == 0 || g_tokens[0].type != JSMN_OBJECT) {
+        rb->snprintf(error_buf, error_len,
+                     "Unexpected book detail response: expected JSON object, "
+                     "got %d token(s). Starts: %.40s",
+                     r, g_detail_response[0] ? g_detail_response : "(empty)");
+        return false;
+    }
+
+    title_idx = find_object_value(g_detail_response, g_tokens, r, 0, "title");
+    media_idx = find_object_value(g_detail_response, g_tokens, r, 0, "media");
+    if (media_idx >= 0 && g_tokens[media_idx].type == JSMN_OBJECT) {
+        metadata_idx = find_object_value(g_detail_response, g_tokens, r,
+                                         media_idx, "metadata");
+        duration_idx = find_object_value(g_detail_response, g_tokens, r,
+                                         media_idx, "duration");
+        audio_files_idx = find_object_value(g_detail_response, g_tokens, r,
+                                            media_idx, "audioFiles");
+    }
+    if (metadata_idx >= 0 && g_tokens[metadata_idx].type == JSMN_OBJECT) {
+        if (title_idx < 0)
+            title_idx = find_object_value(g_detail_response, g_tokens, r,
+                                          metadata_idx, "title");
+        author_idx = find_object_value(g_detail_response, g_tokens, r,
+                                       metadata_idx, "authorName");
+        series_idx = find_object_value(g_detail_response, g_tokens, r,
+                                       metadata_idx, "seriesName");
+        narrator_idx = find_object_value(g_detail_response, g_tokens, r,
+                                         metadata_idx, "narratorName");
+        if (narrator_idx < 0)
+            narrator_idx = find_object_value(g_detail_response, g_tokens, r,
+                                             metadata_idx, "narrators");
+        published_idx = find_object_value(g_detail_response, g_tokens, r,
+                                          metadata_idx, "publishedYear");
+        if (published_idx < 0)
+            published_idx = find_object_value(g_detail_response, g_tokens, r,
+                                              metadata_idx, "publishedDate");
+    }
+
+    if (title_idx >= 0 && g_tokens[title_idx].type == JSMN_STRING)
+        tok_copy(g_detail_response, &g_tokens[title_idx], g_book_detail.title,
+                 sizeof(g_book_detail.title));
+    if (author_idx >= 0 && g_tokens[author_idx].type == JSMN_STRING)
+        tok_copy(g_detail_response, &g_tokens[author_idx], g_book_detail.author,
+                 sizeof(g_book_detail.author));
+    if (series_idx >= 0 && g_tokens[series_idx].type == JSMN_STRING)
+        tok_copy(g_detail_response, &g_tokens[series_idx], g_book_detail.series,
+                 sizeof(g_book_detail.series));
+    if (narrator_idx >= 0 && g_tokens[narrator_idx].type == JSMN_STRING)
+        tok_copy(g_detail_response, &g_tokens[narrator_idx], g_book_detail.narrator,
+                 sizeof(g_book_detail.narrator));
+    if (published_idx >= 0 &&
+        (g_tokens[published_idx].type == JSMN_STRING ||
+         g_tokens[published_idx].type == JSMN_PRIMITIVE))
+        tok_copy(g_detail_response, &g_tokens[published_idx],
+                 g_book_detail.published_year,
+                 sizeof(g_book_detail.published_year));
+    if (duration_idx >= 0)
+        g_book_detail.duration_seconds = tok_to_int(g_detail_response,
+                                                    &g_tokens[duration_idx]);
+    if (audio_files_idx >= 0 && g_tokens[audio_files_idx].type == JSMN_ARRAY) {
+        g_book_detail.audio_file_count = g_tokens[audio_files_idx].size;
+        g_book_detail.has_audio_files = g_book_detail.audio_file_count > 0;
+    }
+
+    if (g_book_detail.title[0] == '\0')
+        rb->strlcpy(g_book_detail.title, "(untitled)",
+                    sizeof(g_book_detail.title));
+
+    return true;
+}
+
 /* ---- list UIs ------------------------------------------------------------- */
 
 static const char *lib_list_get_name(int selected_item, void *data,
@@ -589,6 +760,16 @@ static const char *book_list_get_name(int selected_item, void *data,
     }
 
     return "???";
+}
+
+static const char *detail_list_get_name(int selected_item, void *data,
+                                        char *buffer, size_t buffer_len)
+{
+    (void)data;
+    if (selected_item < 0 || selected_item >= g_detail_line_count)
+        return "???";
+    rb->strlcpy(buffer, g_detail_lines[selected_item], buffer_len);
+    return buffer;
 }
 
 /*
@@ -693,6 +874,74 @@ static int show_book_picker(const char *library_name)
     return result;
 }
 
+static int show_book_detail_menu(void)
+{
+    struct gui_synclist list;
+    int action;
+    bool done = false;
+    int result = DETAIL_ACTION_BACK;
+    char duration[32];
+    char audio_files[32];
+
+    g_detail_line_count = 0;
+    add_detail_line("Title", g_book_detail.title);
+    add_detail_line("Author", g_book_detail.author);
+    add_detail_line("Series", g_book_detail.series);
+    add_detail_line("Narrator", g_book_detail.narrator);
+    add_detail_line("Published", g_book_detail.published_year);
+    format_duration(g_book_detail.duration_seconds, duration, sizeof(duration));
+    add_detail_line("Duration", duration);
+    if (g_book_detail.has_audio_files) {
+        rb->snprintf(audio_files, sizeof(audio_files), "%d",
+                     g_book_detail.audio_file_count);
+        add_detail_line("Audio files", audio_files);
+    }
+
+    g_detail_action_start = g_detail_line_count;
+    rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Download]",
+                sizeof(g_detail_lines[0]));
+    rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Back]",
+                sizeof(g_detail_lines[0]));
+
+    rb->gui_synclist_init(&list, detail_list_get_name, NULL, false, 1, NULL);
+    rb->gui_synclist_set_nb_items(&list, g_detail_line_count);
+    rb->gui_synclist_set_title(&list, g_book_detail.title, Icon_Audio);
+    rb->gui_synclist_select_item(&list, g_detail_action_start);
+    rb->gui_synclist_draw(&list);
+
+    while (!done) {
+        action = rb->get_action(CONTEXT_LIST, HZ / 10);
+        if (rb->gui_synclist_do_button(&list, &action))
+            continue;
+        switch (action) {
+        case ACTION_STD_OK: {
+            int sel = rb->gui_synclist_get_sel_pos(&list);
+            if (sel == g_detail_action_start) {
+                result = DETAIL_ACTION_DOWNLOAD;
+                done = true;
+            } else if (sel == g_detail_action_start + 1) {
+                result = DETAIL_ACTION_BACK;
+                done = true;
+            }
+            break;
+        }
+        case ACTION_STD_CANCEL:
+        case ACTION_STD_MENU:
+            result = DETAIL_ACTION_BACK;
+            done   = true;
+            break;
+        default:
+            if (rb->default_event_handler(action) == SYS_USB_CONNECTED) {
+                result = DETAIL_ACTION_USB;
+                done   = true;
+            }
+            break;
+        }
+    }
+
+    return result;
+}
+
 /* ---- network -------------------------------------------------------------- */
 
 static bool fetch_books_page(const struct abs_config *cfg,
@@ -735,6 +984,51 @@ static bool fetch_books_page(const struct abs_config *cfg,
                      "Bridge rc:    %d\n\n"
                      "Error:\n%s",
                      library_id, page, cfg->page_size,
+                     wifi_result ? wifi_result : "(null)",
+                     http_status, bridge_rc,
+                     error_buf[0] ? error_buf : "(none)");
+        return false;
+    }
+
+    return true;
+}
+
+static bool fetch_book_detail(const struct abs_config *cfg,
+                              const char *header_buf,
+                              const char *item_id,
+                              char *error_buf, size_t error_len,
+                              char *text_buf, size_t text_len)
+{
+    char endpoint[ENDPOINT_BUF_SIZE];
+    const char *wifi_result;
+    int http_status = 0;
+    int bridge_rc;
+
+    rb->splash(HZ, "Loading book details...");
+    wifi_result = rb->android_connect_wifi();
+
+    rb->snprintf(endpoint, sizeof(endpoint), "%s/api/items/%s",
+                 cfg->server_url, item_id);
+
+    g_detail_response[0] = '\0';
+    error_buf[0] = '\0';
+
+    bridge_rc = rb->android_request(
+        "GET", endpoint, header_buf, NULL,
+        g_detail_response, sizeof(g_detail_response),
+        &http_status, error_buf, error_len);
+
+    rb->android_disconnect_wifi();
+
+    if (bridge_rc < 0 || http_status != 200) {
+        rb->snprintf(text_buf, text_len,
+                     "Book detail fetch failed\n\n"
+                     "Book ID:                 %s\n"
+                     "WiFi:                    %s\n"
+                     "HTTP status:             %d\n"
+                     "Bridge rc:               %d\n"
+                     "Bridge error (redacted): %s",
+                     item_id,
                      wifi_result ? wifi_result : "(null)",
                      http_status, bridge_rc,
                      error_buf[0] ? error_buf : "(none)");
@@ -927,31 +1221,60 @@ enum plugin_status plugin_start(const void *parameter)
             continue;
         }
         if (sel >= 0 && sel < g_book_count) {
+            int detail_action;
+            int json_len;
+
             rb->strlcpy(session_book_id, g_book_ids[sel],
                         sizeof(session_book_id));
             rb->strlcpy(session_book_title, g_book_titles[sel],
                         sizeof(session_book_title));
-            break;
+
+            if (!fetch_book_detail(&cfg, header_buf, session_book_id,
+                                   error_buf, sizeof(error_buf),
+                                   text_buf, sizeof(text_buf))) {
+                view_text("Audiobookshelf", text_buf);
+                return PLUGIN_OK;
+            }
+
+            json_len = (int)rb->strlen(g_detail_response);
+            if (!parse_book_detail(json_len, session_book_id,
+                                   error_buf, sizeof(error_buf))) {
+                view_text("Audiobookshelf", error_buf);
+                return PLUGIN_OK;
+            }
+
+            if (session_book_title[0] == '\0' ||
+                !rb->strcmp(session_book_title, "(untitled)")) {
+                rb->strlcpy(session_book_title, g_book_detail.title,
+                            sizeof(session_book_title));
+            }
+
+            detail_action = show_book_detail_menu();
+            if (detail_action == DETAIL_ACTION_USB)
+                return PLUGIN_USB_CONNECTED;
+            if (detail_action == DETAIL_ACTION_BACK)
+                continue;
+
+            rb->snprintf(text_buf, sizeof(text_buf),
+                         "Audiobookshelf: Download planned\n\n"
+                         "Server:       %s\n"
+                         "Library:      %s\n"
+                         "Library ID:   %s\n"
+                         "Book:         %s\n"
+                         "Book ID:      %s\n"
+                         "Download dir: %s\n\n"
+                         "Next slice will implement the actual transfer.\n"
+                         "Audio files detected: %d",
+                         cfg.server_url,
+                         session_lib_name[0] ? session_lib_name : "(unknown)",
+                         session_lib_id,
+                         g_book_detail.title[0] ? g_book_detail.title :
+                                                   session_book_title,
+                         session_book_id,
+                         cfg.download_dir,
+                         g_book_detail.audio_file_count);
+            view_text("Audiobookshelf", text_buf);
+            return PLUGIN_OK;
         }
     }
-
-    /* 8. Confirm selection for the next slice. */
-    rb->snprintf(text_buf, sizeof(text_buf),
-                 "Audiobookshelf: Book selected\n\n"
-                 "Server:       %s\n"
-                 "Library:      %s\n"
-                 "Library ID:   %s\n"
-                 "Book:         %s\n"
-                 "Book ID:      %s\n"
-                 "Download dir: %s\n"
-                 "Page size:    %d",
-                 cfg.server_url,
-                 session_lib_name[0] ? session_lib_name : "(unknown)",
-                 session_lib_id,
-                 session_book_title[0] ? session_book_title : "(unknown)",
-                 session_book_id,
-                 cfg.download_dir,
-                 cfg.page_size);
-    view_text("Audiobookshelf", text_buf);
-    return PLUGIN_OK;
 }
