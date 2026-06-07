@@ -174,7 +174,7 @@ enum plugin_status plugin_start(const void* parameter)
     rb->splash(HZ, "Connecting to WiFi...");
 
     const char* wifi_ret;
-    wifi_ret = rb->android_connect_wifi();
+    wifi_ret = rb->android_podcast_connect_wifi();
     if (strcmp(wifi_ret, "Success") != 0){
         rb->splash(HZ, "Failed connecting to WiFi, please check .rockbox/wifi.cfg and make sure the network is available.");
         return PLUGIN_ERROR;
@@ -389,7 +389,7 @@ enum plugin_status plugin_start(const void* parameter)
         rb->free_array(current_episodes);
         current_episodes = NULL;
     }
-    rb->android_disconnect_wifi();
+    rb->android_podcast_disconnect_wifi();
 
     return ret;
 }

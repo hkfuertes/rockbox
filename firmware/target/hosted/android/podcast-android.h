@@ -8,7 +8,7 @@ int android_podcast_delete_episode(int, int);
 int android_podcast_get_list_count(char**);
 char** android_podcast_get_podcast_names(void);
 char** android_podcast_get_episode_list(int);
-const char* android_podcast_get_episode_path(int podcast_num, int num);
+const char* android_podcast_get_episode_path(int podcast_num, int num)
 void free_array(char**);
 char** split_string_newline(const char*, int*);
 const char* android_podcast_connect_wifi(void);
