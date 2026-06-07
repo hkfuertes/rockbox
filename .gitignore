@@ -4,6 +4,7 @@
 /output
 /.docker-home
 /issues/
+*prd*.md
 *.elf
 *.exe
 *.so
