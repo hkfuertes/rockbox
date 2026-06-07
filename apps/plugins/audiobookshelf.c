@@ -21,6 +21,7 @@
 /* ---- sizes ---------------------------------------------------------------- */
 #define CONFIG_PATH          "/sdcard/.rockbox/audiobookshelf.cfg"
 #define DEFAULT_DOWNLOAD_DIR "/sdcard/audiobookshelf/downloads"
+#define SAFE_DOWNLOAD_BASE   "/sdcard/audiobookshelf"
 #define DEFAULT_PAGE_SIZE    20
 #define MAX_PAGE_SIZE        50
 
@@ -94,6 +95,7 @@ struct abs_book_detail {
     char published_year[16];
     int duration_seconds;
     int audio_file_count;
+    bool audio_files_known;
     bool has_audio_files;
 };
 
@@ -250,6 +252,322 @@ static void add_detail_line(const char *label, const char *value)
                  sizeof(g_detail_lines[g_detail_line_count]),
                  "%s: %s", label, value);
     g_detail_line_count++;
+}
+
+static const char *safe_text(const char *text)
+{
+    return text != NULL && text[0] != '\0' ? text : "(none)";
+}
+
+static bool path_has_traversal(const char *path)
+{
+    const char *p = path;
+
+    if (path == NULL || path[0] == '\0')
+        return true;
+
+    while (*p) {
+        if ((p == path || p[-1] == '/') &&
+            p[0] == '.' &&
+            ((p[1] == '.' && (p[2] == '/' || p[2] == '\0')) ||
+             (p[1] == '/' || p[1] == '\0')))
+            return true;
+        p++;
+    }
+
+    return false;
+}
+
+static bool path_is_under_base(const char *path, const char *base)
+{
+    size_t base_len;
+
+    if (path == NULL || base == NULL)
+        return false;
+
+    base_len = rb->strlen(base);
+    if (rb->strncmp(path, base, base_len) != 0)
+        return false;
+
+    return path[base_len] == '\0' || path[base_len] == '/';
+}
+
+static void sanitize_path_component(const char *src, char *dest, size_t dest_len)
+{
+    size_t di = 0;
+    bool last_was_sep = false;
+    char c;
+
+    if (dest_len == 0)
+        return;
+
+    if (src == NULL || src[0] == '\0')
+        src = "untitled";
+
+    while ((c = *src++) != '\0' && di + 1 < dest_len) {
+        bool keep = (c >= 'A' && c <= 'Z') ||
+                    (c >= 'a' && c <= 'z') ||
+                    (c >= '0' && c <= '9');
+
+        if (keep || c == '-' || c == '_') {
+            dest[di++] = c;
+            last_was_sep = false;
+        } else if (c == ' ' || c == '.' || c == ',') {
+            if (!last_was_sep && di > 0) {
+                dest[di++] = '_';
+                last_was_sep = true;
+            }
+        } else {
+            if (!last_was_sep && di > 0) {
+                dest[di++] = '_';
+                last_was_sep = true;
+            }
+        }
+    }
+
+    while (di > 0 && dest[di - 1] == '_')
+        di--;
+
+    if (di == 0) {
+        rb->strlcpy(dest, "untitled", dest_len);
+        return;
+    }
+
+    dest[di] = '\0';
+}
+
+static void redact_token_text(const char *src,
+                              const char *token,
+                              char *dest,
+                              size_t dest_len)
+{
+    const char *p = src;
+    size_t token_len;
+    size_t used = 0;
+    const char *marker = "[redacted]";
+    size_t marker_len = rb->strlen(marker);
+
+    if (dest_len == 0)
+        return;
+
+    dest[0] = '\0';
+    if (src == NULL || src[0] == '\0')
+        return;
+
+    token_len = token != NULL ? rb->strlen(token) : 0;
+    while (*p != '\0' && used + 1 < dest_len) {
+        if (token_len > 0 && rb->strncmp(p, token, token_len) == 0) {
+            size_t copy = marker_len;
+
+            if (copy > dest_len - used - 1)
+                copy = dest_len - used - 1;
+            rb->memcpy(dest + used, marker, copy);
+            used += copy;
+            dest[used] = '\0';
+            p += token_len;
+            continue;
+        }
+        dest[used++] = *p++;
+        dest[used] = '\0';
+    }
+}
+
+static bool validate_download_root(const struct abs_config *cfg,
+                                   char *root_buf,
+                                   size_t root_len,
+                                   char *error_buf,
+                                   size_t error_len)
+{
+    size_t len;
+
+    if (cfg->download_dir[0] == '\0') {
+        rb->snprintf(error_buf, error_len,
+                     "Download root is empty in " CONFIG_PATH);
+        return false;
+    }
+    if (cfg->download_dir[0] != '/') {
+        rb->snprintf(error_buf, error_len,
+                     "Download root must be an absolute path:\n%s",
+                     cfg->download_dir);
+        return false;
+    }
+    if (path_has_traversal(cfg->download_dir)) {
+        rb->snprintf(error_buf, error_len,
+                     "Download root rejected before bridge: path traversal is not allowed:\n%s",
+                     cfg->download_dir);
+        return false;
+    }
+    if (!path_is_under_base(cfg->download_dir, SAFE_DOWNLOAD_BASE)) {
+        rb->snprintf(error_buf, error_len,
+                     "Download root must stay under %s:\n%s",
+                     SAFE_DOWNLOAD_BASE, cfg->download_dir);
+        return false;
+    }
+    if (path_is_under_base(cfg->download_dir, "/sdcard/.rockbox")) {
+        rb->snprintf(error_buf, error_len,
+                     "Download root may not be inside /sdcard/.rockbox:\n%s",
+                     cfg->download_dir);
+        return false;
+    }
+
+    rb->strlcpy(root_buf, cfg->download_dir, root_len);
+    len = rb->strlen(root_buf);
+    while (len > 1 && root_buf[len - 1] == '/')
+        root_buf[--len] = '\0';
+
+    return true;
+}
+
+static bool build_download_destination(const char *root,
+                                       const char *title,
+                                       const char *item_id,
+                                       char *dest_buf,
+                                       size_t dest_len,
+                                       char *error_buf,
+                                       size_t error_len)
+{
+    char folder[BOOK_TITLE_SIZE];
+    char file_title[BOOK_TITLE_SIZE];
+    char file_id[BOOK_ID_SIZE];
+
+    sanitize_path_component(title, folder, sizeof(folder));
+    sanitize_path_component(title, file_title, sizeof(file_title));
+    sanitize_path_component(item_id, file_id, sizeof(file_id));
+
+    if (path_has_traversal(folder) || path_has_traversal(file_title) ||
+        path_has_traversal(file_id)) {
+        rb->snprintf(error_buf, error_len,
+                     "Download destination rejected before bridge: sanitized title is unsafe");
+        return false;
+    }
+
+    rb->snprintf(dest_buf, dest_len, "%s/%s/%s-%s.abs",
+                 root,
+                 folder,
+                 file_title,
+                 file_id);
+
+    if (dest_buf[0] == '\0' || rb->strlen(dest_buf) >= dest_len - 1) {
+        rb->snprintf(error_buf, error_len,
+                     "Download destination is too long");
+        return false;
+    }
+    if (path_has_traversal(dest_buf) || !path_is_under_base(dest_buf, root)) {
+        rb->snprintf(error_buf, error_len,
+                     "Download destination rejected before bridge:\n%s",
+                     dest_buf);
+        return false;
+    }
+
+    return true;
+}
+
+static bool download_book(const struct abs_config *cfg,
+                          const char *header_buf,
+                          const char *library_name,
+                          const char *library_id,
+                          const char *item_id,
+                          char *text_buf,
+                          size_t text_len)
+{
+    char endpoint[ENDPOINT_BUF_SIZE];
+    char root_buf[DLOAD_DIR_BUF_SIZE];
+    char dest_buf[MAX_PATH];
+    char error_buf[ERROR_BUF_SIZE];
+    char redacted_error[ERROR_BUF_SIZE];
+    const char *wifi_result;
+    const char *book_title;
+    int http_status = 0;
+    int bridge_rc;
+
+    book_title = g_book_detail.title[0] != '\0' ? g_book_detail.title : "(untitled)";
+    error_buf[0] = '\0';
+    redacted_error[0] = '\0';
+
+    if (g_book_detail.audio_files_known && !g_book_detail.has_audio_files) {
+        rb->snprintf(text_buf, text_len,
+                     "Download skipped\n\n"
+                     "Book: %s\n"
+                     "Book ID: %s\n\n"
+                     "Reason: item detail explicitly reports zero audio files.",
+                     book_title,
+                     item_id);
+        return false;
+    }
+
+    if (!validate_download_root(cfg, root_buf, sizeof(root_buf),
+                                error_buf, sizeof(error_buf))) {
+        rb->snprintf(text_buf, text_len,
+                     "Download blocked\n\n"
+                     "Book: %s\n"
+                     "Book ID: %s\n\n"
+                     "%s",
+                     book_title,
+                     item_id,
+                     error_buf);
+        return false;
+    }
+
+    if (!build_download_destination(root_buf, book_title, item_id,
+                                    dest_buf, sizeof(dest_buf),
+                                    error_buf, sizeof(error_buf))) {
+        rb->snprintf(text_buf, text_len,
+                     "Download blocked\n\n"
+                     "Book: %s\n"
+                     "Book ID: %s\n"
+                     "Root: %s\n\n"
+                     "%s",
+                     book_title,
+                     item_id,
+                     root_buf,
+                     error_buf);
+        return false;
+    }
+
+    rb->snprintf(endpoint, sizeof(endpoint), "%s/api/items/%s/download",
+                 cfg->server_url, item_id);
+
+    rb->splash(HZ, "WiFi: connecting...");
+    wifi_result = rb->android_connect_wifi();
+
+    rb->splash(HZ, "Download: running...");
+    bridge_rc = rb->android_download(endpoint,
+                                     header_buf,
+                                     dest_buf,
+                                     &http_status,
+                                     error_buf,
+                                     sizeof(error_buf));
+
+    rb->android_disconnect_wifi();
+    redact_token_text(error_buf, cfg->token,
+                      redacted_error, sizeof(redacted_error));
+
+    rb->snprintf(text_buf, text_len,
+                 "%s\n\n"
+                 "Server: %s\n"
+                 "Library: %s\n"
+                 "Library ID: %s\n"
+                 "Book: %s\n"
+                 "Book ID: %s\n"
+                 "Destination: %s\n"
+                 "WiFi: %s\n"
+                 "HTTP status: %d\n"
+                 "Bridge rc: %d\n"
+                 "Bridge error (redacted): %s",
+                 (bridge_rc >= 0 && http_status >= 200 && http_status < 300) ?
+                    "Download finished" : "Download failed",
+                 cfg->server_url,
+                 library_name && library_name[0] ? library_name : "(unknown)",
+                 library_id && library_id[0] ? library_id : "(unknown)",
+                 book_title,
+                 item_id && item_id[0] ? item_id : "(unknown)",
+                 dest_buf,
+                 safe_text(wifi_result),
+                 http_status,
+                 bridge_rc,
+                 safe_text(redacted_error));
+
+    return bridge_rc >= 0 && http_status >= 200 && http_status < 300;
 }
 
 /* ---- config parsing ------------------------------------------------------- */
@@ -714,6 +1032,7 @@ static bool parse_book_detail(int json_len,
         g_book_detail.duration_seconds = tok_to_int(g_detail_response,
                                                     &g_tokens[duration_idx]);
     if (audio_files_idx >= 0 && g_tokens[audio_files_idx].type == JSMN_ARRAY) {
+        g_book_detail.audio_files_known = true;
         g_book_detail.audio_file_count = g_tokens[audio_files_idx].size;
         g_book_detail.has_audio_files = g_book_detail.audio_file_count > 0;
     }
@@ -891,7 +1210,7 @@ static int show_book_detail_menu(void)
     add_detail_line("Published", g_book_detail.published_year);
     format_duration(g_book_detail.duration_seconds, duration, sizeof(duration));
     add_detail_line("Duration", duration);
-    if (g_book_detail.has_audio_files) {
+    if (g_book_detail.audio_files_known) {
         rb->snprintf(audio_files, sizeof(audio_files), "%d",
                      g_book_detail.audio_file_count);
         add_detail_line("Audio files", audio_files);
@@ -1051,7 +1370,6 @@ enum plugin_status plugin_start(const void *parameter)
     char session_lib_id[LIB_ID_BUF_SIZE];
     char session_lib_name[LIBRARY_NAME_SIZE];
     char session_book_id[BOOK_ID_SIZE];
-    char session_book_title[BOOK_TITLE_SIZE];
     const char *wifi_result;
     int http_status = 0;
     int bridge_rc;
@@ -1104,7 +1422,6 @@ enum plugin_status plugin_start(const void *parameter)
     session_lib_id[0]     = '\0';
     session_lib_name[0]   = '\0';
     session_book_id[0]    = '\0';
-    session_book_title[0] = '\0';
 
     if (cfg.library_id[0] != '\0') {
         /* library_id configured: skip picker */
@@ -1226,8 +1543,6 @@ enum plugin_status plugin_start(const void *parameter)
 
             rb->strlcpy(session_book_id, g_book_ids[sel],
                         sizeof(session_book_id));
-            rb->strlcpy(session_book_title, g_book_titles[sel],
-                        sizeof(session_book_title));
 
             if (!fetch_book_detail(&cfg, header_buf, session_book_id,
                                    error_buf, sizeof(error_buf),
@@ -1243,36 +1558,19 @@ enum plugin_status plugin_start(const void *parameter)
                 return PLUGIN_OK;
             }
 
-            if (session_book_title[0] == '\0' ||
-                !rb->strcmp(session_book_title, "(untitled)")) {
-                rb->strlcpy(session_book_title, g_book_detail.title,
-                            sizeof(session_book_title));
-            }
-
             detail_action = show_book_detail_menu();
             if (detail_action == DETAIL_ACTION_USB)
                 return PLUGIN_USB_CONNECTED;
             if (detail_action == DETAIL_ACTION_BACK)
                 continue;
 
-            rb->snprintf(text_buf, sizeof(text_buf),
-                         "Audiobookshelf: Download planned\n\n"
-                         "Server:       %s\n"
-                         "Library:      %s\n"
-                         "Library ID:   %s\n"
-                         "Book:         %s\n"
-                         "Book ID:      %s\n"
-                         "Download dir: %s\n\n"
-                         "Next slice will implement the actual transfer.\n"
-                         "Audio files detected: %d",
-                         cfg.server_url,
-                         session_lib_name[0] ? session_lib_name : "(unknown)",
-                         session_lib_id,
-                         g_book_detail.title[0] ? g_book_detail.title :
-                                                   session_book_title,
-                         session_book_id,
-                         cfg.download_dir,
-                         g_book_detail.audio_file_count);
+            download_book(&cfg,
+                          header_buf,
+                          session_lib_name,
+                          session_lib_id,
+                          session_book_id,
+                          text_buf,
+                          sizeof(text_buf));
             view_text("Audiobookshelf", text_buf);
             return PLUGIN_OK;
         }

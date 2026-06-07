@@ -236,7 +236,10 @@ public class Connectivity{
 
     private static final String GO_CURL_PATH = "/data/data/gocurl";
     private static final String CA_CERT_PATH = "/data/data/cacert.pem";
-    private static final String ROCKBOX_DOWNLOAD_BASE_PATH = "/sdcard/.rockbox";
+    private static final String[] ROCKBOX_DOWNLOAD_BASE_PATHS = {
+        "/sdcard/.rockbox",
+        "/sdcard/audiobookshelf"
+    };
     private static final int GO_CURL_CONNECT_TIMEOUT_SECONDS = 10;
     private static final int GO_CURL_TOTAL_TIMEOUT_SECONDS = 30;
     private static final int STREAM_CAPTURE_LIMIT_BYTES = 1024 * 1024;
@@ -313,18 +316,35 @@ public class Connectivity{
         return command.toString();
     }
 
-    private static String getCanonicalDownloadBasePath() throws IOException {
-        return new File(ROCKBOX_DOWNLOAD_BASE_PATH).getCanonicalPath();
+    private static String[] getCanonicalDownloadBasePaths() throws IOException {
+        String[] canonicalBases = new String[ROCKBOX_DOWNLOAD_BASE_PATHS.length];
+        int i;
+
+        for (i = 0; i < ROCKBOX_DOWNLOAD_BASE_PATHS.length; i++) {
+            canonicalBases[i] = new File(ROCKBOX_DOWNLOAD_BASE_PATHS[i]).getCanonicalPath();
+        }
+
+        return canonicalBases;
     }
 
     private static boolean isSafeDownloadPath(File path) {
+        int i;
+
         try {
             String canonical = path.getCanonicalPath();
-            String canonicalBase = getCanonicalDownloadBasePath();
-            return canonical.equals(canonicalBase) || canonical.startsWith(canonicalBase + "/");
+            String[] canonicalBases = getCanonicalDownloadBasePaths();
+
+            for (i = 0; i < canonicalBases.length; i++) {
+                String canonicalBase = canonicalBases[i];
+                if (canonical.equals(canonicalBase) || canonical.startsWith(canonicalBase + "/")) {
+                    return true;
+                }
+            }
         } catch (IOException e) {
             return false;
         }
+
+        return false;
     }
 
     private static Thread drainStream(final InputStream stream,
@@ -675,7 +695,7 @@ public class Connectivity{
         String statusText;
         int status = 0;
         String errorText = "";
-        String canonicalBase;
+        String[] canonicalBases;
 
         if (safeUrl.length() == 0) {
             return new String[]{"0", "invalid parameter: url is required"};
@@ -688,16 +708,18 @@ public class Connectivity{
         try {
             destinationFile = new File(safeDestination);
             canonicalDestination = destinationFile.getCanonicalFile();
-            canonicalBase = getCanonicalDownloadBasePath();
+            canonicalBases = getCanonicalDownloadBasePaths();
         } catch (IOException e) {
             return new String[]{"0", "invalid destination path"};
         }
 
         if (!isSafeDownloadPath(canonicalDestination)) {
-            return new String[]{"0", "invalid destination path: must stay under " + canonicalBase + "/"};
+            return new String[]{"0", "invalid destination path: must stay under /sdcard/.rockbox/ or /sdcard/audiobookshelf/"};
         }
 
-        if (canonicalDestination.getPath().equals(canonicalBase) || canonicalDestination.isDirectory()) {
+        if (canonicalDestination.isDirectory() ||
+            canonicalDestination.getPath().equals(canonicalBases[0]) ||
+            canonicalDestination.getPath().equals(canonicalBases[1])) {
             return new String[]{"0", "invalid destination path: destination must be a file path"};
         }
 
