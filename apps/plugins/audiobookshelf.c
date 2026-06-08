@@ -57,6 +57,7 @@
 #define MAX_DETAIL_LINES        16
 #define LIST_TITLE_SIZE         96
 #define FILE_EXT_SIZE           16
+#define MAX_DETAIL_AUDIO_FILES  64
 
 #define LOCAL_INDEX_PATH        SAFE_DOWNLOAD_BASE "/local-index.tsv"
 
@@ -106,9 +107,14 @@ struct abs_book_detail {
     char single_audio_ino[BOOK_ID_SIZE];
     char single_audio_filename[BOOK_TITLE_SIZE];
     char single_audio_ext[FILE_EXT_SIZE];
+    char audio_file_ids[MAX_DETAIL_AUDIO_FILES][BOOK_ID_SIZE];
+    char audio_file_exts[MAX_DETAIL_AUDIO_FILES][FILE_EXT_SIZE];
     char local_path[MAX_PATH];
     int duration_seconds;
     int audio_file_count;
+    int tracked_audio_file_count;
+    int downloadable_audio_file_count;
+    int local_audio_file_count;
     bool audio_files_known;
     bool has_audio_files;
     bool has_single_audio_file;
@@ -121,6 +127,11 @@ static int       g_detail_line_count;
 static int       g_detail_action_start;
 
 static jsmntok_t g_tokens[JSON_TOKEN_COUNT];
+
+static int count_local_indexed_detail_files(const struct abs_config *cfg,
+                                            const char *library_id,
+                                            char *first_path,
+                                            size_t first_path_len);
 
 /* ---- helpers -------------------------------------------------------------- */
 
@@ -792,19 +803,25 @@ static void refresh_local_detail_state(const struct abs_config *cfg,
 {
     g_book_detail.local_file_found = false;
     g_book_detail.local_path[0] = '\0';
+    g_book_detail.local_audio_file_count = 0;
 
-    if (cfg == NULL || library_id == NULL || library_id[0] == '\0' ||
-        !g_book_detail.has_single_audio_file ||
-        g_book_detail.single_audio_ino[0] == '\0')
+    if (cfg == NULL || library_id == NULL || library_id[0] == '\0')
         return;
 
-    g_book_detail.local_file_found = read_local_index_path(
-        cfg,
-        library_id,
-        g_book_detail.item_id,
-        g_book_detail.single_audio_ino,
-        g_book_detail.local_path,
+    g_book_detail.local_audio_file_count = count_local_indexed_detail_files(
+        cfg, library_id, g_book_detail.local_path,
         sizeof(g_book_detail.local_path));
+
+    if (g_book_detail.has_single_audio_file &&
+        g_book_detail.single_audio_ino[0] != '\0') {
+        g_book_detail.local_file_found = read_local_index_path(
+            cfg,
+            library_id,
+            g_book_detail.item_id,
+            g_book_detail.single_audio_ino,
+            g_book_detail.local_path,
+            sizeof(g_book_detail.local_path));
+    }
 }
 
 static bool play_local_detail_file(char *error_buf, size_t error_len)
@@ -1162,6 +1179,8 @@ static bool build_download_destination(const char *root,
                                        const char *item_id,
                                        const char *media_file_id,
                                        const char *file_ext,
+                                       int file_number,
+                                       int total_files,
                                        char *dest_buf,
                                        size_t dest_len,
                                        char *error_buf,
@@ -1189,13 +1208,24 @@ static bool build_download_destination(const char *root,
         return false;
     }
 
-    rb->snprintf(dest_buf, dest_len, "%s/%s/%s-%s-%s%s",
-                 root,
-                 folder,
-                 file_title,
-                 file_id,
-                 media_id,
-                 file_ext);
+    if (total_files > 1) {
+        rb->snprintf(dest_buf, dest_len, "%s/%s/%03d-%s-%s-%s%s",
+                     root,
+                     folder,
+                     file_number + 1,
+                     file_title,
+                     file_id,
+                     media_id,
+                     file_ext);
+    } else {
+        rb->snprintf(dest_buf, dest_len, "%s/%s/%s-%s-%s%s",
+                     root,
+                     folder,
+                     file_title,
+                     file_id,
+                     media_id,
+                     file_ext);
+    }
 
     if (dest_buf[0] == '\0' || rb->strlen(dest_buf) >= dest_len - 1) {
         rb->snprintf(error_buf, error_len,
@@ -1210,6 +1240,37 @@ static bool build_download_destination(const char *root,
     }
 
     return true;
+}
+
+static int count_local_indexed_detail_files(const struct abs_config *cfg,
+                                            const char *library_id,
+                                            char *first_path,
+                                            size_t first_path_len)
+{
+    int i;
+    int found = 0;
+    char path_buf[MAX_PATH];
+
+    if (first_path != NULL && first_path_len > 0)
+        first_path[0] = '\0';
+    if (cfg == NULL || library_id == NULL || library_id[0] == '\0')
+        return 0;
+
+    for (i = 0; i < g_book_detail.tracked_audio_file_count; i++) {
+        if (g_book_detail.audio_file_ids[i][0] == '\0' ||
+            g_book_detail.audio_file_exts[i][0] == '\0')
+            continue;
+        if (!read_local_index_path(cfg, library_id,
+                                   g_book_detail.item_id,
+                                   g_book_detail.audio_file_ids[i],
+                                   path_buf, sizeof(path_buf)))
+            continue;
+        if (found == 0 && first_path != NULL && first_path_len > 0)
+            rb->strlcpy(first_path, path_buf, first_path_len);
+        found++;
+    }
+
+    return found;
 }
 
 static bool download_book(const struct abs_config *cfg,
@@ -1227,30 +1288,24 @@ static bool download_book(const struct abs_config *cfg,
     char tmp_dest_buf[MAX_PATH];
     char error_buf[ERROR_BUF_SIZE];
     char redacted_error[ERROR_BUF_SIZE];
-    const char *wifi_result;
+    char last_media_id[BOOK_ID_SIZE];
+    const char *wifi_result = "not needed";
     const char *book_title;
-    bool success = false;
-    bool already_downloaded = false;
-    bool finalized_file = false;
+    bool overall_success;
+    bool wifi_connected = false;
     int http_status = 0;
-    int bridge_rc;
+    int bridge_rc = 0;
+    int downloaded_now = 0;
+    int already_downloaded = 0;
+    int failed = 0;
+    int unsupported_files = 0;
+    int total_files;
+    int i;
 
     book_title = g_book_detail.title[0] != '\0' ? g_book_detail.title : "(untitled)";
     error_buf[0] = '\0';
     redacted_error[0] = '\0';
-
-    if (!g_book_detail.has_single_audio_file ||
-        g_book_detail.single_audio_ino[0] == '\0' ||
-        g_book_detail.single_audio_ext[0] == '\0') {
-        rb->snprintf(text_buf, text_len,
-                     "Download skipped\n\n"
-                     "Book: %s\n"
-                     "Book ID: %s\n\n"
-                     "Reason: only single-file audiobooks with a usable extension are supported in this flow.",
-                     book_title,
-                     item_id);
-        return false;
-    }
+    last_media_id[0] = '\0';
 
     if (g_book_detail.audio_files_known && !g_book_detail.has_audio_files) {
         rb->snprintf(text_buf, text_len,
@@ -1258,6 +1313,28 @@ static bool download_book(const struct abs_config *cfg,
                      "Book: %s\n"
                      "Book ID: %s\n\n"
                      "Reason: item detail explicitly reports zero audio files.",
+                     book_title,
+                     item_id);
+        return false;
+    }
+
+    total_files = g_book_detail.audio_files_known ?
+        g_book_detail.audio_file_count : g_book_detail.downloadable_audio_file_count;
+    unsupported_files = total_files - g_book_detail.downloadable_audio_file_count;
+    if (unsupported_files < 0)
+        unsupported_files = 0;
+    failed = unsupported_files;
+    if (unsupported_files > 0) {
+        rb->snprintf(error_buf, sizeof(error_buf),
+                     "%d audio file(s) lack usable ids/extensions or exceed the tracked limit",
+                     unsupported_files);
+    }
+    if (total_files <= 0 || g_book_detail.downloadable_audio_file_count <= 0) {
+        rb->snprintf(text_buf, text_len,
+                     "Download skipped\n\n"
+                     "Book: %s\n"
+                     "Book ID: %s\n\n"
+                     "Reason: no downloadable audio files with usable ids/extensions were parsed.",
                      book_title,
                      item_id);
         return false;
@@ -1276,119 +1353,139 @@ static bool download_book(const struct abs_config *cfg,
         return false;
     }
 
-    if (!build_download_destination(root_buf, book_title, item_id,
-                                    g_book_detail.single_audio_ino,
-                                    g_book_detail.single_audio_ext,
-                                    dest_buf, sizeof(dest_buf),
-                                    error_buf, sizeof(error_buf))) {
-        rb->snprintf(text_buf, text_len,
-                     "Download blocked\n\n"
-                     "Book: %s\n"
-                     "Book ID: %s\n"
-                     "Root: %s\n\n"
-                     "%s",
-                     book_title,
-                     item_id,
-                     root_buf,
-                     error_buf);
-        return false;
-    }
-
-    rb->strlcpy(book_dir, dest_buf, sizeof(book_dir));
-    {
-        char *slash = rb->strrchr(book_dir, '/');
-        if (slash == NULL) {
-            rb->snprintf(text_buf, text_len,
-                         "Download blocked\n\nCannot derive destination folder.");
-            return false;
-        }
-        *slash = '\0';
-    }
-    if (!ensure_directory_tree(book_dir)) {
-        rb->snprintf(text_buf, text_len,
-                     "Download blocked\n\nCannot create destination folder:\n%s",
-                     book_dir);
-        return false;
-    }
-
-    if (!build_temp_download_path(dest_buf, tmp_dest_buf, sizeof(tmp_dest_buf))) {
-        rb->snprintf(text_buf, text_len,
-                     "Download blocked\n\nTemporary path is too long for:\n%s",
-                     dest_buf);
-        return false;
-    }
-
-    if (rb->file_exists(dest_buf)) {
+    for (i = 0; i < g_book_detail.tracked_audio_file_count; i++) {
         char indexed_path[MAX_PATH];
-        if (!read_local_index_path(cfg, library_id, item_id,
-                                   g_book_detail.single_audio_ino,
-                                   indexed_path, sizeof(indexed_path)) ||
-            rb->strcmp(indexed_path, dest_buf)) {
-            rb->snprintf(text_buf, text_len,
-                         "Download blocked\n\nDestination already exists but is not indexed; not overwriting:\n%s",
-                         dest_buf);
-            return false;
+        bool file_success = false;
+        bool finalized_file = false;
+
+        if (g_book_detail.audio_file_ids[i][0] == '\0' ||
+            g_book_detail.audio_file_exts[i][0] == '\0')
+            continue;
+
+        rb->strlcpy(last_media_id, g_book_detail.audio_file_ids[i],
+                    sizeof(last_media_id));
+        error_buf[0] = '\0';
+        redacted_error[0] = '\0';
+        http_status = 0;
+        bridge_rc = 0;
+
+        if (!build_download_destination(root_buf, book_title, item_id,
+                                        g_book_detail.audio_file_ids[i],
+                                        g_book_detail.audio_file_exts[i],
+                                        i, total_files,
+                                        dest_buf, sizeof(dest_buf),
+                                        error_buf, sizeof(error_buf))) {
+            failed++;
+            redact_token_text(error_buf, cfg->token,
+                              redacted_error, sizeof(redacted_error));
+            break;
         }
-        already_downloaded = true;
-        success = true;
-        http_status = 200;
-        bridge_rc = ANDROID_REQUEST_OK;
-        wifi_result = "not needed; already downloaded";
-        goto render_result;
-    }
 
-    rb->remove(tmp_dest_buf);
+        rb->strlcpy(book_dir, dest_buf, sizeof(book_dir));
+        {
+            char *slash = rb->strrchr(book_dir, '/');
+            if (slash == NULL) {
+                rb->snprintf(error_buf, sizeof(error_buf),
+                             "Cannot derive destination folder.");
+                failed++;
+                break;
+            }
+            *slash = '\0';
+        }
+        if (!ensure_directory_tree(book_dir)) {
+            rb->snprintf(error_buf, sizeof(error_buf),
+                         "Cannot create destination folder:\n%s",
+                         book_dir);
+            failed++;
+            break;
+        }
 
-    if (rb->snprintf(endpoint, sizeof(endpoint),
-                     "%s/api/items/%s/file/%s/download",
-                     cfg->server_url, item_id,
-                     g_book_detail.single_audio_ino) >= (int)sizeof(endpoint)) {
-        rb->snprintf(text_buf, text_len,
-                     "Download blocked\n\nDownload endpoint is too long.");
-        return false;
-    }
+        if (!build_temp_download_path(dest_buf, tmp_dest_buf, sizeof(tmp_dest_buf))) {
+            rb->snprintf(error_buf, sizeof(error_buf),
+                         "Temporary path is too long for:\n%s",
+                         dest_buf);
+            failed++;
+            break;
+        }
 
-    rb->splash(HZ, "WiFi: connecting...");
-    wifi_result = rb->android_connect_wifi();
+        if (rb->file_exists(dest_buf)) {
+            if (read_local_index_path(cfg, library_id, item_id,
+                                      g_book_detail.audio_file_ids[i],
+                                      indexed_path, sizeof(indexed_path)) &&
+                !rb->strcmp(indexed_path, dest_buf)) {
+                already_downloaded++;
+                continue;
+            }
 
-    rb->splash(HZ, "Download: running...");
-    bridge_rc = rb->android_download(endpoint,
-                                     header_buf,
-                                     tmp_dest_buf,
-                                     &http_status,
-                                     error_buf,
-                                     sizeof(error_buf));
+            rb->snprintf(error_buf, sizeof(error_buf),
+                         "Destination already exists but is not indexed; not overwriting:\n%s",
+                         dest_buf);
+            failed++;
+            redact_token_text(error_buf, cfg->token,
+                              redacted_error, sizeof(redacted_error));
+            continue;
+        }
 
-    rb->android_disconnect_wifi();
-    redact_token_text(error_buf, cfg->token,
-                      redacted_error, sizeof(redacted_error));
-
-    success = bridge_rc >= 0 && http_status >= 200 && http_status < 300 &&
-              rb->file_exists(tmp_dest_buf);
-
-    if (success && !promote_temp_file_exclusive(tmp_dest_buf, dest_buf,
-                                                error_buf, sizeof(error_buf))) {
-        success = false;
-        redact_token_text(error_buf, cfg->token,
-                          redacted_error, sizeof(redacted_error));
-    } else if (success) {
-        finalized_file = true;
-    }
-    if (success && !write_local_index_path(cfg, library_id, item_id,
-                                           g_book_detail.single_audio_ino,
-                                           dest_buf,
-                                           error_buf, sizeof(error_buf))) {
-        success = false;
-        if (finalized_file)
-            rb->remove(dest_buf);
-        redact_token_text(error_buf, cfg->token,
-                          redacted_error, sizeof(redacted_error));
-    }
-
-    if (!success)
         rb->remove(tmp_dest_buf);
 
-render_result:
+        if (rb->snprintf(endpoint, sizeof(endpoint),
+                         "%s/api/items/%s/file/%s/download",
+                         cfg->server_url, item_id,
+                         g_book_detail.audio_file_ids[i]) >= (int)sizeof(endpoint)) {
+            rb->snprintf(error_buf, sizeof(error_buf),
+                         "Download endpoint is too long.");
+            failed++;
+            break;
+        }
+
+        if (!wifi_connected) {
+            rb->splash(HZ, "WiFi: connecting...");
+            wifi_result = rb->android_connect_wifi();
+            wifi_connected = true;
+        }
+
+        rb->splash_progress(i + 1, total_files, "Downloading audio files...");
+        bridge_rc = rb->android_download(endpoint,
+                                         header_buf,
+                                         tmp_dest_buf,
+                                         &http_status,
+                                         error_buf,
+                                         sizeof(error_buf));
+
+        file_success = bridge_rc >= 0 && http_status >= 200 && http_status < 300 &&
+                       rb->file_exists(tmp_dest_buf);
+
+        if (file_success && !promote_temp_file_exclusive(tmp_dest_buf, dest_buf,
+                                                         error_buf, sizeof(error_buf))) {
+            file_success = false;
+        } else if (file_success) {
+            finalized_file = true;
+        }
+        if (file_success && !write_local_index_path(cfg, library_id, item_id,
+                                                    g_book_detail.audio_file_ids[i],
+                                                    dest_buf,
+                                                    error_buf, sizeof(error_buf))) {
+            file_success = false;
+            if (finalized_file)
+                rb->remove(dest_buf);
+        }
+
+        if (!file_success) {
+            failed++;
+            rb->remove(tmp_dest_buf);
+            redact_token_text(error_buf, cfg->token,
+                              redacted_error, sizeof(redacted_error));
+            continue;
+        }
+
+        downloaded_now++;
+    }
+
+    if (wifi_connected)
+        rb->android_disconnect_wifi();
+
+    overall_success = failed == 0 && (downloaded_now > 0 || already_downloaded > 0);
+
     rb->snprintf(text_buf, text_len,
                  "%s\n\n"
                  "Server: %s\n"
@@ -1396,32 +1493,41 @@ render_result:
                  "Library ID: %s\n"
                  "Book: %s\n"
                  "Book ID: %s\n"
-                 "Audio file ID: %s\n"
-                 "Destination: %s\n"
+                 "Downloaded: %d/%d\n"
+                 "Downloaded now: %d\n"
+                 "Already complete: %d\n"
+                 "Failures: %d\n"
+                 "Last audio file ID: %s\n"
+                 "Last destination: %s\n"
                  "WiFi: %s\n"
                  "HTTP status: %d\n"
                  "Bridge rc: %d\n"
                  "Bridge error (redacted): %s",
-                 success ? (already_downloaded ? "Already downloaded" : "Download finished") : "Download failed",
+                 overall_success ? (already_downloaded == total_files ? "Already downloaded" : "Download finished") : "Download incomplete",
                  cfg->server_url,
                  library_name && library_name[0] ? library_name : "(unknown)",
                  library_id && library_id[0] ? library_id : "(unknown)",
                  book_title,
                  item_id && item_id[0] ? item_id : "(unknown)",
-                 g_book_detail.single_audio_ino[0] ? g_book_detail.single_audio_ino : "(unknown)",
+                 downloaded_now + already_downloaded,
+                 total_files,
+                 downloaded_now,
+                 already_downloaded,
+                 failed,
+                 last_media_id[0] ? last_media_id : "(unknown)",
                  dest_buf,
                  safe_text(wifi_result),
                  http_status,
                  bridge_rc,
                  safe_text(redacted_error));
 
-    if (success) {
-        g_book_detail.local_file_found = true;
-        rb->strlcpy(g_book_detail.local_path, dest_buf,
-                    sizeof(g_book_detail.local_path));
+    if (downloaded_now > 0 || already_downloaded > 0) {
+        g_book_detail.local_audio_file_count = downloaded_now + already_downloaded;
+        if (g_book_detail.has_single_audio_file)
+            g_book_detail.local_file_found = true;
     }
 
-    return success;
+    return overall_success;
 }
 
 /* ---- config parsing ------------------------------------------------------- */
@@ -1850,7 +1956,8 @@ static bool parse_book_detail(int json_len,
     int published_idx = -1;
     int duration_idx = -1;
     int audio_files_idx = -1;
-    int single_audio_idx = -1;
+    int array_item_idx;
+    int tracked_idx = 0;
     int audio_ino_idx = -1;
     int audio_filename_idx = -1;
     int file_metadata_idx = -1;
@@ -1947,64 +2054,91 @@ static bool parse_book_detail(int json_len,
         g_book_detail.audio_files_known = true;
         g_book_detail.audio_file_count = g_tokens[audio_files_idx].size;
         g_book_detail.has_audio_files = g_book_detail.audio_file_count > 0;
-        if (g_book_detail.audio_file_count == 1) {
-            single_audio_idx = audio_files_idx + 1;
-            if (single_audio_idx < r && g_tokens[single_audio_idx].type == JSMN_OBJECT) {
-                audio_ino_idx = find_object_value(g_detail_response, g_tokens, r,
-                                                  single_audio_idx, "ino");
-                if (audio_ino_idx < 0)
-                    audio_ino_idx = find_object_value(g_detail_response, g_tokens, r,
-                                                      single_audio_idx, "id");
-                if (audio_ino_idx < 0)
-                    audio_ino_idx = find_object_value(g_detail_response, g_tokens, r,
-                                                      single_audio_idx, "fileId");
-                audio_filename_idx = find_object_value(g_detail_response, g_tokens, r,
-                                                       single_audio_idx, "filename");
-                file_metadata_idx = find_object_value(g_detail_response, g_tokens, r,
-                                                      single_audio_idx, "metadata");
-                if (file_metadata_idx >= 0 &&
-                    g_tokens[file_metadata_idx].type == JSMN_OBJECT) {
-                    if (audio_filename_idx < 0)
-                        audio_filename_idx = find_object_value(g_detail_response,
-                                                               g_tokens, r,
-                                                               file_metadata_idx,
-                                                               "filename");
-                    audio_ext_idx = find_object_value(g_detail_response, g_tokens, r,
-                                                      file_metadata_idx, "ext");
-                }
-                if (audio_ino_idx >= 0 &&
-                    g_tokens[audio_ino_idx].type == JSMN_STRING) {
-                    tok_copy(g_detail_response, &g_tokens[audio_ino_idx],
-                             g_book_detail.single_audio_ino,
-                             sizeof(g_book_detail.single_audio_ino));
-                }
-                if (audio_filename_idx >= 0 &&
-                    g_tokens[audio_filename_idx].type == JSMN_STRING) {
-                    tok_copy(g_detail_response, &g_tokens[audio_filename_idx],
-                             g_book_detail.single_audio_filename,
-                             sizeof(g_book_detail.single_audio_filename));
-                }
-                if (audio_ext_idx >= 0 &&
-                    g_tokens[audio_ext_idx].type == JSMN_STRING) {
-                    tok_copy(g_detail_response, &g_tokens[audio_ext_idx],
-                             ext_hint, sizeof(ext_hint));
-                    (void)normalize_file_extension(
-                        g_book_detail.single_audio_filename,
-                        ext_hint,
-                        g_book_detail.single_audio_ext,
-                        sizeof(g_book_detail.single_audio_ext));
-                }
-                if (g_book_detail.single_audio_ext[0] == '\0')
-                    (void)normalize_file_extension(
-                        g_book_detail.single_audio_filename,
-                        NULL,
-                        g_book_detail.single_audio_ext,
-                        sizeof(g_book_detail.single_audio_ext));
-                g_book_detail.has_single_audio_file =
-                    g_book_detail.single_audio_ino[0] != '\0' &&
-                    g_book_detail.single_audio_ext[0] != '\0';
+
+        array_item_idx = audio_files_idx + 1;
+        while (array_item_idx < r &&
+               tracked_idx < MAX_DETAIL_AUDIO_FILES &&
+               tracked_idx < g_book_detail.audio_file_count) {
+            char filename_buf[BOOK_TITLE_SIZE];
+
+            if (g_tokens[array_item_idx].start >= g_tokens[audio_files_idx].end)
+                break;
+            if (g_tokens[array_item_idx].type != JSMN_OBJECT) {
+                array_item_idx = skip_value(array_item_idx, r, g_tokens);
+                continue;
             }
+
+            audio_ino_idx = find_object_value(g_detail_response, g_tokens, r,
+                                              array_item_idx, "ino");
+            if (audio_ino_idx < 0)
+                audio_ino_idx = find_object_value(g_detail_response, g_tokens, r,
+                                                  array_item_idx, "id");
+            if (audio_ino_idx < 0)
+                audio_ino_idx = find_object_value(g_detail_response, g_tokens, r,
+                                                  array_item_idx, "fileId");
+            audio_filename_idx = find_object_value(g_detail_response, g_tokens, r,
+                                                   array_item_idx, "filename");
+            file_metadata_idx = find_object_value(g_detail_response, g_tokens, r,
+                                                  array_item_idx, "metadata");
+            audio_ext_idx = -1;
+            filename_buf[0] = '\0';
+            ext_hint[0] = '\0';
+
+            if (file_metadata_idx >= 0 &&
+                g_tokens[file_metadata_idx].type == JSMN_OBJECT) {
+                if (audio_filename_idx < 0)
+                    audio_filename_idx = find_object_value(g_detail_response,
+                                                           g_tokens, r,
+                                                           file_metadata_idx,
+                                                           "filename");
+                audio_ext_idx = find_object_value(g_detail_response, g_tokens, r,
+                                                  file_metadata_idx, "ext");
+            }
+
+            if (audio_ino_idx >= 0 && g_tokens[audio_ino_idx].type == JSMN_STRING) {
+                tok_copy(g_detail_response, &g_tokens[audio_ino_idx],
+                         g_book_detail.audio_file_ids[tracked_idx],
+                         sizeof(g_book_detail.audio_file_ids[tracked_idx]));
+            }
+            if (audio_filename_idx >= 0 &&
+                g_tokens[audio_filename_idx].type == JSMN_STRING) {
+                tok_copy(g_detail_response, &g_tokens[audio_filename_idx],
+                         filename_buf, sizeof(filename_buf));
+            }
+            if (audio_ext_idx >= 0 && g_tokens[audio_ext_idx].type == JSMN_STRING) {
+                tok_copy(g_detail_response, &g_tokens[audio_ext_idx],
+                         ext_hint, sizeof(ext_hint));
+            }
+            (void)normalize_file_extension(
+                filename_buf,
+                ext_hint[0] ? ext_hint : NULL,
+                g_book_detail.audio_file_exts[tracked_idx],
+                sizeof(g_book_detail.audio_file_exts[tracked_idx]));
+
+            if (tracked_idx == 0) {
+                rb->strlcpy(g_book_detail.single_audio_ino,
+                            g_book_detail.audio_file_ids[tracked_idx],
+                            sizeof(g_book_detail.single_audio_ino));
+                rb->strlcpy(g_book_detail.single_audio_filename,
+                            filename_buf,
+                            sizeof(g_book_detail.single_audio_filename));
+                rb->strlcpy(g_book_detail.single_audio_ext,
+                            g_book_detail.audio_file_exts[tracked_idx],
+                            sizeof(g_book_detail.single_audio_ext));
+            }
+            if (g_book_detail.audio_file_ids[tracked_idx][0] != '\0' &&
+                g_book_detail.audio_file_exts[tracked_idx][0] != '\0')
+                g_book_detail.downloadable_audio_file_count++;
+
+            tracked_idx++;
+            array_item_idx = skip_value(array_item_idx, r, g_tokens);
         }
+
+        g_book_detail.tracked_audio_file_count = tracked_idx;
+        g_book_detail.has_single_audio_file =
+            g_book_detail.audio_file_count == 1 &&
+            g_book_detail.single_audio_ino[0] != '\0' &&
+            g_book_detail.single_audio_ext[0] != '\0';
     }
 
     if (g_book_detail.title[0] == '\0')
@@ -2171,6 +2305,7 @@ static int show_book_detail_menu(void)
     int result = DETAIL_ACTION_BACK;
     char duration[32];
     char audio_files[32];
+    char local_state[32];
 
     g_detail_line_count = 0;
     add_detail_line("Title", g_book_detail.title);
@@ -2185,7 +2320,15 @@ static int show_book_detail_menu(void)
                      g_book_detail.audio_file_count);
         add_detail_line("Audio files", audio_files);
     }
-    add_detail_line("Local", g_book_detail.local_file_found ? "yes" : "no");
+    if (g_book_detail.downloadable_audio_file_count > 0) {
+        rb->snprintf(local_state, sizeof(local_state), "%d/%d",
+                     g_book_detail.local_audio_file_count,
+                     g_book_detail.downloadable_audio_file_count);
+    } else {
+        rb->strlcpy(local_state, g_book_detail.local_file_found ? "yes" : "no",
+                    sizeof(local_state));
+    }
+    add_detail_line("Local", local_state);
 
     g_detail_action_start = g_detail_line_count;
     if (g_book_detail.local_file_found)
@@ -2772,7 +2915,7 @@ static void self_test_book_detail(struct abs_self_test_state *state)
                 "{\"media\":{\"metadata\":{\"title\":\"Detail Book\","
                 "\"authorName\":\"Author\",\"seriesName\":\"Series\","
                 "\"narratorName\":\"Narrator\",\"publishedYear\":2024},"
-                "\"duration\":3661,\"audioFiles\":[{\"index\":0},{\"index\":1}]}}",
+                "\"duration\":3661,\"audioFiles\":[{\"ino\":\"part-1\",\"filename\":\"01.mp3\"},{\"ino\":\"part-2\",\"filename\":\"02.m4b\"}]}}",
                 sizeof(g_detail_response));
     self_test_check(state,
                     parse_book_detail((int)rb->strlen(g_detail_response),
@@ -2783,9 +2926,15 @@ static void self_test_book_detail(struct abs_self_test_state *state)
                     g_book_detail.duration_seconds == 3661 &&
                     g_book_detail.audio_files_known &&
                     g_book_detail.audio_file_count == 2 &&
+                    g_book_detail.tracked_audio_file_count == 2 &&
+                    g_book_detail.downloadable_audio_file_count == 2 &&
                     g_book_detail.has_audio_files &&
+                    rb->strcmp(g_book_detail.audio_file_ids[0], "part-1") == 0 &&
+                    rb->strcmp(g_book_detail.audio_file_ids[1], "part-2") == 0 &&
+                    rb->strcmp(g_book_detail.audio_file_exts[0], ".mp3") == 0 &&
+                    rb->strcmp(g_book_detail.audio_file_exts[1], ".m4b") == 0 &&
                     !g_book_detail.has_single_audio_file,
-                    "parse_book_detail parses metadata and audio files");
+                    "parse_book_detail parses ordered audio files");
 
     rb->strlcpy(g_detail_response,
                 "{\"media\":{\"metadata\":{},\"audioFiles\":[]}}",
@@ -2913,6 +3062,7 @@ static void self_test_paths_and_redaction(struct abs_self_test_state *state)
                     build_download_destination("/sdcard/audiobookshelf/downloads",
                                                "../Bad Book", "id/42",
                                                "ino/7", ".m4b",
+                                               0, 1,
                                                path_buf, sizeof(path_buf),
                                                error_buf, sizeof(error_buf)) &&
                     contains_text(path_buf, "/Bad_Book/") &&
