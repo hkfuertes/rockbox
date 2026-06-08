@@ -12,6 +12,11 @@
  *   library_id:   lib_abc123                       (optional)
  *   download_dir: /sdcard/audiobookshelf/downloads (optional)
  *   page_size:    20                               (optional, default 20)
+ *
+ * Compile-time toggle:
+ *   Define AUDIOBOOKSHELF_FAKE_BACKEND (e.g. -DAUDIOBOOKSHELF_FAKE_BACKEND)
+ *   to replace all network calls with static fake data.  All UI code paths
+ *   remain live; no real WiFi or server is needed.
  ****************************************************************************/
 
 #include "plugin.h"
@@ -1357,86 +1362,311 @@ static bool fetch_book_detail(const struct abs_config *cfg,
     return true;
 }
 
-/* ---- plugin entry point --------------------------------------------------- */
+/* ---- fake backend --------------------------------------------------------- */
 
-enum plugin_status plugin_start(const void *parameter)
+#ifdef AUDIOBOOKSHELF_FAKE_BACKEND
+
+/*
+ * Static fake data used when AUDIOBOOKSHELF_FAKE_BACKEND is defined.
+ * populate_fake_libraries() / populate_fake_books() / populate_fake_detail()
+ * write into the same globals that the real JSON parsers use, so every UI
+ * function works unchanged.
+ */
+
+struct fake_lib_entry {
+    const char *id;
+    const char *name;
+};
+
+static const struct fake_lib_entry fake_libs[] = {
+    { "fake-lib-001", "Audiobooks" },
+    { "fake-lib-002", "Podcasts"   },
+    { "fake-lib-003", "Short Stories" },
+};
+#define FAKE_LIB_COUNT 3
+
+struct fake_book_entry {
+    const char *id;
+    const char *title;
+    const char *author;
+    const char *series;
+};
+
+static const struct fake_book_entry fake_books[] = {
+    { "fake-book-001", "The Hobbit",                "J.R.R. Tolkien",     ""                    },
+    { "fake-book-002", "Dune",                      "Frank Herbert",      "Dune Chronicles"     },
+    { "fake-book-003", "Foundation",                "Isaac Asimov",       "Foundation Series"   },
+    { "fake-book-004", "Neuromancer",               "William Gibson",     "Sprawl Trilogy"      },
+    { "fake-book-005", "The Left Hand of Darkness", "Ursula K. Le Guin",  "Hainish Cycle"       },
+};
+#define FAKE_BOOK_COUNT 5
+
+static void populate_fake_libraries(void)
 {
-    struct abs_config cfg;
-    char header_buf[HEADER_BUF_SIZE];
-    char endpoint[ENDPOINT_BUF_SIZE];
-    char response_buf[RESPONSE_BUF_SIZE];
+    int i;
+
+    g_lib_count = 0;
+    for (i = 0; i < FAKE_LIB_COUNT && i < MAX_LIBRARIES; i++) {
+        rb->strlcpy(g_lib_ids[i],   fake_libs[i].id,   sizeof(g_lib_ids[i]));
+        rb->strlcpy(g_lib_names[i], fake_libs[i].name, sizeof(g_lib_names[i]));
+        g_lib_count++;
+    }
+}
+
+static void populate_fake_books(int page, int page_size)
+{
+    int start = page * page_size;
+    int i;
+
+    g_book_count    = 0;
+    g_book_page     = page;
+    g_book_limit    = page_size;
+    g_book_total    = FAKE_BOOK_COUNT;
+    g_book_has_next = false;
+
+    for (i = 0; i < page_size && (start + i) < FAKE_BOOK_COUNT &&
+                g_book_count < MAX_BOOKS_PER_PAGE; i++) {
+        int src = start + i;
+
+        rb->strlcpy(g_book_ids[g_book_count],
+                    fake_books[src].id,
+                    sizeof(g_book_ids[g_book_count]));
+        build_book_title(g_book_titles[g_book_count],
+                         sizeof(g_book_titles[g_book_count]),
+                         fake_books[src].title,
+                         fake_books[src].author,
+                         fake_books[src].series);
+        g_book_count++;
+    }
+
+    g_book_has_next = ((page + 1) * page_size) < FAKE_BOOK_COUNT;
+}
+
+static void populate_fake_detail(const char *item_id)
+{
+    int i;
+
+    rb->memset(&g_book_detail, 0, sizeof(g_book_detail));
+
+    if (item_id)
+        rb->strlcpy(g_book_detail.item_id, item_id,
+                    sizeof(g_book_detail.item_id));
+
+    for (i = 0; i < FAKE_BOOK_COUNT; i++) {
+        if (rb->strcmp(fake_books[i].id, item_id) == 0) {
+            rb->strlcpy(g_book_detail.title,  fake_books[i].title,
+                        sizeof(g_book_detail.title));
+            rb->strlcpy(g_book_detail.author, fake_books[i].author,
+                        sizeof(g_book_detail.author));
+            rb->strlcpy(g_book_detail.series, fake_books[i].series,
+                        sizeof(g_book_detail.series));
+            rb->strlcpy(g_book_detail.narrator,       "Test Narrator",
+                        sizeof(g_book_detail.narrator));
+            rb->strlcpy(g_book_detail.published_year, "2024",
+                        sizeof(g_book_detail.published_year));
+            g_book_detail.duration_seconds  = (i + 1) * 3600 + i * 600;
+            g_book_detail.audio_files_known = true;
+            g_book_detail.audio_file_count  = i + 1;
+            g_book_detail.has_audio_files   = true;
+            return;
+        }
+    }
+
+    /* Unknown id — fill in a minimal placeholder. */
+    rb->strlcpy(g_book_detail.title, item_id[0] ? item_id : "(unknown)",
+                sizeof(g_book_detail.title));
+}
+
+#endif /* AUDIOBOOKSHELF_FAKE_BACKEND */
+
+/* ---- top-level menu sections ---------------------------------------------- */
+
+/*
+ * Menu index constants — must match the string order passed to
+ * MENUITEM_STRINGLIST in show_main_menu() below.
+ */
+#define MAIN_MENU_BROWSE      0
+#define MAIN_MENU_LOCAL       1
+#define MAIN_MENU_DIAG        2
+#define MAIN_MENU_HELP        3
+#define MAIN_MENU_QUIT        4
+
+static void show_local_downloads(void)
+{
+    view_text("Local Downloads",
+              "No local downloads found.\n\n"
+              "Use Browse Library to download\n"
+              "books to your device.\n\n"
+              "Downloads are saved to:\n"
+              DEFAULT_DOWNLOAD_DIR);
+}
+
+static void show_diagnostics(const struct abs_config *cfg)
+{
+    char text_buf[TEXT_BUF_SIZE];
+
+#ifdef AUDIOBOOKSHELF_FAKE_BACKEND
+    rb->snprintf(text_buf, sizeof(text_buf),
+                 "Audiobookshelf Diagnostics\n\n"
+                 "Mode:         FAKE BACKEND\n"
+                 "Fake libs:    %d\n"
+                 "Fake books:   %d\n\n"
+                 "Build:        " __DATE__ " " __TIME__,
+                 FAKE_LIB_COUNT, FAKE_BOOK_COUNT);
+#else
+    rb->snprintf(text_buf, sizeof(text_buf),
+                 "Audiobookshelf Diagnostics\n\n"
+                 "Mode:         Network\n"
+                 "Server:       %s\n"
+                 "Library ID:   %s\n"
+                 "Download dir: %s\n"
+                 "Page size:    %d\n\n"
+                 "Build:        " __DATE__ " " __TIME__,
+                 cfg->server_url[0] ? cfg->server_url : "(not set)",
+                 cfg->library_id[0] ? cfg->library_id : "(auto)",
+                 cfg->download_dir[0] ? cfg->download_dir : DEFAULT_DOWNLOAD_DIR,
+                 cfg->page_size);
+#endif
+    view_text("Diagnostics", text_buf);
+}
+
+static void show_help_settings(void)
+{
+    view_text("Help / Settings",
+              "Audiobookshelf for Rockbox\n\n"
+              "Config: " CONFIG_PATH "\n\n"
+              "Keys:\n"
+              "  Select  Confirm / open\n"
+              "  Back    Return / cancel\n"
+              "  Menu    Return to main menu\n\n"
+              "server_url  Your ABS server URL\n"
+              "token       API bearer token\n"
+              "library_id  (optional) skip picker\n"
+              "download_dir (optional) save path\n"
+              "page_size   (optional, default 20)");
+}
+
+/*
+ * browse_library() — drives the library -> book -> detail -> download flow.
+ *
+ * Under AUDIOBOOKSHELF_FAKE_BACKEND the network helpers are skipped;
+ * fake data is loaded directly into the shared globals.
+ *
+ * Under the real backend, the original network path is unchanged.
+ *
+ * Returns PLUGIN_USB_CONNECTED or PLUGIN_OK.
+ */
+static enum plugin_status browse_library(struct abs_config *cfg,
+                                         const char *header_buf)
+{
     char error_buf[ERROR_BUF_SIZE];
     char text_buf[TEXT_BUF_SIZE];
     char session_lib_id[LIB_ID_BUF_SIZE];
     char session_lib_name[LIBRARY_NAME_SIZE];
     char session_book_id[BOOK_ID_SIZE];
-    const char *wifi_result;
-    int http_status = 0;
-    int bridge_rc;
-    int page = 0;
+    int  page = 0;
 
-    (void)parameter;
+    session_lib_id[0]   = '\0';
+    session_lib_name[0] = '\0';
+    session_book_id[0]  = '\0';
 
-    /* 1. Read config */
-    if (!read_config(&cfg, error_buf, sizeof(error_buf))) {
-        view_text("Audiobookshelf", error_buf);
+#ifdef AUDIOBOOKSHELF_FAKE_BACKEND
+
+    /* -- fake library selection ------------------------------------------- */
+    populate_fake_libraries();
+
+    if (g_lib_count == 0) {
+        view_text("Audiobookshelf", "Fake backend: no libraries defined.");
         return PLUGIN_OK;
     }
 
-    /* Build Authorization header — token is never placed in text_buf below. */
-    rb->snprintf(header_buf, sizeof(header_buf),
-                 "Authorization: Bearer %s\nAccept: application/json",
-                 cfg.token);
+    {
+        int sel = show_library_picker();
 
-    /* 2. Connect WiFi */
-    rb->splash(HZ, "WiFi: connecting...");
-    wifi_result = rb->android_connect_wifi();
+        if (sel == -2)
+            return PLUGIN_USB_CONNECTED;
+        if (sel < 0)
+            return PLUGIN_OK;
 
-    /* 3. Validate token via GET /api/me */
-    rb->splash(HZ, "Validating token...");
-    rb->snprintf(endpoint, sizeof(endpoint), "%s/api/me", cfg.server_url);
-    response_buf[0] = '\0';
-    error_buf[0]    = '\0';
-    bridge_rc = rb->android_request(
-        "GET", endpoint, header_buf, NULL,
-        response_buf, sizeof(response_buf),
-        &http_status, error_buf, sizeof(error_buf));
-
-    if (http_status != 200) {
-        rb->android_disconnect_wifi();
-        rb->snprintf(text_buf, sizeof(text_buf),
-                     "Auth failed\n\n"
-                     "Server:      %s\n\n"
-                     "WiFi:        %s\n"
-                     "HTTP status: %d\n"
-                     "Bridge rc:   %d\n\n"
-                     "Error:\n%s",
-                     cfg.server_url,
-                     wifi_result ? wifi_result : "(null)",
-                     http_status, bridge_rc,
-                     error_buf[0] ? error_buf : "(none)");
-        view_text("Audiobookshelf", text_buf);
-        return PLUGIN_OK;
-    }
-
-    session_lib_id[0]     = '\0';
-    session_lib_name[0]   = '\0';
-    session_book_id[0]    = '\0';
-
-    if (cfg.library_id[0] != '\0') {
-        /* library_id configured: skip picker */
-        rb->strlcpy(session_lib_id, cfg.library_id, sizeof(session_lib_id));
-        rb->strlcpy(session_lib_name, cfg.library_id,
+        rb->strlcpy(session_lib_id,   g_lib_ids[sel],
+                    sizeof(session_lib_id));
+        rb->strlcpy(session_lib_name, g_lib_names[sel],
                     sizeof(session_lib_name));
-        rb->android_disconnect_wifi();
-    } else {
-        int json_len;
+    }
+
+    /* -- fake book browsing ----------------------------------------------- */
+    while (true) {
         int sel;
 
-        /* 4. Fetch accessible libraries */
+        populate_fake_books(page, cfg->page_size);
+
+        if (g_book_count == 0 && page == 0) {
+            view_text("Audiobookshelf",
+                      "Fake backend: no books in this library.");
+            return PLUGIN_OK;
+        }
+
+        if (g_book_count == 0 && page > 0) {
+            rb->snprintf(text_buf, sizeof(text_buf),
+                         "No books on page %d.", page + 1);
+            view_text("Audiobookshelf", text_buf);
+            page--;
+            continue;
+        }
+
+        sel = show_book_picker(session_lib_name);
+        if (sel == BOOK_PICKER_USB)
+            return PLUGIN_USB_CONNECTED;
+        if (sel == BOOK_PICKER_CANCEL)
+            return PLUGIN_OK;
+        if (sel == BOOK_PICKER_PREV_PAGE) {
+            if (page > 0)
+                page--;
+            continue;
+        }
+        if (sel == BOOK_PICKER_NEXT_PAGE) {
+            page++;
+            continue;
+        }
+        if (sel >= 0 && sel < g_book_count) {
+            int detail_action;
+
+            rb->strlcpy(session_book_id, g_book_ids[sel],
+                        sizeof(session_book_id));
+
+            populate_fake_detail(session_book_id);
+
+            detail_action = show_book_detail_menu();
+            if (detail_action == DETAIL_ACTION_USB)
+                return PLUGIN_USB_CONNECTED;
+            if (detail_action == DETAIL_ACTION_BACK)
+                continue;
+
+            view_text("Audiobookshelf",
+                      "Download skipped\n\n"
+                      "Fake backend: downloads are not\n"
+                      "available in demo mode.");
+            return PLUGIN_OK;
+        }
+    }
+
+#else /* real network backend */
+
+    if (cfg->library_id[0] != '\0') {
+        /* library_id configured: skip picker */
+        rb->strlcpy(session_lib_id,   cfg->library_id, sizeof(session_lib_id));
+        rb->strlcpy(session_lib_name, cfg->library_id, sizeof(session_lib_name));
+    } else {
+        char endpoint[ENDPOINT_BUF_SIZE];
+        int  http_status = 0;
+        int  bridge_rc;
+        int  json_len;
+        int  sel;
+
+        /* Fetch accessible libraries */
         rb->splash(HZ, "Loading libraries...");
         rb->snprintf(endpoint, sizeof(endpoint),
-                     "%s/api/libraries", cfg.server_url);
+                     "%s/api/libraries", cfg->server_url);
         g_lib_response[0] = '\0';
         error_buf[0]      = '\0';
         http_status       = 0;
@@ -1445,7 +1675,6 @@ enum plugin_status plugin_start(const void *parameter)
             g_lib_response, sizeof(g_lib_response),
             &http_status, error_buf, sizeof(error_buf));
 
-        /* All network operations done — disconnect before blocking UI */
         rb->android_disconnect_wifi();
 
         if (http_status != 200) {
@@ -1455,13 +1684,12 @@ enum plugin_status plugin_start(const void *parameter)
                          "HTTP status: %d\n"
                          "Bridge rc:   %d\n\n"
                          "Error:\n%s",
-                         cfg.server_url, http_status, bridge_rc,
+                         cfg->server_url, http_status, bridge_rc,
                          error_buf[0] ? error_buf : "(none)");
             view_text("Audiobookshelf", text_buf);
             return PLUGIN_OK;
         }
 
-        /* 5. Parse library JSON */
         json_len = (int)rb->strlen(g_lib_response);
         if (parse_libraries(json_len, error_buf, sizeof(error_buf)) < 0) {
             view_text("Audiobookshelf", error_buf);
@@ -1476,24 +1704,22 @@ enum plugin_status plugin_start(const void *parameter)
             return PLUGIN_OK;
         }
 
-        /* 6. Show picker */
         sel = show_library_picker();
         if (sel == -2)
             return PLUGIN_USB_CONNECTED;
         if (sel < 0)
-            return PLUGIN_OK; /* cancelled */
+            return PLUGIN_OK;
 
-        rb->strlcpy(session_lib_id, g_lib_ids[sel], sizeof(session_lib_id));
-        rb->strlcpy(session_lib_name, g_lib_names[sel],
-                    sizeof(session_lib_name));
+        rb->strlcpy(session_lib_id,   g_lib_ids[sel],   sizeof(session_lib_id));
+        rb->strlcpy(session_lib_name, g_lib_names[sel], sizeof(session_lib_name));
     }
 
-    /* 7. Browse books page-by-page. */
+    /* Browse books page-by-page */
     while (true) {
         int json_len;
         int sel;
 
-        if (!fetch_books_page(&cfg, header_buf, session_lib_id, page,
+        if (!fetch_books_page(cfg, header_buf, session_lib_id, page,
                               error_buf, sizeof(error_buf),
                               text_buf, sizeof(text_buf))) {
             view_text("Audiobookshelf", text_buf);
@@ -1501,7 +1727,7 @@ enum plugin_status plugin_start(const void *parameter)
         }
 
         json_len = (int)rb->strlen(g_items_response);
-        if (parse_books(json_len, page, cfg.page_size,
+        if (parse_books(json_len, page, cfg->page_size,
                         error_buf, sizeof(error_buf)) < 0) {
             view_text("Audiobookshelf", error_buf);
             return PLUGIN_OK;
@@ -1539,20 +1765,20 @@ enum plugin_status plugin_start(const void *parameter)
         }
         if (sel >= 0 && sel < g_book_count) {
             int detail_action;
-            int json_len;
+            int dlen;
 
             rb->strlcpy(session_book_id, g_book_ids[sel],
                         sizeof(session_book_id));
 
-            if (!fetch_book_detail(&cfg, header_buf, session_book_id,
+            if (!fetch_book_detail(cfg, header_buf, session_book_id,
                                    error_buf, sizeof(error_buf),
                                    text_buf, sizeof(text_buf))) {
                 view_text("Audiobookshelf", text_buf);
                 return PLUGIN_OK;
             }
 
-            json_len = (int)rb->strlen(g_detail_response);
-            if (!parse_book_detail(json_len, session_book_id,
+            dlen = (int)rb->strlen(g_detail_response);
+            if (!parse_book_detail(dlen, session_book_id,
                                    error_buf, sizeof(error_buf))) {
                 view_text("Audiobookshelf", error_buf);
                 return PLUGIN_OK;
@@ -1564,7 +1790,7 @@ enum plugin_status plugin_start(const void *parameter)
             if (detail_action == DETAIL_ACTION_BACK)
                 continue;
 
-            download_book(&cfg,
+            download_book(cfg,
                           header_buf,
                           session_lib_name,
                           session_lib_id,
@@ -1575,4 +1801,122 @@ enum plugin_status plugin_start(const void *parameter)
             return PLUGIN_OK;
         }
     }
+
+#endif /* AUDIOBOOKSHELF_FAKE_BACKEND */
+}
+
+/* ---- plugin entry point --------------------------------------------------- */
+
+enum plugin_status plugin_start(const void *parameter)
+{
+    struct abs_config cfg;
+    char header_buf[HEADER_BUF_SIZE];
+    char error_buf[ERROR_BUF_SIZE];
+    int menu_sel = MAIN_MENU_BROWSE;
+    bool menu_running = true;
+
+    (void)parameter;
+
+#ifdef AUDIOBOOKSHELF_FAKE_BACKEND
+    /* Fake mode: config is optional; fill defaults so diagnostics work. */
+    cfg.server_url[0]   = '\0';
+    cfg.token[0]        = '\0';
+    cfg.library_id[0]   = '\0';
+    cfg.page_size       = DEFAULT_PAGE_SIZE;
+    rb->strlcpy(cfg.download_dir, DEFAULT_DOWNLOAD_DIR,
+                sizeof(cfg.download_dir));
+    (void)read_config(&cfg, error_buf, sizeof(error_buf)); /* best-effort */
+    header_buf[0] = '\0';
+#else
+    /* Real mode: config is required. */
+    if (!read_config(&cfg, error_buf, sizeof(error_buf))) {
+        view_text("Audiobookshelf", error_buf);
+        return PLUGIN_OK;
+    }
+
+    rb->snprintf(header_buf, sizeof(header_buf),
+                 "Authorization: Bearer %s\nAccept: application/json",
+                 cfg.token);
+#endif
+
+    /* Top-level menu loop */
+    while (menu_running) {
+        MENUITEM_STRINGLIST(main_menu, "Audiobookshelf", NULL,
+                            "Browse Library",
+                            "Local Downloads",
+                            "Diagnostics",
+                            "Help / Settings",
+                            "Quit");
+
+        switch (rb->do_menu(&main_menu, &menu_sel, NULL, false)) {
+        case MAIN_MENU_BROWSE:
+#ifndef AUDIOBOOKSHELF_FAKE_BACKEND
+            /* Connect WiFi and validate token before entering browse. */
+            {
+                char endpoint[ENDPOINT_BUF_SIZE];
+                char response_buf[RESPONSE_BUF_SIZE];
+                const char *wifi_result;
+                int http_status = 0;
+                int bridge_rc;
+                char text_buf[TEXT_BUF_SIZE];
+                bool auth_ok = true;
+
+                rb->splash(HZ, "WiFi: connecting...");
+                wifi_result = rb->android_connect_wifi();
+
+                rb->splash(HZ, "Validating token...");
+                rb->snprintf(endpoint, sizeof(endpoint),
+                             "%s/api/me", cfg.server_url);
+                response_buf[0] = '\0';
+                error_buf[0]    = '\0';
+                bridge_rc = rb->android_request(
+                    "GET", endpoint, header_buf, NULL,
+                    response_buf, sizeof(response_buf),
+                    &http_status, error_buf, sizeof(error_buf));
+
+                if (http_status != 200) {
+                    rb->android_disconnect_wifi();
+                    rb->snprintf(text_buf, sizeof(text_buf),
+                                 "Auth failed\n\n"
+                                 "Server:      %s\n\n"
+                                 "WiFi:        %s\n"
+                                 "HTTP status: %d\n"
+                                 "Bridge rc:   %d\n\n"
+                                 "Error:\n%s",
+                                 cfg.server_url,
+                                 wifi_result ? wifi_result : "(null)",
+                                 http_status, bridge_rc,
+                                 error_buf[0] ? error_buf : "(none)");
+                    view_text("Audiobookshelf", text_buf);
+                    auth_ok = false;
+                }
+
+                if (!auth_ok)
+                    break;
+            }
+#endif
+            if (browse_library(&cfg, header_buf) == PLUGIN_USB_CONNECTED)
+                return PLUGIN_USB_CONNECTED;
+            break;
+
+        case MAIN_MENU_LOCAL:
+            show_local_downloads();
+            break;
+
+        case MAIN_MENU_DIAG:
+            show_diagnostics(&cfg);
+            break;
+
+        case MAIN_MENU_HELP:
+            show_help_settings();
+            break;
+
+        case MAIN_MENU_QUIT:
+        default:
+            menu_running = false;
+            break;
+        }
+    }
+
+    return PLUGIN_OK;
 }
