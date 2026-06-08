@@ -479,23 +479,43 @@ public class Connectivity{
 
     private static String moveCompletedDownloadIntoPlace(File tempFile,
                                                          File canonicalDestination) {
-        int linkRc;
+        FileInputStream input = null;
+        FileOutputStream output = null;
+        byte[] buffer = new byte[8192];
+        int read;
+        boolean createdDestination = false;
 
         if (tempFile == null || !tempFile.exists()) {
             return "filesystem error: temporary download file missing after helper exit";
         }
 
-        linkRc = atomicLinkExclusive(tempFile.getAbsolutePath(),
-                                     canonicalDestination.getAbsolutePath());
-        deleteQuietly(tempFile);
+        try {
+            if (!canonicalDestination.createNewFile()) {
+                deleteQuietly(tempFile);
+                return "filesystem error: destination already exists";
+            }
+            createdDestination = true;
 
-        if (linkRc == 0) {
-            return "";
+            input = new FileInputStream(tempFile);
+            output = new FileOutputStream(canonicalDestination);
+            while ((read = input.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            output.getFD().sync();
+        } catch (IOException e) {
+            closeQuietly(output);
+            closeQuietly(input);
+            deleteQuietly(tempFile);
+            if (createdDestination) {
+                deleteQuietly(canonicalDestination);
+            }
+            return "filesystem error: failed to move completed download into place";
         }
-        if (linkRc == EEXIST) {
-            return "filesystem error: destination already exists";
-        }
-        return "filesystem error: failed to move completed download into place";
+
+        closeQuietly(output);
+        closeQuietly(input);
+        deleteQuietly(tempFile);
+        return "";
     }
 
     private static String summarizeHelperFailure(String detail, String fallback) {
