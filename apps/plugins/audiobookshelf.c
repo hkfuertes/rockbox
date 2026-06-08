@@ -60,6 +60,7 @@
 #define MAX_DETAIL_AUDIO_FILES  64
 
 #define LOCAL_INDEX_PATH        SAFE_DOWNLOAD_BASE "/local-index.tsv"
+#define JSON_TMP_PATH           "/sdcard/.rockbox/audiobookshelf-response.tmp"
 
 #define BOOK_PICKER_CANCEL      (-1)
 #define BOOK_PICKER_USB         (-2)
@@ -2931,6 +2932,95 @@ static int show_book_detail_menu(void)
 
 /* ---- network -------------------------------------------------------------- */
 
+static bool read_downloaded_json_file(const char *path,
+                                      char *buf,
+                                      size_t buf_len,
+                                      char *error_buf,
+                                      size_t error_len)
+{
+    int fd;
+    off_t size;
+    ssize_t nread;
+
+    if (buf == NULL || buf_len == 0) {
+        rb->snprintf(error_buf, error_len, "JSON buffer is unavailable");
+        return false;
+    }
+
+    buf[0] = '\0';
+    fd = rb->open(path, O_RDONLY);
+    if (fd < 0) {
+        rb->snprintf(error_buf, error_len,
+                     "Could not open downloaded JSON:\n%s", path);
+        return false;
+    }
+
+    size = rb->filesize(fd);
+    if (size < 0) {
+        rb->close(fd);
+        rb->snprintf(error_buf, error_len,
+                     "Could not determine downloaded JSON size:\n%s", path);
+        return false;
+    }
+    if ((size_t)size >= buf_len) {
+        rb->close(fd);
+        rb->snprintf(error_buf, error_len,
+                     "Downloaded JSON is too large (%ld bytes, buffer %lu bytes)",
+                     (long)size, (unsigned long)buf_len);
+        return false;
+    }
+
+    nread = rb->read(fd, buf, (size_t)size);
+    rb->close(fd);
+    if (nread != size) {
+        buf[0] = '\0';
+        rb->snprintf(error_buf, error_len,
+                     "Could not read complete downloaded JSON (%ld/%ld bytes)",
+                     (long)nread, (long)size);
+        return false;
+    }
+
+    buf[(size_t)size] = '\0';
+    return true;
+}
+
+static bool fetch_json_to_buffer_via_download(const char *endpoint,
+                                              const char *header_buf,
+                                              char *response_buf,
+                                              size_t response_len,
+                                              int *http_status,
+                                              int *bridge_rc,
+                                              char *error_buf,
+                                              size_t error_len)
+{
+    bool ok;
+    int rc;
+
+    rb->remove(JSON_TMP_PATH);
+    if (http_status != NULL)
+        *http_status = 0;
+    rc = rb->android_download(endpoint, header_buf, JSON_TMP_PATH,
+                              http_status, error_buf, error_len);
+    if (bridge_rc != NULL)
+        *bridge_rc = rc;
+
+    if (rc < 0) {
+        rb->remove(JSON_TMP_PATH);
+        return false;
+    }
+    if (http_status != NULL && *http_status != 200) {
+        rb->remove(JSON_TMP_PATH);
+        return false;
+    }
+
+    ok = read_downloaded_json_file(JSON_TMP_PATH, response_buf, response_len,
+                                   error_buf, error_len);
+    rb->remove(JSON_TMP_PATH);
+    if (!ok && bridge_rc != NULL)
+        *bridge_rc = ANDROID_REQUEST_TRUNCATED;
+    return ok;
+}
+
 static bool fetch_books_page(const struct abs_config *cfg,
                              const char *header_buf,
                              const char *library_id,
@@ -2960,10 +3050,11 @@ static bool fetch_books_page(const struct abs_config *cfg,
         g_items_response[0] = '\0';
         error_buf[0] = '\0';
         http_status = 0;
-        bridge_rc = rb->android_request(
-            "GET", endpoint, header_buf, NULL,
-            g_items_response, sizeof(g_items_response),
-            &http_status, error_buf, error_len);
+        (void)fetch_json_to_buffer_via_download(endpoint, header_buf,
+                                                g_items_response,
+                                                sizeof(g_items_response),
+                                                &http_status, &bridge_rc,
+                                                error_buf, error_len);
 
         if (bridge_rc != ANDROID_REQUEST_TRUNCATED)
             break;
@@ -3024,10 +3115,11 @@ static bool fetch_book_detail(const struct abs_config *cfg,
     g_detail_response[0] = '\0';
     error_buf[0] = '\0';
 
-    bridge_rc = rb->android_request(
-        "GET", endpoint, header_buf, NULL,
-        g_detail_response, sizeof(g_detail_response),
-        &http_status, error_buf, error_len);
+    (void)fetch_json_to_buffer_via_download(endpoint, header_buf,
+                                            g_detail_response,
+                                            sizeof(g_detail_response),
+                                            &http_status, &bridge_rc,
+                                            error_buf, error_len);
 
     rb->android_disconnect_wifi();
 
