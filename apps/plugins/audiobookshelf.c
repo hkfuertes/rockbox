@@ -66,11 +66,12 @@
 #define BOOK_PICKER_PREV_PAGE   (-3)
 #define BOOK_PICKER_NEXT_PAGE   (-4)
 
-#define DETAIL_ACTION_BACK         0
-#define DETAIL_ACTION_DOWNLOAD     1
-#define DETAIL_ACTION_PLAY_LOCAL   2
-#define DETAIL_ACTION_DELETE_LOCAL 3
-#define DETAIL_ACTION_USB         -2
+#define DETAIL_ACTION_BACK          0
+#define DETAIL_ACTION_DOWNLOAD      1
+#define DETAIL_ACTION_PLAY_LOCAL    2
+#define DETAIL_ACTION_DELETE_LOCAL  3
+#define DETAIL_ACTION_SYNC_PROGRESS 4
+#define DETAIL_ACTION_USB          -2
 
 /* ---- config --------------------------------------------------------------- */
 struct abs_config {
@@ -122,6 +123,22 @@ struct abs_book_detail {
     bool has_audio_files;
     bool has_single_audio_file;
     bool local_file_found;
+};
+
+struct abs_progress_state {
+    int current_time;
+    int duration;
+    int percent;
+    bool known;
+    bool finished;
+};
+
+struct abs_progress_snapshot {
+    char local_path[MAX_PATH];
+    int current_time;
+    int duration;
+    int percent;
+    bool finished;
 };
 
 static struct abs_book_detail g_book_detail;
@@ -1194,6 +1211,214 @@ static const char *android_request_rc_name(int bridge_rc)
 static bool is_auth_error_status(int http_status)
 {
     return http_status == 401 || http_status == 403;
+}
+
+static bool http_status_is_success(int http_status)
+{
+    return http_status >= 200 && http_status < 300;
+}
+
+static bool detail_has_manual_sync_mapping(void)
+{
+    return g_book_detail.item_id[0] != '\0' &&
+           g_book_detail.duration_seconds > 0 &&
+           g_book_detail.has_single_audio_file &&
+           g_book_detail.local_file_found &&
+           g_book_detail.local_path[0] != '\0';
+}
+
+static void init_progress_state(struct abs_progress_state *state)
+{
+    if (state == NULL)
+        return;
+
+    state->current_time = -1;
+    state->duration = -1;
+    state->percent = -1;
+    state->known = false;
+    state->finished = false;
+}
+
+static void parse_progress_state_object(const char *js,
+                                        const jsmntok_t *tokens,
+                                        int r,
+                                        int obj_idx,
+                                        struct abs_progress_state *state)
+{
+    int progress_idx;
+    int current_time_idx;
+    int duration_idx;
+    int finished_idx;
+
+    if (state == NULL || obj_idx < 0 || obj_idx >= r ||
+        tokens[obj_idx].type != JSMN_OBJECT)
+        return;
+
+    progress_idx = find_object_value(js, tokens, r, obj_idx, "progress");
+    if (progress_idx < 0)
+        progress_idx = find_object_value(js, tokens, r, obj_idx, "percentage");
+    if (progress_idx < 0)
+        progress_idx = find_object_value(js, tokens, r, obj_idx, "percentComplete");
+    current_time_idx = find_object_value(js, tokens, r, obj_idx, "currentTime");
+    duration_idx = find_object_value(js, tokens, r, obj_idx, "duration");
+    finished_idx = find_object_value(js, tokens, r, obj_idx, "isFinished");
+
+    if (progress_idx >= 0)
+        state->percent = tok_to_percent(js, &tokens[progress_idx]);
+    if (current_time_idx >= 0)
+        state->current_time = tok_to_int(js, &tokens[current_time_idx]);
+    if (duration_idx >= 0)
+        state->duration = tok_to_int(js, &tokens[duration_idx]);
+    if (finished_idx >= 0)
+        (void)tok_to_bool(js, &tokens[finished_idx], &state->finished);
+
+    state->known = state->finished || state->percent >= 0 || state->current_time >= 0;
+}
+
+static bool finalize_remote_progress_state(struct abs_progress_state *state)
+{
+    if (state == NULL)
+        return false;
+
+    if (state->duration <= 0)
+        state->duration = g_book_detail.duration_seconds;
+    if (state->finished) {
+        state->known = true;
+        if (state->duration > 0)
+            state->current_time = state->duration;
+        state->percent = 100;
+    } else if (state->percent < 0 && state->current_time >= 0 && state->duration > 0) {
+        state->percent = (state->current_time * 100) / state->duration;
+    }
+
+    return state->known;
+}
+
+static bool extract_progress_state_from_json(const char *json,
+                                             struct abs_progress_state *state,
+                                             char *error_buf,
+                                             size_t error_len)
+{
+    jsmn_parser parser;
+    int r;
+    int media_idx;
+    int progress_idx;
+
+    init_progress_state(state);
+    if (json == NULL || json[0] == '\0') {
+        if (error_buf != NULL && error_len > 0)
+            rb->snprintf(error_buf, error_len, "empty JSON response");
+        return false;
+    }
+
+    jsmn_init(&parser);
+    r = jsmn_parse(&parser, json, rb->strlen(json), g_tokens, JSON_TOKEN_COUNT);
+    if (r <= 0) {
+        if (error_buf != NULL && error_len > 0)
+            rb->snprintf(error_buf, error_len, "JSON parse failed (%d)", r);
+        return false;
+    }
+    if (g_tokens[0].type != JSMN_OBJECT) {
+        if (error_buf != NULL && error_len > 0)
+            rb->snprintf(error_buf, error_len, "expected JSON object");
+        return false;
+    }
+
+    progress_idx = find_object_value(json, g_tokens, r, 0, "mediaProgress");
+    if (progress_idx < 0)
+        progress_idx = find_object_value(json, g_tokens, r, 0, "userMediaProgress");
+
+    media_idx = find_object_value(json, g_tokens, r, 0, "media");
+    if (progress_idx < 0 && media_idx >= 0 && g_tokens[media_idx].type == JSMN_OBJECT) {
+        progress_idx = find_object_value(json, g_tokens, r, media_idx,
+                                         "mediaProgress");
+        if (progress_idx < 0)
+            progress_idx = find_object_value(json, g_tokens, r, media_idx,
+                                             "userMediaProgress");
+    }
+
+    if (progress_idx >= 0) {
+        parse_progress_state_object(json, g_tokens, r, progress_idx, state);
+    } else {
+        parse_progress_state_object(json, g_tokens, r, 0, state);
+    }
+
+    if (!finalize_remote_progress_state(state)) {
+        if (error_buf != NULL && error_len > 0)
+            rb->snprintf(error_buf, error_len,
+                         "response did not include usable progress fields");
+        return false;
+    }
+
+    return true;
+}
+
+static bool extract_detail_remote_progress(struct abs_progress_state *state)
+{
+    return extract_progress_state_from_json(g_detail_response, state, NULL, 0);
+}
+
+static bool build_local_progress_snapshot(struct abs_progress_snapshot *snapshot,
+                                          char *error_buf,
+                                          size_t error_len)
+{
+    struct mp3entry *current;
+    int duration_ms;
+    int elapsed_ms;
+
+    if (snapshot == NULL) {
+        rb->snprintf(error_buf, error_len, "Manual sync snapshot is unavailable.");
+        return false;
+    }
+
+    rb->memset(snapshot, 0, sizeof(*snapshot));
+    if (!detail_has_manual_sync_mapping()) {
+        rb->snprintf(error_buf, error_len,
+                     "Manual sync needs one downloaded single-file book with a local Audiobookshelf mapping.");
+        return false;
+    }
+
+    current = rb->audio_current_track();
+    if (current == NULL || current->path[0] == '\0') {
+        rb->snprintf(error_buf, error_len,
+                     "Manual sync spike only supports the selected book while it is currently playing.");
+        return false;
+    }
+    if (rb->strcmp(current->path, g_book_detail.local_path) != 0) {
+        rb->snprintf(error_buf, error_len,
+                     "Current track does not match this downloaded book.\n\nExpected:\n%s\n\nPlaying:\n%s",
+                     g_book_detail.local_path,
+                     current->path);
+        return false;
+    }
+
+    duration_ms = (int)current->length;
+    elapsed_ms = (int)current->elapsed;
+    if (duration_ms <= 0 && g_book_detail.duration_seconds > 0)
+        duration_ms = g_book_detail.duration_seconds * 1000;
+    if (duration_ms <= 0) {
+        rb->snprintf(error_buf, error_len,
+                     "Cannot determine playback duration for the selected local file.");
+        return false;
+    }
+    if (elapsed_ms < 0)
+        elapsed_ms = 0;
+    if (elapsed_ms > duration_ms)
+        elapsed_ms = duration_ms;
+
+    rb->strlcpy(snapshot->local_path, g_book_detail.local_path,
+                sizeof(snapshot->local_path));
+    snapshot->current_time = elapsed_ms / 1000;
+    snapshot->duration = duration_ms / 1000;
+    if (snapshot->duration <= 0)
+        snapshot->duration = g_book_detail.duration_seconds;
+    if (snapshot->duration <= 0)
+        snapshot->duration = 1;
+    if (snapshot->current_time > snapshot->duration)
+        snapshot->current_time = snapshot->duration;
+    snapshot->percent = (snapshot->current_time * 100) / snapshot->duration;
+    snapshot->finished = snapshot->current_time >= snapshot->duration;
+    return true;
 }
 
 static void format_request_failure(const char *title,
@@ -2625,6 +2850,9 @@ static int show_book_detail_menu(void)
     if (g_book_detail.local_index_entry_count > 0)
         rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Delete Local]",
                     sizeof(g_detail_lines[0]));
+    if (detail_has_manual_sync_mapping())
+        rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Sync Progress]",
+                    sizeof(g_detail_lines[0]));
     rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Download]",
                 sizeof(g_detail_lines[0]));
     rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Back]",
@@ -2656,6 +2884,14 @@ static int show_book_detail_menu(void)
             if (g_book_detail.local_index_entry_count > 0) {
                 if (sel == action_pos) {
                     result = DETAIL_ACTION_DELETE_LOCAL;
+                    done = true;
+                    break;
+                }
+                action_pos++;
+            }
+            if (detail_has_manual_sync_mapping()) {
+                if (sel == action_pos) {
+                    result = DETAIL_ACTION_SYNC_PROGRESS;
                     done = true;
                     break;
                 }
@@ -2787,6 +3023,258 @@ static bool fetch_book_detail(const struct abs_config *cfg,
     }
 
     return true;
+}
+
+static bool sync_book_progress_now(const struct abs_config *cfg,
+                                   char *text_buf,
+                                   size_t text_len)
+{
+    struct abs_progress_snapshot local;
+    struct abs_progress_state remote;
+    char endpoint[ENDPOINT_BUF_SIZE];
+    char headers[HEADER_BUF_SIZE + 64];
+    char body[192];
+    char response_buf[RESPONSE_BUF_SIZE];
+    char get_error[ERROR_BUF_SIZE];
+    char patch_error[ERROR_BUF_SIZE];
+    char post_error[ERROR_BUF_SIZE];
+    char parse_error[ERROR_BUF_SIZE];
+    char get_error_redacted[ERROR_BUF_SIZE];
+    char patch_error_redacted[ERROR_BUF_SIZE];
+    char post_error_redacted[ERROR_BUF_SIZE];
+    const char *wifi_result;
+    int progress_milli;
+    int get_status = 0;
+    int patch_status = 0;
+    int post_status = 0;
+    int get_rc = 0;
+    int patch_rc = 0;
+    int post_rc = 0;
+    int remote_ahead_threshold;
+
+    if (!build_local_progress_snapshot(&local, get_error, sizeof(get_error))) {
+        rb->snprintf(text_buf, text_len,
+                     "Sync Progress unavailable\n\nBook: %s\n\n%s",
+                     g_book_detail.title,
+                     get_error);
+        return false;
+    }
+
+    progress_milli = (local.current_time * 1000) / (local.duration > 0 ? local.duration : 1);
+    if (progress_milli > 1000)
+        progress_milli = 1000;
+
+    if (rb->snprintf(endpoint, sizeof(endpoint), "%s/api/me/progress/%s",
+                     cfg->server_url, g_book_detail.item_id) >= (int)sizeof(endpoint)) {
+        rb->snprintf(text_buf, text_len,
+                     "Sync Progress failed\n\nProgress endpoint is too long.\nLocal progress was not changed.");
+        return false;
+    }
+    rb->snprintf(headers, sizeof(headers),
+                 "Authorization: Bearer %s\n"
+                 "Accept: application/json\n"
+                 "Content-Type: application/json",
+                 cfg->token);
+    rb->snprintf(body, sizeof(body),
+                 "{\"duration\":%d,\"currentTime\":%d,\"progress\":%d.%03d,\"isFinished\":%s}",
+                 local.duration,
+                 local.current_time,
+                 progress_milli / 1000,
+                 progress_milli % 1000,
+                 local.finished ? "true" : "false");
+
+    rb->splash(HZ, "Syncing progress...");
+    wifi_result = rb->android_connect_wifi();
+
+    response_buf[0] = '\0';
+    get_error[0] = '\0';
+    patch_error[0] = '\0';
+    post_error[0] = '\0';
+    parse_error[0] = '\0';
+    get_rc = rb->android_request(
+        "GET", endpoint, headers, NULL,
+        response_buf, sizeof(response_buf),
+        &get_status, get_error, sizeof(get_error));
+
+    if (get_rc < 0 || get_status == 0) {
+        rb->android_disconnect_wifi();
+        redact_token_text(get_error, cfg->token,
+                          get_error_redacted, sizeof(get_error_redacted));
+        rb->snprintf(text_buf, text_len,
+                     "Sync Progress failed\n\n"
+                     "Phase:         remote fetch\n"
+                     "Category:      connection_error\n"
+                     "Book:          %s\n"
+                     "Local:         %d/%d sec (%d%%)\n"
+                     "WiFi:          %s\n"
+                     "GET status:    %d\n"
+                     "GET rc:        %d (%s)\n"
+                     "Local progress was not changed.\n\n"
+                     "Hint: check WiFi, server URL, and bridge status before retrying.\n\n"
+                     "GET error:\n%s",
+                     g_book_detail.title,
+                     local.current_time, local.duration, local.percent,
+                     wifi_result ? wifi_result : "(null)",
+                     get_status, get_rc, android_request_rc_name(get_rc),
+                     get_error_redacted[0] ? get_error_redacted : "(none)");
+        return false;
+    }
+    if (is_auth_error_status(get_status)) {
+        rb->android_disconnect_wifi();
+        redact_token_text(get_error, cfg->token,
+                          get_error_redacted, sizeof(get_error_redacted));
+        rb->snprintf(text_buf, text_len,
+                     "Sync Progress failed\n\n"
+                     "Phase:         remote fetch\n"
+                     "Category:      auth_error\n"
+                     "Book:          %s\n"
+                     "Local:         %d/%d sec (%d%%)\n"
+                     "WiFi:          %s\n"
+                     "GET status:    %d\n"
+                     "GET rc:        %d (%s)\n"
+                     "Local progress was not changed.\n\n"
+                     "Hint: token rejected; verify token in " CONFIG_PATH "\n\n"
+                     "GET error:\n%s",
+                     g_book_detail.title,
+                     local.current_time, local.duration, local.percent,
+                     wifi_result ? wifi_result : "(null)",
+                     get_status, get_rc, android_request_rc_name(get_rc),
+                     get_error_redacted[0] ? get_error_redacted : "(none)");
+        return false;
+    }
+    if (get_status == 404) {
+        init_progress_state(&remote);
+    } else if (!http_status_is_success(get_status)) {
+        rb->android_disconnect_wifi();
+        redact_token_text(get_error, cfg->token,
+                          get_error_redacted, sizeof(get_error_redacted));
+        rb->snprintf(text_buf, text_len,
+                     "Sync Progress failed\n\n"
+                     "Phase:         remote fetch\n"
+                     "Category:      server_error\n"
+                     "Book:          %s\n"
+                     "Local:         %d/%d sec (%d%%)\n"
+                     "WiFi:          %s\n"
+                     "GET status:    %d\n"
+                     "GET rc:        %d (%s)\n"
+                     "Local progress was not changed.\n\n"
+                     "Hint: server rejected the progress lookup; inspect server logs/health.\n\n"
+                     "GET error:\n%s",
+                     g_book_detail.title,
+                     local.current_time, local.duration, local.percent,
+                     wifi_result ? wifi_result : "(null)",
+                     get_status, get_rc, android_request_rc_name(get_rc),
+                     get_error_redacted[0] ? get_error_redacted : "(none)");
+        return false;
+    } else if (!extract_progress_state_from_json(response_buf, &remote,
+                                                 parse_error, sizeof(parse_error))) {
+        rb->android_disconnect_wifi();
+        rb->snprintf(text_buf, text_len,
+                     "Sync Progress failed\n\n"
+                     "Phase:         remote fetch\n"
+                     "Category:      payload_error\n"
+                     "Book:          %s\n"
+                     "Local:         %d/%d sec (%d%%)\n"
+                     "WiFi:          %s\n"
+                     "GET status:    %d\n"
+                     "GET rc:        %d (%s)\n"
+                     "Local progress was not changed.\n\n"
+                     "Hint: remote progress response was not usable, so upload was blocked to avoid overwriting newer state.\n\n"
+                     "Payload issue:\n%s",
+                     g_book_detail.title,
+                     local.current_time, local.duration, local.percent,
+                     wifi_result ? wifi_result : "(null)",
+                     get_status, get_rc, android_request_rc_name(get_rc),
+                     parse_error[0] ? parse_error : "(unknown)");
+        return false;
+    }
+
+    remote_ahead_threshold = local.duration / 100;
+    if (remote_ahead_threshold < 30)
+        remote_ahead_threshold = 30;
+
+    if (remote.known && remote.current_time > local.current_time + remote_ahead_threshold) {
+        rb->android_disconnect_wifi();
+        rb->snprintf(text_buf, text_len,
+                     "Sync Progress skipped\n\n"
+                     "Conflict policy: remote progress is ahead, so this manual spike will not overwrite it automatically.\n\n"
+                     "Book:          %s\n"
+                     "Local:         %d/%d sec (%d%%)\n"
+                     "Remote:        %d/%d sec (%d%%)\n"
+                     "GET status:    %d\n\n"
+                     "Review the remote position first, then retry only after playback catches up locally.",
+                     g_book_detail.title,
+                     local.current_time, local.duration, local.percent,
+                     remote.current_time < 0 ? 0 : remote.current_time,
+                     remote.duration > 0 ? remote.duration : local.duration,
+                     remote.percent >= 0 ? remote.percent :
+                         ((remote.current_time >= 0 && local.duration > 0) ?
+                          (remote.current_time * 100) / local.duration : 0),
+                     get_status);
+        return false;
+    }
+
+    response_buf[0] = '\0';
+    patch_rc = rb->android_request(
+        "PATCH", endpoint, headers, body,
+        response_buf, sizeof(response_buf),
+        &patch_status, patch_error, sizeof(patch_error));
+
+    if (!http_status_is_success(patch_status) &&
+        (patch_status == 404 || patch_status == 405)) {
+        response_buf[0] = '\0';
+        post_rc = rb->android_request(
+            "POST", endpoint, headers, body,
+            response_buf, sizeof(response_buf),
+            &post_status, post_error, sizeof(post_error));
+    }
+
+    rb->android_disconnect_wifi();
+
+    redact_token_text(patch_error, cfg->token,
+                      patch_error_redacted, sizeof(patch_error_redacted));
+    redact_token_text(post_error, cfg->token,
+                      post_error_redacted, sizeof(post_error_redacted));
+
+    if (http_status_is_success(patch_status) || http_status_is_success(post_status)) {
+        rb->snprintf(text_buf, text_len,
+                     "Sync Progress uploaded\n\n"
+                     "Book:          %s\n"
+                     "Method:        %s\n"
+                     "Local:         %d/%d sec (%d%%)\n"
+                     "WiFi:          %s\n"
+                     "Remote policy: never overwrite newer remote progress automatically\n\n"
+                     "Endpoint: %s",
+                     g_book_detail.title,
+                     http_status_is_success(patch_status) ? "PATCH" : "POST",
+                     local.current_time, local.duration, local.percent,
+                     wifi_result ? wifi_result : "(null)",
+                     endpoint);
+        return true;
+    }
+
+    rb->snprintf(text_buf, text_len,
+                 "Sync Progress failed\n\n"
+                 "Phase:         upload\n"
+                 "Book:          %s\n"
+                 "Local:         %d/%d sec (%d%%)\n"
+                 "WiFi:          %s\n"
+                 "PATCH status:  %d\n"
+                 "PATCH rc:      %d (%s)\n"
+                 "POST status:   %d\n"
+                 "POST rc:       %d (%s)\n"
+                 "Local progress was not changed.\n\n"
+                 "PATCH error:\n%s\n\n"
+                 "POST error:\n%s",
+                 g_book_detail.title,
+                 local.current_time, local.duration, local.percent,
+                 wifi_result ? wifi_result : "(null)",
+                 patch_status, patch_rc, android_request_rc_name(patch_rc),
+                 post_status, post_rc, android_request_rc_name(post_rc),
+                 patch_error_redacted[0] ? patch_error_redacted : "(none)",
+                 post_error_redacted[0] ? post_error_redacted :
+                     ((patch_status == 404 || patch_status == 405) ? "(none)" : "(not attempted)"));
+    return false;
 }
 
 /* ---- fake backend --------------------------------------------------------- */
@@ -3260,6 +3748,26 @@ static void self_test_book_detail(struct abs_self_test_state *state)
                     rb->strcmp(g_book_detail.single_audio_ext, ".m4b") == 0,
                     "parse_book_detail captures single audio file metadata");
 
+    rb->strlcpy(g_book_detail.local_path,
+                "/sdcard/audiobookshelf/downloads/Single_File/track-book-6-ino-1.m4b",
+                sizeof(g_book_detail.local_path));
+    g_book_detail.local_file_found = true;
+    g_book_detail.duration_seconds = 120;
+    rb->strlcpy(g_detail_response,
+                "{\"media\":{\"duration\":120,\"audioFiles\":[{\"ino\":\"ino-1\",\"filename\":\"track.m4b\"}],\"mediaProgress\":{\"currentTime\":45,\"duration\":120}}}",
+                sizeof(g_detail_response));
+    self_test_check(state,
+                    detail_has_manual_sync_mapping() &&
+                    extract_detail_remote_progress(&(struct abs_progress_state){0}) == true &&
+                    extract_progress_state_from_json(
+                        "{\"currentTime\":30,\"duration\":120,\"progress\":0.250}",
+                        &(struct abs_progress_state){0}, error_buf, sizeof(error_buf)) == true &&
+                    !extract_progress_state_from_json(
+                        "{\"id\":\"missing-progress\"}",
+                        &(struct abs_progress_state){0}, error_buf, sizeof(error_buf)) &&
+                    contains_text(error_buf, "usable progress fields"),
+                    "manual sync spike parses explicit remote progress payloads");
+
     rb->strlcpy(g_detail_response, "{\"media\":{\"metadata\":{\"title\":\"Broken\"}",
                 sizeof(g_detail_response));
     self_test_check(state,
@@ -3610,7 +4118,15 @@ static void show_help_settings(void)
               "token       API bearer token\n"
               "library_id  (optional) skip picker\n"
               "download_dir (optional) save path\n"
-              "page_size   (optional, default 20)");
+              "page_size   (optional, default 20)\n\n"
+              "Manual progress sync spike:\n"
+              "  - disabled unless a downloaded book has\n"
+              "    one unambiguous local file mapping\n"
+              "  - only uploads the selected book while\n"
+              "    that local file is currently playing\n"
+              "  - if remote progress is ahead, sync now\n"
+              "    will not overwrite it automatically\n"
+              "  - automatic sync remains disabled");
 }
 
 /*
@@ -3711,9 +4227,10 @@ static enum plugin_status browse_library(struct abs_config *cfg,
 
             view_text("Audiobookshelf",
                       "Action skipped\n\n"
-                      "Fake backend: local playback and\n"
-                      "download management are not\n"
-                      "available in demo mode.");
+                      "Fake backend: local playback,\n"
+                      "download management, and manual\n"
+                      "progress sync are not available\n"
+                      "in demo mode.");
             return PLUGIN_OK;
         }
     }
@@ -3871,6 +4388,11 @@ static enum plugin_status browse_library(struct abs_config *cfg,
                                         text_buf, sizeof(text_buf));
                     view_text("Audiobookshelf", text_buf);
                     refresh_local_detail_state(cfg, session_lib_id);
+                    continue;
+                }
+                if (detail_action == DETAIL_ACTION_SYNC_PROGRESS) {
+                    sync_book_progress_now(cfg, text_buf, sizeof(text_buf));
+                    view_text("Audiobookshelf", text_buf);
                     continue;
                 }
 
