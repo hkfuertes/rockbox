@@ -1218,6 +1218,12 @@ static bool http_status_is_success(int http_status)
     return http_status >= 200 && http_status < 300;
 }
 
+static bool android_request_status_ok(int http_status, int bridge_rc)
+{
+    return http_status_is_success(http_status) &&
+           (bridge_rc >= 0 || bridge_rc == ANDROID_REQUEST_TRUNCATED);
+}
+
 static bool detail_has_manual_sync_mapping(void)
 {
     return g_book_detail.item_id[0] != '\0' &&
@@ -4027,7 +4033,7 @@ static void diag_test_auth(const struct abs_config *cfg,
     redact_token_text(error_buf, cfg->token,
                       redacted_error, sizeof(redacted_error));
 
-    if (http_status == 200 && bridge_rc >= 0) {
+    if (http_status == 200 && android_request_status_ok(http_status, bridge_rc)) {
         rb->snprintf(text_buf, sizeof(text_buf),
                      "Auth Test\n\n"
                      "Server:      %s\n"
@@ -4477,7 +4483,7 @@ enum plugin_status plugin_start(const void *parameter)
                     response_buf, sizeof(response_buf),
                     &http_status, error_buf, sizeof(error_buf));
 
-                if (bridge_rc < 0 || http_status != 200) {
+                if (!android_request_status_ok(http_status, bridge_rc)) {
                     rb->android_disconnect_wifi();
                     format_request_failure("Auth failed", &cfg, wifi_result,
                                            http_status, bridge_rc, error_buf,
