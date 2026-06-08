@@ -28,6 +28,17 @@ fi
 for f in .rockbox/*; do
   cp -rf "$f" /sdcard/.rockbox/
 done
+SHORTCUTS_FILE=/sdcard/.rockbox/shortcuts.txt
+if grep -q "data: /sdcard/.rockbox/rocks/custom/audiobookshelf.rock" "$SHORTCUTS_FILE" 2>/dev/null; then
+  sed -i 's#/sdcard/.rockbox/rocks/custom/audiobookshelf.rock#/data/data/org.rockbox/app_rockbox/rockbox/rocks/apps/audiobookshelf.rock#' "$SHORTCUTS_FILE"
+fi
+if grep -q "data: /sdcard/.rockbox/rocks/apps/audiobookshelf.rock" "$SHORTCUTS_FILE" 2>/dev/null; then
+  sed -i 's#/sdcard/.rockbox/rocks/apps/audiobookshelf.rock#/data/data/org.rockbox/app_rockbox/rockbox/rocks/apps/audiobookshelf.rock#' "$SHORTCUTS_FILE"
+fi
+if ! grep -q "data: /data/data/org.rockbox/app_rockbox/rockbox/rocks/apps/audiobookshelf.rock" "$SHORTCUTS_FILE" 2>/dev/null; then
+  printf '\n[shortcut]\ntype: file\ndata: /data/data/org.rockbox/app_rockbox/rockbox/rocks/apps/audiobookshelf.rock\nname: Audiobookshelf\nicon: 5\n' >> "$SHORTCUTS_FILE"
+fi
+echo "++ Updated Audiobookshelf shortcut"
 echo "++ Updated libraries"
 
 rm /system/app/org.rockbox.apk
