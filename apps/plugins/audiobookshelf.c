@@ -60,7 +60,9 @@
 #define MAX_DETAIL_AUDIO_FILES  64
 
 #define LOCAL_INDEX_PATH        SAFE_DOWNLOAD_BASE "/local-index.tsv"
-#define JSON_TMP_PATH           "/sdcard/.rockbox/audiobookshelf-response.tmp"
+#define JSON_TMP_PATH_SIZE      256
+#define JSON_PAGE_TMP_FMT       "/sdcard/.rockbox/audiobookshelf-page-%d.tmp"
+#define JSON_DETAIL_TMP_PATH    "/sdcard/.rockbox/audiobookshelf-detail.tmp"
 
 #define BOOK_PICKER_CANCEL      (-1)
 #define BOOK_PICKER_USB         (-2)
@@ -3023,6 +3025,7 @@ static bool read_downloaded_json_file(const char *path,
 
 static bool fetch_json_to_buffer_via_download(const char *endpoint,
                                               const char *header_buf,
+                                              const char *tmp_path,
                                               char *response_buf,
                                               size_t response_len,
                                               int *http_status,
@@ -3033,26 +3036,26 @@ static bool fetch_json_to_buffer_via_download(const char *endpoint,
     bool ok;
     int rc;
 
-    rb->remove(JSON_TMP_PATH);
+    rb->remove(tmp_path);
     if (http_status != NULL)
         *http_status = 0;
-    rc = rb->android_download(endpoint, header_buf, JSON_TMP_PATH,
+    rc = rb->android_download(endpoint, header_buf, tmp_path,
                               http_status, error_buf, error_len);
     if (bridge_rc != NULL)
         *bridge_rc = rc;
 
     if (rc < 0) {
-        rb->remove(JSON_TMP_PATH);
+        rb->remove(tmp_path);
         return false;
     }
     if (http_status != NULL && *http_status != 200) {
-        rb->remove(JSON_TMP_PATH);
+        rb->remove(tmp_path);
         return false;
     }
 
-    ok = read_downloaded_json_file(JSON_TMP_PATH, response_buf, response_len,
+    ok = read_downloaded_json_file(tmp_path, response_buf, response_len,
                                    error_buf, error_len);
-    rb->remove(JSON_TMP_PATH);
+    rb->remove(tmp_path);
     if (!ok && bridge_rc != NULL)
         *bridge_rc = ANDROID_REQUEST_TRUNCATED;
     return ok;
@@ -3067,9 +3070,10 @@ static bool fetch_books_page(const struct abs_config *cfg,
                              char *text_buf, size_t text_len)
 {
     char endpoint[ENDPOINT_BUF_SIZE];
+    char tmp_path[JSON_TMP_PATH_SIZE];
     const char *wifi_result;
     int http_status = 0;
-    int bridge_rc;
+    int bridge_rc = 0;
     int page_size;
 
     page_size = page_size_io != NULL ? *page_size_io : cfg->page_size;
@@ -3084,10 +3088,12 @@ static bool fetch_books_page(const struct abs_config *cfg,
                      "%s/api/libraries/%s/items?limit=%d&page=%d&sort=media.metadata.title&desc=0&minified=1",
                      cfg->server_url, library_id, page_size, page);
 
+        rb->snprintf(tmp_path, sizeof(tmp_path), JSON_PAGE_TMP_FMT, page);
         g_items_response[0] = '\0';
         error_buf[0] = '\0';
         http_status = 0;
         (void)fetch_json_to_buffer_via_download(endpoint, header_buf,
+                                                tmp_path,
                                                 g_items_response,
                                                 g_items_response_size,
                                                 &http_status, &bridge_rc,
@@ -3141,7 +3147,7 @@ static bool fetch_book_detail(const struct abs_config *cfg,
     char endpoint[ENDPOINT_BUF_SIZE];
     const char *wifi_result;
     int http_status = 0;
-    int bridge_rc;
+    int bridge_rc = 0;
 
     rb->splash(HZ, "Loading book details...");
     wifi_result = rb->android_connect_wifi();
@@ -3153,6 +3159,7 @@ static bool fetch_book_detail(const struct abs_config *cfg,
     error_buf[0] = '\0';
 
     (void)fetch_json_to_buffer_via_download(endpoint, header_buf,
+                                            JSON_DETAIL_TMP_PATH,
                                             g_detail_response,
                                             g_detail_response_size,
                                             &http_status, &bridge_rc,
