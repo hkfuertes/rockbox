@@ -21,7 +21,8 @@ unzip libs/armeabi/libmisc.so
 mkdir -p /data/data/org.rockbox/app_rockbox/rockbox
 if [ -d .rockbox/rocks ]; then
   rm -rf /data/data/org.rockbox/app_rockbox/rockbox/rocks
-  cp -rf .rockbox/rocks /data/data/org.rockbox/app_rockbox/rockbox/
+  mkdir -p /data/data/org.rockbox/app_rockbox/rockbox/rocks
+  cp -R .rockbox/rocks/* /data/data/org.rockbox/app_rockbox/rockbox/rocks/
   chmod -R 755 /data/data/org.rockbox/app_rockbox/rockbox/rocks
 fi
 for f in .rockbox/*; do
