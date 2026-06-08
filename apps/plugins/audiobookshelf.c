@@ -96,9 +96,46 @@ static int       g_book_page;
 static int       g_book_limit;
 static int       g_book_total;
 static bool      g_book_has_next;
-static char      g_items_response[ITEMS_RESPONSE_SIZE];
-static char      g_detail_response[DETAIL_RESPONSE_SIZE];
+static char      g_items_response_storage[ITEMS_RESPONSE_SIZE];
+static char      g_detail_response_storage[DETAIL_RESPONSE_SIZE];
+static char     *g_items_response = g_items_response_storage;
+static char     *g_detail_response = g_detail_response_storage;
+static size_t    g_items_response_size = ITEMS_RESPONSE_SIZE;
+static size_t    g_detail_response_size = DETAIL_RESPONSE_SIZE;
 static char      g_list_title[LIST_TITLE_SIZE];
+
+static void init_response_buffers(void)
+{
+    size_t buffer_size = 0;
+    char *buffer = (char *)rb->plugin_get_buffer(&buffer_size);
+
+    g_items_response = g_items_response_storage;
+    g_detail_response = g_detail_response_storage;
+    g_items_response_size = ITEMS_RESPONSE_SIZE;
+    g_detail_response_size = DETAIL_RESPONSE_SIZE;
+
+    if (buffer != NULL && buffer_size > ITEMS_RESPONSE_SIZE + DETAIL_RESPONSE_SIZE) {
+        size_t detail_size = buffer_size / 4;
+        size_t item_size;
+
+        if (detail_size < DETAIL_RESPONSE_SIZE)
+            detail_size = DETAIL_RESPONSE_SIZE;
+        if (detail_size > 131072)
+            detail_size = 131072;
+        if (detail_size + 1024 >= buffer_size)
+            return;
+
+        item_size = buffer_size - detail_size;
+        if (item_size > ITEMS_RESPONSE_SIZE) {
+            g_items_response = buffer;
+            g_items_response_size = item_size;
+            g_detail_response = buffer + item_size;
+            g_detail_response_size = detail_size;
+            g_items_response[0] = '\0';
+            g_detail_response[0] = '\0';
+        }
+    }
+}
 
 struct abs_book_detail {
     char item_id[BOOK_ID_SIZE];
@@ -3052,7 +3089,7 @@ static bool fetch_books_page(const struct abs_config *cfg,
         http_status = 0;
         (void)fetch_json_to_buffer_via_download(endpoint, header_buf,
                                                 g_items_response,
-                                                sizeof(g_items_response),
+                                                g_items_response_size,
                                                 &http_status, &bridge_rc,
                                                 error_buf, error_len);
 
@@ -3117,7 +3154,7 @@ static bool fetch_book_detail(const struct abs_config *cfg,
 
     (void)fetch_json_to_buffer_via_download(endpoint, header_buf,
                                             g_detail_response,
-                                            sizeof(g_detail_response),
+                                            g_detail_response_size,
                                             &http_status, &bridge_rc,
                                             error_buf, error_len);
 
@@ -3741,7 +3778,7 @@ static void self_test_books(struct abs_self_test_state *state)
                 "{\"id\":\"b1\",\"media\":{\"metadata\":{\"title\":\"Book One\",\"authorName\":\"Author\",\"seriesName\":\"Series\"},\"duration\":400},\"isDownloaded\":true,\"mediaProgress\":{\"currentTime\":100}},"
                 "{\"id\":\"b2\",\"title\":\"Standalone\"}],"
                 "\"page\":1,\"limit\":2,\"total\":5}",
-                sizeof(g_items_response));
+                g_items_response_size);
     self_test_check(state,
                     parse_books((int)rb->strlen(g_items_response), 0, 2,
                                 error_buf, sizeof(error_buf)) == 2 &&
@@ -3759,7 +3796,7 @@ static void self_test_books(struct abs_self_test_state *state)
     rb->strlcpy(g_items_response,
                 "{\"libraryItems\":[{\"id\":\"b3\",\"name\":\"Named\"}],"
                 "\"total\":1}",
-                sizeof(g_items_response));
+                g_items_response_size);
     self_test_check(state,
                     parse_books((int)rb->strlen(g_items_response), 0, 20,
                                 error_buf, sizeof(error_buf)) == 1 &&
@@ -3771,14 +3808,14 @@ static void self_test_books(struct abs_self_test_state *state)
                     "parse_books accepts libraryItems fallback");
 
     rb->strlcpy(g_items_response, "{\"results\":[{\"id\":\"b1\"}",
-                sizeof(g_items_response));
+                g_items_response_size);
     self_test_check(state,
                     parse_books((int)rb->strlen(g_items_response), 0, 20,
                                 error_buf, sizeof(error_buf)) < 0 &&
                     contains_text(error_buf, "truncated"),
                     "parse_books rejects truncated JSON");
 
-    rb->strlcpy(g_items_response, "{\"page\":0}", sizeof(g_items_response));
+    rb->strlcpy(g_items_response, "{\"page\":0}", g_items_response_size);
     self_test_check(state,
                     parse_books((int)rb->strlen(g_items_response), 0, 20,
                                 error_buf, sizeof(error_buf)) < 0 &&
@@ -3787,22 +3824,22 @@ static void self_test_books(struct abs_self_test_state *state)
 
     rb->strlcpy(g_items_response,
                 "{\"results\":[{\"title\":\"Missing Id\"}],\"total\":1}",
-                sizeof(g_items_response));
+                g_items_response_size);
     self_test_check(state,
                     parse_books((int)rb->strlen(g_items_response), 0, 20,
                                 error_buf, sizeof(error_buf)) == 0,
                     "parse_books skips items missing ids");
 
-    len = rb->snprintf(g_items_response, sizeof(g_items_response),
+    len = rb->snprintf(g_items_response, g_items_response_size,
                        "{\"results\":[");
-    for (i = 0; i < 350 && len > 0 && len < (int)sizeof(g_items_response) - 64; i++)
+    for (i = 0; i < 2000 && len > 0 && len < (int)g_items_response_size - 64; i++)
         len += rb->snprintf(g_items_response + len,
-                            sizeof(g_items_response) - (size_t)len,
+                            g_items_response_size - (size_t)len,
                             "%s{\"id\":\"b%d\",\"title\":\"T%d\"}",
                             i ? "," : "", i, i);
     rb->snprintf(g_items_response + len,
-                 sizeof(g_items_response) - (size_t)len,
-                 "],\"total\":350}");
+                 g_items_response_size - (size_t)len,
+                 "],\"total\":2000}");
     self_test_check(state,
                     parse_books((int)rb->strlen(g_items_response), 0, 20,
                                 error_buf, sizeof(error_buf)) < 0 &&
@@ -3822,7 +3859,7 @@ static void self_test_book_detail(struct abs_self_test_state *state)
                 "\"authorName\":\"Author\",\"seriesName\":\"Series\","
                 "\"narratorName\":\"Narrator\",\"publishedYear\":2024},"
                 "\"duration\":3661,\"audioFiles\":[{\"ino\":\"part-1\",\"filename\":\"01.mp3\"},{\"ino\":\"part-2\",\"filename\":\"02.m4b\"}]}}",
-                sizeof(g_detail_response));
+                g_detail_response_size);
     self_test_check(state,
                     parse_book_detail((int)rb->strlen(g_detail_response),
                                       "book-1", error_buf, sizeof(error_buf)) &&
@@ -3844,7 +3881,7 @@ static void self_test_book_detail(struct abs_self_test_state *state)
 
     rb->strlcpy(g_detail_response,
                 "{\"media\":{\"metadata\":{},\"audioFiles\":[]}}",
-                sizeof(g_detail_response));
+                g_detail_response_size);
     self_test_check(state,
                     parse_book_detail((int)rb->strlen(g_detail_response),
                                       "book-2", error_buf, sizeof(error_buf)) &&
@@ -3858,7 +3895,7 @@ static void self_test_book_detail(struct abs_self_test_state *state)
                 "{\"media\":{\"metadata\":{\"title\":\"Single File\"},"
                 "\"audioFiles\":[{\"ino\":\"ino-1\",\"filename\":\"track.M4B\","
                 "\"metadata\":{\"ext\":\".M4B\"}}]}}",
-                sizeof(g_detail_response));
+                g_detail_response_size);
     self_test_check(state,
                     parse_book_detail((int)rb->strlen(g_detail_response),
                                       "book-6", error_buf, sizeof(error_buf)) &&
@@ -3874,7 +3911,7 @@ static void self_test_book_detail(struct abs_self_test_state *state)
     g_book_detail.duration_seconds = 120;
     rb->strlcpy(g_detail_response,
                 "{\"media\":{\"duration\":120,\"audioFiles\":[{\"ino\":\"ino-1\",\"filename\":\"track.m4b\"}],\"mediaProgress\":{\"currentTime\":45,\"duration\":120}}}",
-                sizeof(g_detail_response));
+                g_detail_response_size);
     self_test_check(state,
                     detail_has_manual_sync_mapping() &&
                     extract_detail_remote_progress(&(struct abs_progress_state){0}) == true &&
@@ -3888,28 +3925,28 @@ static void self_test_book_detail(struct abs_self_test_state *state)
                     "manual sync spike parses explicit remote progress payloads");
 
     rb->strlcpy(g_detail_response, "{\"media\":{\"metadata\":{\"title\":\"Broken\"}",
-                sizeof(g_detail_response));
+                g_detail_response_size);
     self_test_check(state,
                     !parse_book_detail((int)rb->strlen(g_detail_response),
                                        "book-3", error_buf, sizeof(error_buf)) &&
                     contains_text(error_buf, "truncated"),
                     "parse_book_detail rejects truncated JSON");
 
-    rb->strlcpy(g_detail_response, "[]", sizeof(g_detail_response));
+    rb->strlcpy(g_detail_response, "[]", g_detail_response_size);
     self_test_check(state,
                     !parse_book_detail((int)rb->strlen(g_detail_response),
                                        "book-4", error_buf, sizeof(error_buf)) &&
                     contains_text(error_buf, "expected JSON object"),
                     "parse_book_detail rejects wrong root type");
 
-    len = rb->snprintf(g_detail_response, sizeof(g_detail_response),
+    len = rb->snprintf(g_detail_response, g_detail_response_size,
                        "{\"media\":{\"metadata\":{\"title\":\"Huge\"},\"audioFiles\":[");
-    for (i = 0; i < 600 && len > 0 && len < (int)sizeof(g_detail_response) - 32; i++)
+    for (i = 0; i < 600 && len > 0 && len < (int)g_detail_response_size - 32; i++)
         len += rb->snprintf(g_detail_response + len,
-                            sizeof(g_detail_response) - (size_t)len,
+                            g_detail_response_size - (size_t)len,
                             "%s{\"i\":%d}", i ? "," : "", i);
     rb->snprintf(g_detail_response + len,
-                 sizeof(g_detail_response) - (size_t)len,
+                 g_detail_response_size - (size_t)len,
                  "]}}");
     self_test_check(state,
                     !parse_book_detail((int)rb->strlen(g_detail_response),
@@ -4548,6 +4585,7 @@ enum plugin_status plugin_start(const void *parameter)
     bool menu_running = true;
 
     (void)parameter;
+    init_response_buffers();
 
 #ifdef AUDIOBOOKSHELF_FAKE_BACKEND
     /* Fake mode: config is optional; fill defaults so diagnostics work. */
