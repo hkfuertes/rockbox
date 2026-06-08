@@ -2935,6 +2935,7 @@ static bool fetch_books_page(const struct abs_config *cfg,
                              const char *header_buf,
                              const char *library_id,
                              int page,
+                             int *page_size_io,
                              char *error_buf, size_t error_len,
                              char *text_buf, size_t text_len)
 {
@@ -2942,23 +2943,43 @@ static bool fetch_books_page(const struct abs_config *cfg,
     const char *wifi_result;
     int http_status = 0;
     int bridge_rc;
+    int page_size;
+
+    page_size = page_size_io != NULL ? *page_size_io : cfg->page_size;
+    if (page_size <= 0)
+        page_size = DEFAULT_PAGE_SIZE;
 
     rb->splashf(HZ, "Loading page %d...", page + 1);
     wifi_result = rb->android_connect_wifi();
 
-    rb->snprintf(endpoint, sizeof(endpoint),
-                 "%s/api/libraries/%s/items?limit=%d&page=%d&sort=media.metadata.title&desc=0&minified=1",
-                 cfg->server_url, library_id, cfg->page_size, page);
+    while (page_size >= 1) {
+        rb->snprintf(endpoint, sizeof(endpoint),
+                     "%s/api/libraries/%s/items?limit=%d&page=%d&sort=media.metadata.title&desc=0&minified=1",
+                     cfg->server_url, library_id, page_size, page);
 
-    g_items_response[0] = '\0';
-    error_buf[0] = '\0';
+        g_items_response[0] = '\0';
+        error_buf[0] = '\0';
+        http_status = 0;
+        bridge_rc = rb->android_request(
+            "GET", endpoint, header_buf, NULL,
+            g_items_response, sizeof(g_items_response),
+            &http_status, error_buf, error_len);
 
-    bridge_rc = rb->android_request(
-        "GET", endpoint, header_buf, NULL,
-        g_items_response, sizeof(g_items_response),
-        &http_status, error_buf, error_len);
+        if (bridge_rc != ANDROID_REQUEST_TRUNCATED)
+            break;
+        if (page_size <= 1)
+            break;
+
+        page_size = (page_size + 1) / 2;
+        if (page_size_io != NULL)
+            *page_size_io = page_size;
+        rb->splashf(HZ, "Response too large; retrying %d/page", page_size);
+    }
 
     rb->android_disconnect_wifi();
+
+    if (page_size_io != NULL)
+        *page_size_io = page_size;
 
     if (bridge_rc < 0 || http_status != 200) {
         char redacted_error[ERROR_BUF_SIZE];
@@ -2971,11 +2992,11 @@ static bool fetch_books_page(const struct abs_config *cfg,
                      "Page size:    %d\n"
                      "WiFi:         %s\n"
                      "HTTP status:  %d\n"
-                     "Bridge rc:    %d\n\n"
+                     "Bridge rc:    %d (%s)\n\n"
                      "Error:\n%s",
-                     library_id, page, cfg->page_size,
+                     library_id, page, page_size,
                      wifi_result ? wifi_result : "(null)",
-                     http_status, bridge_rc,
+                     http_status, bridge_rc, android_request_rc_name(bridge_rc),
                      redacted_error[0] ? redacted_error : "(none)");
         return false;
     }
@@ -4302,11 +4323,15 @@ static enum plugin_status browse_library(struct abs_config *cfg,
     }
 
     /* Browse books page-by-page */
+    {
+    int effective_page_size = cfg->page_size;
+
     while (true) {
         int json_len;
         int sel;
 
         if (!fetch_books_page(cfg, header_buf, session_lib_id, page,
+                              &effective_page_size,
                               error_buf, sizeof(error_buf),
                               text_buf, sizeof(text_buf))) {
             view_text("Audiobookshelf", text_buf);
@@ -4314,7 +4339,7 @@ static enum plugin_status browse_library(struct abs_config *cfg,
         }
 
         json_len = (int)rb->strlen(g_items_response);
-        if (parse_books(json_len, page, cfg->page_size,
+        if (parse_books(json_len, page, effective_page_size,
                         error_buf, sizeof(error_buf)) < 0) {
             view_text("Audiobookshelf", error_buf);
             return PLUGIN_OK;
@@ -4414,6 +4439,7 @@ static enum plugin_status browse_library(struct abs_config *cfg,
             }
             continue;
         }
+    }
     }
 
 #endif /* AUDIOBOOKSHELF_FAKE_BACKEND */
