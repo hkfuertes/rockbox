@@ -635,10 +635,36 @@ static bool read_config(struct abs_config *cfg,
     rb->close(fd);
     cfg->page_size = sanitize_page_size(cfg->page_size);
 
+    /* Strip trailing slashes so endpoints are built cleanly. */
+    {
+        size_t len = rb->strlen(cfg->server_url);
+        while (len > 0 && cfg->server_url[len - 1] == '/')
+            cfg->server_url[--len] = '\0';
+    }
+
     if (cfg->server_url[0] == '\0') {
         rb->snprintf(error_buf, error_len,
                      "Missing 'server_url' in " CONFIG_PATH "\n\n%s",
                      config_error_hint);
+        return false;
+    }
+
+    if (!rb->strncmp(cfg->server_url, "http://", 7)) {
+        rb->snprintf(error_buf, error_len,
+                     "Plain HTTP is not allowed.\n\n"
+                     "Update " CONFIG_PATH ":\n"
+                     "  server_url: https://your.abs.server\n\n"
+                     "HTTP sends your API token in the clear.");
+        cfg->server_url[0] = '\0';
+        return false;
+    }
+
+    if (rb->strncmp(cfg->server_url, "https://", 8)) {
+        rb->snprintf(error_buf, error_len,
+                     "server_url must start with https://\n\n"
+                     "Found: %s\n\n%s",
+                     cfg->server_url, config_error_hint);
+        cfg->server_url[0] = '\0';
         return false;
     }
 
@@ -1298,6 +1324,9 @@ static bool fetch_books_page(const struct abs_config *cfg,
     rb->android_disconnect_wifi();
 
     if (bridge_rc < 0 || http_status != 200) {
+        char redacted_error[ERROR_BUF_SIZE];
+        redact_token_text(error_buf, cfg->token,
+                          redacted_error, sizeof(redacted_error));
         rb->snprintf(text_buf, text_len,
                      "Book list fetch failed\n\n"
                      "Library ID:   %s\n"
@@ -1310,7 +1339,7 @@ static bool fetch_books_page(const struct abs_config *cfg,
                      library_id, page, cfg->page_size,
                      wifi_result ? wifi_result : "(null)",
                      http_status, bridge_rc,
-                     error_buf[0] ? error_buf : "(none)");
+                     redacted_error[0] ? redacted_error : "(none)");
         return false;
     }
 
@@ -1345,6 +1374,9 @@ static bool fetch_book_detail(const struct abs_config *cfg,
     rb->android_disconnect_wifi();
 
     if (bridge_rc < 0 || http_status != 200) {
+        char redacted_error[ERROR_BUF_SIZE];
+        redact_token_text(error_buf, cfg->token,
+                          redacted_error, sizeof(redacted_error));
         rb->snprintf(text_buf, text_len,
                      "Book detail fetch failed\n\n"
                      "Book ID:                 %s\n"
@@ -1355,7 +1387,7 @@ static bool fetch_book_detail(const struct abs_config *cfg,
                      item_id,
                      wifi_result ? wifi_result : "(null)",
                      http_status, bridge_rc,
-                     error_buf[0] ? error_buf : "(none)");
+                     redacted_error[0] ? redacted_error : "(none)");
         return false;
     }
 
@@ -1491,6 +1523,10 @@ static void populate_fake_detail(const char *item_id)
 #define MAIN_MENU_HELP        3
 #define MAIN_MENU_QUIT        4
 
+#define DIAG_MENU_WIFI        0
+#define DIAG_MENU_AUTH        1
+#define DIAG_MENU_BACK        2
+
 static void show_local_downloads(void)
 {
     view_text("Local Downloads",
@@ -1501,11 +1537,73 @@ static void show_local_downloads(void)
               DEFAULT_DOWNLOAD_DIR);
 }
 
-static void show_diagnostics(const struct abs_config *cfg)
+#ifndef AUDIOBOOKSHELF_FAKE_BACKEND
+static void diag_test_wifi(void)
 {
     char text_buf[TEXT_BUF_SIZE];
+    const char *wifi_result;
 
+    rb->splash(HZ, "Testing WiFi...");
+    wifi_result = rb->android_connect_wifi();
+    rb->android_disconnect_wifi();
+
+    rb->snprintf(text_buf, sizeof(text_buf),
+                 "WiFi Test\n\nResult: %s",
+                 wifi_result ? wifi_result : "(null)");
+    view_text("Diagnostics: WiFi", text_buf);
+}
+
+static void diag_test_auth(const struct abs_config *cfg,
+                           const char *header_buf)
+{
+    char text_buf[TEXT_BUF_SIZE];
+    char error_buf[ERROR_BUF_SIZE];
+    char redacted_error[ERROR_BUF_SIZE];
+    char response_buf[RESPONSE_BUF_SIZE];
+    char endpoint[ENDPOINT_BUF_SIZE];
+    const char *wifi_result;
+    int http_status = 0;
+    int bridge_rc;
+
+    rb->splash(HZ, "Testing auth...");
+    wifi_result = rb->android_connect_wifi();
+
+    rb->snprintf(endpoint, sizeof(endpoint), "%s/api/me", cfg->server_url);
+    response_buf[0] = '\0';
+    error_buf[0]    = '\0';
+    bridge_rc = rb->android_request(
+        "GET", endpoint, header_buf, NULL,
+        response_buf, sizeof(response_buf),
+        &http_status, error_buf, sizeof(error_buf));
+
+    rb->android_disconnect_wifi();
+
+    redact_token_text(error_buf, cfg->token,
+                      redacted_error, sizeof(redacted_error));
+
+    rb->snprintf(text_buf, sizeof(text_buf),
+                 "Auth Test\n\n"
+                 "Server:      %s\n"
+                 "WiFi:        %s\n"
+                 "HTTP status: %d\n"
+                 "Bridge rc:   %d\n"
+                 "Error:       %s",
+                 cfg->server_url,
+                 wifi_result ? wifi_result : "(null)",
+                 http_status, bridge_rc,
+                 redacted_error[0] ? redacted_error : "(none)");
+    view_text("Diagnostics: Auth", text_buf);
+}
+#endif /* !AUDIOBOOKSHELF_FAKE_BACKEND */
+
+static void show_diagnostics(const struct abs_config *cfg,
+                             const char *header_buf)
+{
 #ifdef AUDIOBOOKSHELF_FAKE_BACKEND
+    char text_buf[TEXT_BUF_SIZE];
+
+    (void)cfg;
+    (void)header_buf;
     rb->snprintf(text_buf, sizeof(text_buf),
                  "Audiobookshelf Diagnostics\n\n"
                  "Mode:         FAKE BACKEND\n"
@@ -1513,21 +1611,30 @@ static void show_diagnostics(const struct abs_config *cfg)
                  "Fake books:   %d\n\n"
                  "Build:        " __DATE__ " " __TIME__,
                  FAKE_LIB_COUNT, FAKE_BOOK_COUNT);
-#else
-    rb->snprintf(text_buf, sizeof(text_buf),
-                 "Audiobookshelf Diagnostics\n\n"
-                 "Mode:         Network\n"
-                 "Server:       %s\n"
-                 "Library ID:   %s\n"
-                 "Download dir: %s\n"
-                 "Page size:    %d\n\n"
-                 "Build:        " __DATE__ " " __TIME__,
-                 cfg->server_url[0] ? cfg->server_url : "(not set)",
-                 cfg->library_id[0] ? cfg->library_id : "(auto)",
-                 cfg->download_dir[0] ? cfg->download_dir : DEFAULT_DOWNLOAD_DIR,
-                 cfg->page_size);
-#endif
     view_text("Diagnostics", text_buf);
+#else
+    int menu_sel = DIAG_MENU_WIFI;
+    bool running = true;
+
+    while (running) {
+        MENUITEM_STRINGLIST(diag_menu, "Diagnostics", NULL,
+                            "Test WiFi",
+                            "Test Auth",
+                            "Back");
+        switch (rb->do_menu(&diag_menu, &menu_sel, NULL, false)) {
+        case DIAG_MENU_WIFI:
+            diag_test_wifi();
+            break;
+        case DIAG_MENU_AUTH:
+            diag_test_auth(cfg, header_buf);
+            break;
+        case DIAG_MENU_BACK:
+        default:
+            running = false;
+            break;
+        }
+    }
+#endif
 }
 
 static void show_help_settings(void)
@@ -1678,6 +1785,9 @@ static enum plugin_status browse_library(struct abs_config *cfg,
         rb->android_disconnect_wifi();
 
         if (http_status != 200) {
+            char redacted_error[ERROR_BUF_SIZE];
+            redact_token_text(error_buf, cfg->token,
+                              redacted_error, sizeof(redacted_error));
             rb->snprintf(text_buf, sizeof(text_buf),
                          "Library fetch failed\n\n"
                          "Server:      %s\n"
@@ -1685,7 +1795,7 @@ static enum plugin_status browse_library(struct abs_config *cfg,
                          "Bridge rc:   %d\n\n"
                          "Error:\n%s",
                          cfg->server_url, http_status, bridge_rc,
-                         error_buf[0] ? error_buf : "(none)");
+                         redacted_error[0] ? redacted_error : "(none)");
             view_text("Audiobookshelf", text_buf);
             return PLUGIN_OK;
         }
@@ -1875,7 +1985,10 @@ enum plugin_status plugin_start(const void *parameter)
                     &http_status, error_buf, sizeof(error_buf));
 
                 if (http_status != 200) {
+                    char redacted_error[ERROR_BUF_SIZE];
                     rb->android_disconnect_wifi();
+                    redact_token_text(error_buf, cfg.token,
+                                      redacted_error, sizeof(redacted_error));
                     rb->snprintf(text_buf, sizeof(text_buf),
                                  "Auth failed\n\n"
                                  "Server:      %s\n\n"
@@ -1886,7 +1999,7 @@ enum plugin_status plugin_start(const void *parameter)
                                  cfg.server_url,
                                  wifi_result ? wifi_result : "(null)",
                                  http_status, bridge_rc,
-                                 error_buf[0] ? error_buf : "(none)");
+                                 redacted_error[0] ? redacted_error : "(none)");
                     view_text("Audiobookshelf", text_buf);
                     auth_ok = false;
                 }
@@ -1904,7 +2017,7 @@ enum plugin_status plugin_start(const void *parameter)
             break;
 
         case MAIN_MENU_DIAG:
-            show_diagnostics(&cfg);
+            show_diagnostics(&cfg, header_buf);
             break;
 
         case MAIN_MENU_HELP:
