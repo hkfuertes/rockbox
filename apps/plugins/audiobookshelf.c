@@ -172,6 +172,55 @@ static int tok_to_int(const char *js, const jsmntok_t *tok)
     return rb->atoi(buf);
 }
 
+static bool tok_to_bool(const char *js, const jsmntok_t *tok, bool *value)
+{
+    char buf[8];
+
+    if (!value || (tok->type != JSMN_PRIMITIVE && tok->type != JSMN_STRING))
+        return false;
+
+    tok_copy(js, tok, buf, sizeof(buf));
+    if (!rb->strcmp(buf, "true") || !rb->strcmp(buf, "1")) {
+        *value = true;
+        return true;
+    }
+    if (!rb->strcmp(buf, "false") || !rb->strcmp(buf, "0")) {
+        *value = false;
+        return true;
+    }
+
+    return false;
+}
+
+static int tok_to_percent(const char *js, const jsmntok_t *tok)
+{
+    char buf[24];
+    char *dot;
+    int whole;
+    int frac = 0;
+
+    if (tok->type != JSMN_PRIMITIVE && tok->type != JSMN_STRING)
+        return -1;
+
+    tok_copy(js, tok, buf, sizeof(buf));
+    whole = rb->atoi(buf);
+    dot = rb->strchr(buf, '.');
+
+    if (whole > 1)
+        return whole > 100 ? 100 : whole;
+    if (!dot)
+        return whole == 1 ? 100 : whole;
+    if (whole >= 1)
+        return 100;
+
+    if (dot[1] >= '0' && dot[1] <= '9')
+        frac += (dot[1] - '0') * 10;
+    if (dot[2] >= '0' && dot[2] <= '9')
+        frac += (dot[2] - '0');
+
+    return frac;
+}
+
 /*
  * Advance token index past the token at [i] and all its descendants.
  * Uses character-position containment: all tokens whose start < tokens[i].end
@@ -225,6 +274,24 @@ static void build_book_title(char *dest, size_t dest_len,
     } else {
         rb->strlcpy(dest, base, dest_len);
     }
+}
+
+static void build_book_entry(char *dest, size_t dest_len,
+                             const char *item_id,
+                             const char *title,
+                             const char *author,
+                             const char *series,
+                             const char *download_state,
+                             const char *progress_state)
+{
+    char base[BOOK_TITLE_SIZE];
+
+    build_book_title(base, sizeof(base), title, author, series);
+    rb->snprintf(dest, dest_len, "[%s] %s | DL:%s | P:%s",
+                 item_id && item_id[0] ? item_id : "?",
+                 base,
+                 download_state && download_state[0] ? download_state : "--",
+                 progress_state && progress_state[0] ? progress_state : "--");
 }
 
 static void format_duration(int seconds, char *buf, size_t buf_len)
@@ -1046,10 +1113,24 @@ static int parse_books(int json_len, int requested_page, int requested_limit,
         int metadata_idx;
         int author_idx = -1;
         int series_idx = -1;
+        int downloaded_idx = -1;
+        int progress_obj_idx = -1;
+        int progress_idx = -1;
+        int current_time_idx = -1;
+        int duration_idx = -1;
+        int finished_idx = -1;
+        int progress_percent = -1;
+        int current_time = -1;
+        int duration = -1;
+        bool downloaded = false;
+        bool downloaded_known = false;
+        bool finished = false;
         char id[BOOK_ID_SIZE];
         char title[BOOK_TITLE_SIZE];
         char author[BOOK_META_SIZE];
         char series[BOOK_META_SIZE];
+        char download_state[8];
+        char progress_state[16];
 
         if (g_tokens[i].type != JSMN_OBJECT) {
             i = skip_value(i, r, g_tokens);
@@ -1060,6 +1141,8 @@ static int parse_books(int json_len, int requested_page, int requested_limit,
         title[0] = '\0';
         author[0] = '\0';
         series[0] = '\0';
+        rb->strlcpy(download_state, "--", sizeof(download_state));
+        rb->strlcpy(progress_state, "--", sizeof(progress_state));
 
         id_idx = find_object_value(g_items_response, g_tokens, r, i, "id");
         title_idx = find_object_value(g_items_response, g_tokens, r, i, "title");
@@ -1071,6 +1154,28 @@ static int parse_books(int json_len, int requested_page, int requested_limit,
                                        "seriesName");
 
         media_idx = find_object_value(g_items_response, g_tokens, r, i, "media");
+        downloaded_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                           "isDownloaded");
+        if (downloaded_idx < 0)
+            downloaded_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                               "downloaded");
+        progress_obj_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                             "mediaProgress");
+        if (progress_obj_idx < 0)
+            progress_obj_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                                 "userMediaProgress");
+        progress_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                         "progress");
+        if (progress_idx < 0)
+            progress_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                             "percentComplete");
+        current_time_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                             "currentTime");
+        duration_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                         "duration");
+        finished_idx = find_object_value(g_items_response, g_tokens, r, i,
+                                         "isFinished");
+
         if (media_idx >= 0 && g_tokens[media_idx].type == JSMN_OBJECT) {
             metadata_idx = find_object_value(g_items_response, g_tokens, r,
                                              media_idx, "metadata");
@@ -1085,6 +1190,39 @@ static int parse_books(int json_len, int requested_page, int requested_limit,
                     series_idx = find_object_value(g_items_response, g_tokens, r,
                                                    metadata_idx, "seriesName");
             }
+            if (downloaded_idx < 0)
+                downloaded_idx = find_object_value(g_items_response, g_tokens, r,
+                                                   media_idx, "isDownloaded");
+            if (progress_obj_idx < 0)
+                progress_obj_idx = find_object_value(g_items_response, g_tokens, r,
+                                                     media_idx, "mediaProgress");
+            if (progress_obj_idx < 0)
+                progress_obj_idx = find_object_value(g_items_response, g_tokens, r,
+                                                     media_idx, "userMediaProgress");
+            if (duration_idx < 0)
+                duration_idx = find_object_value(g_items_response, g_tokens, r,
+                                                 media_idx, "duration");
+        }
+
+        if (progress_obj_idx >= 0 && g_tokens[progress_obj_idx].type == JSMN_OBJECT) {
+            if (progress_idx < 0)
+                progress_idx = find_object_value(g_items_response, g_tokens, r,
+                                                 progress_obj_idx, "progress");
+            if (progress_idx < 0)
+                progress_idx = find_object_value(g_items_response, g_tokens, r,
+                                                 progress_obj_idx, "percentage");
+            if (progress_idx < 0)
+                progress_idx = find_object_value(g_items_response, g_tokens, r,
+                                                 progress_obj_idx, "percentComplete");
+            if (current_time_idx < 0)
+                current_time_idx = find_object_value(g_items_response, g_tokens, r,
+                                                     progress_obj_idx, "currentTime");
+            if (duration_idx < 0)
+                duration_idx = find_object_value(g_items_response, g_tokens, r,
+                                                 progress_obj_idx, "duration");
+            if (finished_idx < 0)
+                finished_idx = find_object_value(g_items_response, g_tokens, r,
+                                                 progress_obj_idx, "isFinished");
         }
 
         if (id_idx >= 0 && g_tokens[id_idx].type == JSMN_STRING)
@@ -1097,13 +1235,43 @@ static int parse_books(int json_len, int requested_page, int requested_limit,
         if (series_idx >= 0 && g_tokens[series_idx].type == JSMN_STRING)
             tok_copy(g_items_response, &g_tokens[series_idx], series,
                      sizeof(series));
+        if (downloaded_idx >= 0)
+            downloaded_known = tok_to_bool(g_items_response,
+                                           &g_tokens[downloaded_idx],
+                                           &downloaded);
+        if (finished_idx >= 0)
+            (void)tok_to_bool(g_items_response, &g_tokens[finished_idx],
+                              &finished);
+        if (progress_idx >= 0)
+            progress_percent = tok_to_percent(g_items_response,
+                                              &g_tokens[progress_idx]);
+        if (current_time_idx >= 0)
+            current_time = tok_to_int(g_items_response,
+                                      &g_tokens[current_time_idx]);
+        if (duration_idx >= 0)
+            duration = tok_to_int(g_items_response,
+                                  &g_tokens[duration_idx]);
+
+        if (downloaded_known)
+            rb->strlcpy(download_state, downloaded ? "yes" : "no",
+                        sizeof(download_state));
+        if (finished) {
+            rb->strlcpy(progress_state, "100%", sizeof(progress_state));
+        } else if (progress_percent >= 0) {
+            rb->snprintf(progress_state, sizeof(progress_state), "%d%%",
+                         progress_percent > 100 ? 100 : progress_percent);
+        } else if (current_time > 0 && duration > 0) {
+            rb->snprintf(progress_state, sizeof(progress_state), "%d%%",
+                         (current_time * 100) / duration);
+        }
 
         if (id[0] != '\0') {
             rb->strlcpy(g_book_ids[g_book_count], id,
                         sizeof(g_book_ids[g_book_count]));
-            build_book_title(g_book_titles[g_book_count],
+            build_book_entry(g_book_titles[g_book_count],
                              sizeof(g_book_titles[g_book_count]),
-                             title, author, series);
+                             id, title, author, series,
+                             download_state, progress_state);
             g_book_count++;
         }
 
@@ -1622,11 +1790,14 @@ static void populate_fake_books(int page, int page_size)
         rb->strlcpy(g_book_ids[g_book_count],
                     fake_books[src].id,
                     sizeof(g_book_ids[g_book_count]));
-        build_book_title(g_book_titles[g_book_count],
+        build_book_entry(g_book_titles[g_book_count],
                          sizeof(g_book_titles[g_book_count]),
+                         fake_books[src].id,
                          fake_books[src].title,
                          fake_books[src].author,
-                         fake_books[src].series);
+                         fake_books[src].series,
+                         "--",
+                         "--");
         g_book_count++;
     }
 
@@ -1892,7 +2063,7 @@ static void self_test_books(struct abs_self_test_state *state)
 
     rb->strlcpy(g_items_response,
                 "{\"results\":["
-                "{\"id\":\"b1\",\"media\":{\"metadata\":{\"title\":\"Book One\",\"authorName\":\"Author\",\"seriesName\":\"Series\"}}},"
+                "{\"id\":\"b1\",\"media\":{\"metadata\":{\"title\":\"Book One\",\"authorName\":\"Author\",\"seriesName\":\"Series\"},\"duration\":400},\"isDownloaded\":true,\"mediaProgress\":{\"currentTime\":100}},"
                 "{\"id\":\"b2\",\"title\":\"Standalone\"}],"
                 "\"page\":1,\"limit\":2,\"total\":5}",
                 sizeof(g_items_response));
@@ -1902,10 +2073,13 @@ static void self_test_books(struct abs_self_test_state *state)
                     g_book_page == 1 && g_book_limit == 2 && g_book_total == 5 &&
                     g_book_has_next &&
                     rb->strcmp(g_book_ids[0], "b1") == 0 &&
+                    contains_text(g_book_titles[0], "[b1]") &&
                     contains_text(g_book_titles[0], "Book One") &&
                     contains_text(g_book_titles[0], "Author") &&
+                    contains_text(g_book_titles[0], "DL:yes") &&
+                    contains_text(g_book_titles[0], "P:25%") &&
                     rb->strcmp(g_book_ids[1], "b2") == 0,
-                    "parse_books parses metadata and paging");
+                    "parse_books parses metadata, status, and paging");
 
     rb->strlcpy(g_items_response,
                 "{\"libraryItems\":[{\"id\":\"b3\",\"name\":\"Named\"}],"
@@ -1915,7 +2089,10 @@ static void self_test_books(struct abs_self_test_state *state)
                     parse_books((int)rb->strlen(g_items_response), 0, 20,
                                 error_buf, sizeof(error_buf)) == 1 &&
                     rb->strcmp(g_book_ids[0], "b3") == 0 &&
-                    contains_text(g_book_titles[0], "Named"),
+                    contains_text(g_book_titles[0], "[b3]") &&
+                    contains_text(g_book_titles[0], "Named") &&
+                    contains_text(g_book_titles[0], "DL:--") &&
+                    contains_text(g_book_titles[0], "P:--"),
                     "parse_books accepts libraryItems fallback");
 
     rb->strlcpy(g_items_response, "{\"results\":[{\"id\":\"b1\"}",
