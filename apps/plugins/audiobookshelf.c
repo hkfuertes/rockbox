@@ -66,10 +66,11 @@
 #define BOOK_PICKER_PREV_PAGE   (-3)
 #define BOOK_PICKER_NEXT_PAGE   (-4)
 
-#define DETAIL_ACTION_BACK       0
-#define DETAIL_ACTION_DOWNLOAD   1
-#define DETAIL_ACTION_PLAY_LOCAL 2
-#define DETAIL_ACTION_USB       -2
+#define DETAIL_ACTION_BACK         0
+#define DETAIL_ACTION_DOWNLOAD     1
+#define DETAIL_ACTION_PLAY_LOCAL   2
+#define DETAIL_ACTION_DELETE_LOCAL 3
+#define DETAIL_ACTION_USB         -2
 
 /* ---- config --------------------------------------------------------------- */
 struct abs_config {
@@ -115,6 +116,8 @@ struct abs_book_detail {
     int tracked_audio_file_count;
     int downloadable_audio_file_count;
     int local_audio_file_count;
+    int local_index_entry_count;
+    int local_stale_index_count;
     bool audio_files_known;
     bool has_audio_files;
     bool has_single_audio_file;
@@ -132,6 +135,9 @@ static int count_local_indexed_detail_files(const struct abs_config *cfg,
                                             const char *library_id,
                                             char *first_path,
                                             size_t first_path_len);
+static int count_local_detail_index_entries(const struct abs_config *cfg,
+                                            const char *library_id,
+                                            bool existing_only);
 
 /* ---- helpers -------------------------------------------------------------- */
 
@@ -798,12 +804,98 @@ static bool write_local_index_path(const struct abs_config *cfg,
     return true;
 }
 
+static bool parse_local_index_line_for_item(char *line,
+                                            const struct abs_config *cfg,
+                                            const char *library_id,
+                                            const char *item_id,
+                                            char *path_buf,
+                                            size_t path_len)
+{
+    char *server;
+    char *library;
+    char *item;
+    char *media;
+    char *path;
+    char *tab;
+
+    if (path_len > 0)
+        path_buf[0] = '\0';
+    if (cfg == NULL || library_id == NULL || item_id == NULL)
+        return false;
+
+    server = line;
+    tab = rb->strchr(server, '\t');
+    if (!tab)
+        return false;
+    *tab++ = '\0';
+    library = tab;
+    tab = rb->strchr(library, '\t');
+    if (!tab)
+        return false;
+    *tab++ = '\0';
+    item = tab;
+    tab = rb->strchr(item, '\t');
+    if (!tab)
+        return false;
+    *tab++ = '\0';
+    media = tab;
+    tab = rb->strchr(media, '\t');
+    if (!tab)
+        return false;
+    *tab++ = '\0';
+    path = trim_ws(tab);
+    (void)media;
+
+    if (path_len > 0)
+        rb->strlcpy(path_buf, path, path_len);
+
+    return !rb->strcmp(server, cfg->server_url) &&
+           !rb->strcmp(library, library_id) &&
+           !rb->strcmp(item, item_id);
+}
+
+static int count_local_detail_index_entries(const struct abs_config *cfg,
+                                            const char *library_id,
+                                            bool existing_only)
+{
+    int fd;
+    int count = 0;
+    char line[INDEX_LINE_BUF_SIZE];
+
+    if (cfg == NULL || library_id == NULL || library_id[0] == '\0')
+        return 0;
+
+    fd = rb->open(LOCAL_INDEX_PATH, O_RDONLY);
+    if (fd < 0)
+        return 0;
+
+    while (rb->read_line(fd, line, sizeof(line)) > 0) {
+        char parse_buf[INDEX_LINE_BUF_SIZE];
+        char path_buf[MAX_PATH];
+
+        rb->strlcpy(parse_buf, line, sizeof(parse_buf));
+        if (!parse_local_index_line_for_item(parse_buf, cfg, library_id,
+                                             g_book_detail.item_id,
+                                             path_buf, sizeof(path_buf)))
+            continue;
+        if (existing_only &&
+            (!local_index_path_is_safe(cfg, path_buf) || !rb->file_exists(path_buf)))
+            continue;
+        count++;
+    }
+
+    rb->close(fd);
+    return count;
+}
+
 static void refresh_local_detail_state(const struct abs_config *cfg,
                                        const char *library_id)
 {
     g_book_detail.local_file_found = false;
     g_book_detail.local_path[0] = '\0';
     g_book_detail.local_audio_file_count = 0;
+    g_book_detail.local_index_entry_count = 0;
+    g_book_detail.local_stale_index_count = 0;
 
     if (cfg == NULL || library_id == NULL || library_id[0] == '\0')
         return;
@@ -811,32 +903,42 @@ static void refresh_local_detail_state(const struct abs_config *cfg,
     g_book_detail.local_audio_file_count = count_local_indexed_detail_files(
         cfg, library_id, g_book_detail.local_path,
         sizeof(g_book_detail.local_path));
+    g_book_detail.local_index_entry_count = count_local_detail_index_entries(
+        cfg, library_id, false);
+    g_book_detail.local_stale_index_count =
+        g_book_detail.local_index_entry_count - g_book_detail.local_audio_file_count;
+    if (g_book_detail.local_stale_index_count < 0)
+        g_book_detail.local_stale_index_count = 0;
 
+    g_book_detail.local_file_found = g_book_detail.local_audio_file_count > 0;
     if (g_book_detail.has_single_audio_file &&
-        g_book_detail.single_audio_ino[0] != '\0') {
-        g_book_detail.local_file_found = read_local_index_path(
-            cfg,
-            library_id,
-            g_book_detail.item_id,
-            g_book_detail.single_audio_ino,
-            g_book_detail.local_path,
-            sizeof(g_book_detail.local_path));
-    }
+        g_book_detail.single_audio_ino[0] != '\0' &&
+        read_local_index_path(cfg, library_id,
+                              g_book_detail.item_id,
+                              g_book_detail.single_audio_ino,
+                              g_book_detail.local_path,
+                              sizeof(g_book_detail.local_path)))
+        g_book_detail.local_file_found = true;
 }
 
-static bool play_local_detail_file(char *error_buf, size_t error_len)
+static bool play_local_detail_file(const struct abs_config *cfg,
+                                   const char *library_id,
+                                   char *error_buf,
+                                   size_t error_len)
 {
-    if (!g_book_detail.local_file_found || g_book_detail.local_path[0] == '\0') {
+    int i;
+    int queued = 0;
+
+    if (cfg == NULL || library_id == NULL || library_id[0] == '\0') {
         rb->snprintf(error_buf, error_len,
-                     "No local file indexed for this book.");
+                     "Cannot play local files without library context.");
         return false;
     }
-    if (!rb->file_exists(g_book_detail.local_path)) {
+    if (g_book_detail.local_audio_file_count <= 0) {
         rb->snprintf(error_buf, error_len,
-                     "Indexed local file is missing:\n%s",
-                     g_book_detail.local_path);
-        g_book_detail.local_file_found = false;
-        g_book_detail.local_path[0] = '\0';
+                     g_book_detail.local_index_entry_count > 0 ?
+                     "Indexed local files are missing or stale.\nUse Delete Local to repair the index or download again." :
+                     "No local files indexed for this book.");
         return false;
     }
 
@@ -846,16 +948,191 @@ static bool play_local_detail_file(char *error_buf, size_t error_len)
                      "Cannot create playback playlist.");
         return false;
     }
-    if (rb->playlist_insert_track(NULL, g_book_detail.local_path,
-                                  0, false, true) < 0) {
+
+    for (i = 0; i < g_book_detail.tracked_audio_file_count; i++) {
+        char path_buf[MAX_PATH];
+
+        if (g_book_detail.audio_file_ids[i][0] == '\0' ||
+            !read_local_index_path(cfg, library_id,
+                                   g_book_detail.item_id,
+                                   g_book_detail.audio_file_ids[i],
+                                   path_buf, sizeof(path_buf)))
+            continue;
+        if (rb->playlist_insert_track(NULL, path_buf,
+                                      queued, false, true) < 0) {
+            rb->snprintf(error_buf, error_len,
+                         "Cannot queue local file:\n%s",
+                         path_buf);
+            return false;
+        }
+        queued++;
+    }
+
+    if (queued <= 0) {
         rb->snprintf(error_buf, error_len,
-                     "Cannot queue local file:\n%s",
-                     g_book_detail.local_path);
+                     "No playable local files remain.\nUse Delete Local to clear stale entries or download again.");
         return false;
     }
 
     rb->playlist_start(0, 0, 0);
     return true;
+}
+
+static bool delete_local_detail(const struct abs_config *cfg,
+                                const char *library_id,
+                                char *text_buf,
+                                size_t text_len)
+{
+    int in_fd;
+    int out_fd;
+    int matched_entries = 0;
+    int kept_entries = 0;
+    int deleted_files = 0;
+    int missing_files = 0;
+    int delete_failures = 0;
+    char line[INDEX_LINE_BUF_SIZE];
+    char tmp_path[MAX_PATH];
+    char backup_path[MAX_PATH];
+    bool backed_up_old_index = false;
+    int backup_idx;
+
+    if (cfg == NULL || library_id == NULL || library_id[0] == '\0') {
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local skipped\n\nMissing library context.");
+        return false;
+    }
+    if (g_book_detail.local_index_entry_count <= 0) {
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local skipped\n\nNo local index entries were found for this book.");
+        return false;
+    }
+    if (!rb->yesno_pop("Delete local files for this book?")) {
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local cancelled\n\nBook: %s",
+                     g_book_detail.title);
+        return false;
+    }
+    if (!ensure_directory_tree(SAFE_DOWNLOAD_BASE)) {
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local failed\n\nCannot create %s",
+                     SAFE_DOWNLOAD_BASE);
+        return false;
+    }
+
+    in_fd = rb->open(LOCAL_INDEX_PATH, O_RDONLY);
+    if (in_fd < 0) {
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local skipped\n\nLocal index file was not found.");
+        return false;
+    }
+
+    rb->snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", LOCAL_INDEX_PATH);
+    rb->remove(tmp_path);
+    out_fd = rb->open(tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (out_fd < 0) {
+        rb->close(in_fd);
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local failed\n\nCannot write local index temp file.");
+        return false;
+    }
+
+    while (rb->read_line(in_fd, line, sizeof(line)) > 0) {
+        char parse_buf[INDEX_LINE_BUF_SIZE];
+        char path_buf[MAX_PATH];
+        bool keep_line = true;
+
+        rb->strlcpy(parse_buf, line, sizeof(parse_buf));
+        if (parse_local_index_line_for_item(parse_buf, cfg, library_id,
+                                            g_book_detail.item_id,
+                                            path_buf, sizeof(path_buf))) {
+            matched_entries++;
+            if (!local_index_path_is_safe(cfg, path_buf) || !rb->file_exists(path_buf)) {
+                missing_files++;
+                keep_line = false;
+            } else if (rb->remove(path_buf) >= 0) {
+                deleted_files++;
+                keep_line = false;
+            } else {
+                delete_failures++;
+            }
+        }
+
+        if (keep_line) {
+            if (rb->fdprintf(out_fd, "%s\n", trim_ws(line)) < 0) {
+                rb->close(in_fd);
+                rb->close(out_fd);
+                rb->remove(tmp_path);
+                rb->snprintf(text_buf, text_len,
+                             "Delete Local failed\n\nCannot rewrite local index.");
+                return false;
+            }
+            kept_entries++;
+        }
+    }
+
+    rb->close(in_fd);
+    if (rb->close(out_fd) < 0) {
+        rb->remove(tmp_path);
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local failed\n\nCannot flush local index.");
+        return false;
+    }
+
+    backup_path[0] = '\0';
+    for (backup_idx = 0; backup_idx < 10; backup_idx++) {
+        rb->snprintf(backup_path, sizeof(backup_path), "%s.bak%d",
+                     LOCAL_INDEX_PATH, backup_idx);
+        if (!rb->file_exists(backup_path))
+            break;
+    }
+    if (backup_idx >= 10 || backup_path[0] == '\0') {
+        rb->remove(tmp_path);
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local failed\n\nCannot find safe local index backup path.");
+        return false;
+    }
+    if (rb->rename(LOCAL_INDEX_PATH, backup_path) < 0) {
+        rb->remove(tmp_path);
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local failed\n\nCannot preserve local index before replace.");
+        return false;
+    }
+    backed_up_old_index = true;
+
+    if (matched_entries <= 0) {
+        rb->remove(tmp_path);
+        if (backed_up_old_index)
+            rb->rename(backup_path, LOCAL_INDEX_PATH);
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local skipped\n\nNo matching local index entries were found for this book.");
+        return false;
+    }
+
+    if (rb->rename(tmp_path, LOCAL_INDEX_PATH) < 0) {
+        rb->remove(tmp_path);
+        if (backed_up_old_index)
+            rb->rename(backup_path, LOCAL_INDEX_PATH);
+        rb->snprintf(text_buf, text_len,
+                     "Delete Local failed\n\nCannot finalize local index.");
+        return false;
+    }
+
+    if (backed_up_old_index)
+        rb->remove(backup_path);
+    if (kept_entries == 0)
+        rb->remove(LOCAL_INDEX_PATH);
+
+    rb->snprintf(text_buf, text_len,
+                 delete_failures > 0 ?
+                 "Delete Local incomplete\n\nBook: %s\nDeleted files: %d\nCleared stale entries: %d\nDelete failures: %d\nRemaining index entries: %d" :
+                 "Delete Local finished\n\nBook: %s\nDeleted files: %d\nCleared stale entries: %d\nRemaining index entries: %d",
+                 g_book_detail.title,
+                 deleted_files,
+                 missing_files,
+                 delete_failures,
+                 kept_entries);
+
+    return delete_failures == 0;
 }
 
 static void redact_token_text(const char *src,
@@ -2321,9 +2598,20 @@ static int show_book_detail_menu(void)
         add_detail_line("Audio files", audio_files);
     }
     if (g_book_detail.downloadable_audio_file_count > 0) {
-        rb->snprintf(local_state, sizeof(local_state), "%d/%d",
-                     g_book_detail.local_audio_file_count,
-                     g_book_detail.downloadable_audio_file_count);
+        if (g_book_detail.local_stale_index_count > 0) {
+            rb->snprintf(local_state, sizeof(local_state), "%d/%d +%d stale",
+                         g_book_detail.local_audio_file_count,
+                         g_book_detail.downloadable_audio_file_count,
+                         g_book_detail.local_stale_index_count);
+        } else {
+            rb->snprintf(local_state, sizeof(local_state), "%d/%d",
+                         g_book_detail.local_audio_file_count,
+                         g_book_detail.downloadable_audio_file_count);
+        }
+    } else if (g_book_detail.local_stale_index_count > 0) {
+        rb->snprintf(local_state, sizeof(local_state), "%s +%d stale",
+                     g_book_detail.local_file_found ? "yes" : "no",
+                     g_book_detail.local_stale_index_count);
     } else {
         rb->strlcpy(local_state, g_book_detail.local_file_found ? "yes" : "no",
                     sizeof(local_state));
@@ -2333,6 +2621,9 @@ static int show_book_detail_menu(void)
     g_detail_action_start = g_detail_line_count;
     if (g_book_detail.local_file_found)
         rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Play Local]",
+                    sizeof(g_detail_lines[0]));
+    if (g_book_detail.local_index_entry_count > 0)
+        rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Delete Local]",
                     sizeof(g_detail_lines[0]));
     rb->strlcpy(g_detail_lines[g_detail_line_count++], "[Download]",
                 sizeof(g_detail_lines[0]));
@@ -2357,6 +2648,14 @@ static int show_book_detail_menu(void)
             if (g_book_detail.local_file_found) {
                 if (sel == action_pos) {
                     result = DETAIL_ACTION_PLAY_LOCAL;
+                    done = true;
+                    break;
+                }
+                action_pos++;
+            }
+            if (g_book_detail.local_index_entry_count > 0) {
+                if (sel == action_pos) {
+                    result = DETAIL_ACTION_DELETE_LOCAL;
                     done = true;
                     break;
                 }
@@ -3411,8 +3710,9 @@ static enum plugin_status browse_library(struct abs_config *cfg,
                 continue;
 
             view_text("Audiobookshelf",
-                      "Download skipped\n\n"
-                      "Fake backend: downloads are not\n"
+                      "Action skipped\n\n"
+                      "Fake backend: local playback and\n"
+                      "download management are not\n"
                       "available in demo mode.");
             return PLUGIN_OK;
         }
@@ -3558,10 +3858,18 @@ static enum plugin_status browse_library(struct abs_config *cfg,
                 if (detail_action == DETAIL_ACTION_BACK)
                     break;
                 if (detail_action == DETAIL_ACTION_PLAY_LOCAL) {
-                    if (!play_local_detail_file(error_buf, sizeof(error_buf)))
+                    if (!play_local_detail_file(cfg, session_lib_id,
+                                                error_buf, sizeof(error_buf)))
                         view_text("Audiobookshelf", error_buf);
                     else
                         return PLUGIN_OK;
+                    refresh_local_detail_state(cfg, session_lib_id);
+                    continue;
+                }
+                if (detail_action == DETAIL_ACTION_DELETE_LOCAL) {
+                    delete_local_detail(cfg, session_lib_id,
+                                        text_buf, sizeof(text_buf));
+                    view_text("Audiobookshelf", text_buf);
                     refresh_local_detail_state(cfg, session_lib_id);
                     continue;
                 }
