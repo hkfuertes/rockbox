@@ -61,8 +61,8 @@
 
 #define LOCAL_INDEX_PATH        SAFE_DOWNLOAD_BASE "/local-index.tsv"
 #define JSON_TMP_PATH_SIZE      256
-#define JSON_PAGE_TMP_FMT       "/sdcard/.rockbox/audiobookshelf-page-%d.tmp"
-#define JSON_DETAIL_TMP_PATH    "/sdcard/.rockbox/audiobookshelf-detail.tmp"
+#define JSON_PAGE_TMP_FMT       "/data/data/org.rockbox/cache/audiobookshelf/page-%d.tmp"
+#define JSON_DETAIL_TMP_PATH    "/data/data/org.rockbox/cache/audiobookshelf/detail.tmp"
 
 #define BOOK_PICKER_CANCEL      (-1)
 #define BOOK_PICKER_USB         (-2)

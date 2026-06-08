@@ -240,7 +240,8 @@ public class Connectivity{
     private static final String CA_CERT_PATH = "/data/data/cacert.pem";
     private static final String[] ROCKBOX_DOWNLOAD_BASE_PATHS = {
         "/sdcard/.rockbox",
-        "/sdcard/audiobookshelf"
+        "/sdcard/audiobookshelf",
+        "/data/data/org.rockbox/cache/audiobookshelf"
     };
     private static final int GO_CURL_CONNECT_TIMEOUT_SECONDS = 10;
     private static final int GO_CURL_TOTAL_TIMEOUT_SECONDS = 30;
@@ -736,7 +737,7 @@ public class Connectivity{
         }
 
         if (!isSafeDownloadPath(canonicalDestination)) {
-            return new String[]{"0", "invalid destination path: must stay under /sdcard/.rockbox/ or /sdcard/audiobookshelf/"};
+            return new String[]{"0", "invalid destination path: must stay under /sdcard/.rockbox/, /sdcard/audiobookshelf/, or app cache"};
         }
 
         if (canonicalDestination.isDirectory() ||
