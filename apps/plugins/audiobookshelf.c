@@ -377,6 +377,168 @@ static void redact_token_text(const char *src,
     }
 }
 
+static const char *config_error_hint =
+    "Expected entries in " CONFIG_PATH ":\n"
+    "  server_url: https://your.abs.server\n"
+    "  token: your_api_token\n"
+    "  library_id: (optional)\n"
+    "  download_dir: (optional)\n"
+    "  page_size: (optional, default 20)";
+
+static bool normalize_server_url(char *server_url,
+                                 char *error_buf,
+                                 size_t error_len)
+{
+    size_t len;
+
+    if (server_url[0] == '\0') {
+        rb->snprintf(error_buf, error_len,
+                     "Missing 'server_url' in " CONFIG_PATH "\n\n%s",
+                     config_error_hint);
+        return false;
+    }
+
+    len = rb->strlen(server_url);
+    while (len > 0 && server_url[len - 1] == '/')
+        server_url[--len] = '\0';
+
+    if (!rb->strncmp(server_url, "http://", 7)) {
+        rb->snprintf(error_buf, error_len,
+                     "Plain HTTP is not allowed.\n\n"
+                     "Update " CONFIG_PATH ":\n"
+                     "  server_url: https://your.abs.server\n\n"
+                     "HTTP sends your API token in the clear.");
+        server_url[0] = '\0';
+        return false;
+    }
+
+    if (rb->strncmp(server_url, "https://", 8)) {
+        rb->snprintf(error_buf, error_len,
+                     "server_url must start with https://\n\n"
+                     "Found: %s\n\n%s",
+                     server_url, config_error_hint);
+        server_url[0] = '\0';
+        return false;
+    }
+
+    return true;
+}
+
+static bool apply_config_value(struct abs_config *cfg,
+                               const char *key,
+                               char *value,
+                               char *error_buf,
+                               size_t error_len)
+{
+    if (!rb->strcmp(key, "server_url")) {
+        rb->strlcpy(cfg->server_url, value, sizeof(cfg->server_url));
+    } else if (!rb->strcmp(key, "token")) {
+        rb->strlcpy(cfg->token, value, sizeof(cfg->token));
+    } else if (!rb->strcmp(key, "library_id")) {
+        rb->strlcpy(cfg->library_id, value, sizeof(cfg->library_id));
+    } else if (!rb->strcmp(key, "download_dir")) {
+        if (value[0] != '\0')
+            rb->strlcpy(cfg->download_dir, value, sizeof(cfg->download_dir));
+    } else if (!rb->strcmp(key, "page_size")) {
+        if (value[0] != '\0')
+            cfg->page_size = rb->atoi(value);
+    } else {
+        /* Forward-compatible: ignore unknown keys, but malformed lines still fail. */
+        (void)error_buf;
+        (void)error_len;
+    }
+
+    return true;
+}
+
+static bool parse_config_line(struct abs_config *cfg,
+                              char *line,
+                              char *error_buf,
+                              size_t error_len)
+{
+    char *t = trim_ws(line);
+    char *sep;
+    char *key;
+    char *value;
+
+    if (t[0] == '\0' || t[0] == '#')
+        return true;
+
+    sep = rb->strchr(t, ':');
+    if (sep == NULL) {
+        rb->snprintf(error_buf, error_len,
+                     "Malformed config line in " CONFIG_PATH ":\n%s",
+                     t);
+        return false;
+    }
+
+    *sep = '\0';
+    key = trim_ws(t);
+    value = trim_ws(sep + 1);
+
+    if (key[0] == '\0') {
+        rb->snprintf(error_buf, error_len,
+                     "Malformed config key in " CONFIG_PATH ":\n%s",
+                     t);
+        return false;
+    }
+
+    return apply_config_value(cfg, key, value, error_buf, error_len);
+}
+
+static void init_config_defaults(struct abs_config *cfg)
+{
+    cfg->server_url[0] = '\0';
+    cfg->token[0]      = '\0';
+    cfg->library_id[0] = '\0';
+    cfg->page_size     = DEFAULT_PAGE_SIZE;
+    rb->strlcpy(cfg->download_dir, DEFAULT_DOWNLOAD_DIR,
+                sizeof(cfg->download_dir));
+}
+
+static bool validate_config(struct abs_config *cfg,
+                            char *error_buf,
+                            size_t error_len)
+{
+    cfg->page_size = sanitize_page_size(cfg->page_size);
+
+    if (!normalize_server_url(cfg->server_url, error_buf, error_len))
+        return false;
+
+    if (cfg->token[0] == '\0') {
+        rb->snprintf(error_buf, error_len,
+                     "Missing 'token' in " CONFIG_PATH "\n\n%s",
+                     config_error_hint);
+        return false;
+    }
+
+    return true;
+}
+
+static bool parse_config_text(struct abs_config *cfg,
+                              char *text,
+                              char *error_buf,
+                              size_t error_len)
+{
+    char *line = text;
+
+    init_config_defaults(cfg);
+
+    while (line != NULL && line[0] != '\0') {
+        char *next = rb->strchr(line, '\n');
+
+        if (next != NULL)
+            *next++ = '\0';
+
+        if (!parse_config_line(cfg, line, error_buf, error_len))
+            return false;
+
+        line = next;
+    }
+
+    return validate_config(cfg, error_buf, error_len);
+}
+
 static bool validate_download_root(const struct abs_config *cfg,
                                    char *root_buf,
                                    size_t root_len,
@@ -577,26 +739,13 @@ static bool download_book(const struct abs_config *cfg,
 
 /* ---- config parsing ------------------------------------------------------- */
 
-static const char *config_error_hint =
-    "Expected entries in " CONFIG_PATH ":\n"
-    "  server_url: https://your.abs.server\n"
-    "  token: your_api_token\n"
-    "  library_id: (optional)\n"
-    "  download_dir: (optional)\n"
-    "  page_size: (optional, default 20)";
-
 static bool read_config(struct abs_config *cfg,
                         char *error_buf, size_t error_len)
 {
     int fd;
     char line[LINE_BUF_SIZE];
 
-    cfg->server_url[0] = '\0';
-    cfg->token[0]      = '\0';
-    cfg->library_id[0] = '\0';
-    cfg->page_size     = DEFAULT_PAGE_SIZE;
-    rb->strlcpy(cfg->download_dir, DEFAULT_DOWNLOAD_DIR,
-                sizeof(cfg->download_dir));
+    init_config_defaults(cfg);
 
     fd = rb->open(CONFIG_PATH, O_RDONLY);
     if (fd < 0) {
@@ -606,76 +755,14 @@ static bool read_config(struct abs_config *cfg,
     }
 
     while (rb->read_line(fd, line, sizeof(line)) > 0) {
-        char *t = trim_ws(line);
-        char *v;
-
-        if (t[0] == '\0' || t[0] == '#')
-            continue;
-
-        if (!rb->strncmp(t, "server_url:", 11)) {
-            v = trim_ws(t + 11);
-            rb->strlcpy(cfg->server_url, v, sizeof(cfg->server_url));
-        } else if (!rb->strncmp(t, "token:", 6)) {
-            v = trim_ws(t + 6);
-            rb->strlcpy(cfg->token, v, sizeof(cfg->token));
-        } else if (!rb->strncmp(t, "library_id:", 11)) {
-            v = trim_ws(t + 11);
-            rb->strlcpy(cfg->library_id, v, sizeof(cfg->library_id));
-        } else if (!rb->strncmp(t, "download_dir:", 13)) {
-            v = trim_ws(t + 13);
-            if (v[0] != '\0')
-                rb->strlcpy(cfg->download_dir, v, sizeof(cfg->download_dir));
-        } else if (!rb->strncmp(t, "page_size:", 10)) {
-            v = trim_ws(t + 10);
-            if (v[0] != '\0')
-                cfg->page_size = rb->atoi(v);
+        if (!parse_config_line(cfg, line, error_buf, error_len)) {
+            rb->close(fd);
+            return false;
         }
     }
 
     rb->close(fd);
-    cfg->page_size = sanitize_page_size(cfg->page_size);
-
-    /* Strip trailing slashes so endpoints are built cleanly. */
-    {
-        size_t len = rb->strlen(cfg->server_url);
-        while (len > 0 && cfg->server_url[len - 1] == '/')
-            cfg->server_url[--len] = '\0';
-    }
-
-    if (cfg->server_url[0] == '\0') {
-        rb->snprintf(error_buf, error_len,
-                     "Missing 'server_url' in " CONFIG_PATH "\n\n%s",
-                     config_error_hint);
-        return false;
-    }
-
-    if (!rb->strncmp(cfg->server_url, "http://", 7)) {
-        rb->snprintf(error_buf, error_len,
-                     "Plain HTTP is not allowed.\n\n"
-                     "Update " CONFIG_PATH ":\n"
-                     "  server_url: https://your.abs.server\n\n"
-                     "HTTP sends your API token in the clear.");
-        cfg->server_url[0] = '\0';
-        return false;
-    }
-
-    if (rb->strncmp(cfg->server_url, "https://", 8)) {
-        rb->snprintf(error_buf, error_len,
-                     "server_url must start with https://\n\n"
-                     "Found: %s\n\n%s",
-                     cfg->server_url, config_error_hint);
-        cfg->server_url[0] = '\0';
-        return false;
-    }
-
-    if (cfg->token[0] == '\0') {
-        rb->snprintf(error_buf, error_len,
-                     "Missing 'token' in " CONFIG_PATH "\n\n%s",
-                     config_error_hint);
-        return false;
-    }
-
-    return true;
+    return validate_config(cfg, error_buf, error_len);
 }
 
 /* ---- JSON library parsing ------------------------------------------------- */
@@ -1511,6 +1598,445 @@ static void populate_fake_detail(const char *item_id)
 
 #endif /* AUDIOBOOKSHELF_FAKE_BACKEND */
 
+/* ---- deterministic self-tests -------------------------------------------- */
+
+struct abs_self_test_state {
+    int pass;
+    int fail;
+    char failures[TEXT_BUF_SIZE];
+    size_t failures_used;
+};
+
+static bool contains_text(const char *haystack, const char *needle)
+{
+    size_t i;
+    size_t hay_len;
+    size_t needle_len;
+
+    if (haystack == NULL || needle == NULL)
+        return false;
+
+    hay_len = rb->strlen(haystack);
+    needle_len = rb->strlen(needle);
+    if (needle_len == 0)
+        return true;
+    if (needle_len > hay_len)
+        return false;
+
+    for (i = 0; i <= hay_len - needle_len; i++) {
+        if (rb->memcmp(haystack + i, needle, needle_len) == 0)
+            return true;
+    }
+
+    return false;
+}
+
+static void self_test_check(struct abs_self_test_state *state,
+                            bool ok,
+                            const char *label)
+{
+    if (ok) {
+        state->pass++;
+        return;
+    }
+
+    state->fail++;
+    if (state->failures_used + 2 < sizeof(state->failures)) {
+        int written = rb->snprintf(state->failures + state->failures_used,
+                                   sizeof(state->failures) - state->failures_used,
+                                   "%s- %s",
+                                   state->failures_used == 0 ? "" : "\n",
+                                   label);
+        if (written > 0)
+            state->failures_used += (size_t)written;
+    }
+}
+
+static void self_test_config(struct abs_self_test_state *state)
+{
+    struct abs_config cfg;
+    char buf[128];
+    char config_text[512];
+    char error_buf[ERROR_BUF_SIZE];
+
+    rb->strlcpy(buf, "  hello  ", sizeof(buf));
+    self_test_check(state, rb->strcmp(trim_ws(buf), "hello") == 0,
+                    "trim_ws strips outer spaces");
+
+    rb->strlcpy(buf, "\t\nvalue\r\n", sizeof(buf));
+    self_test_check(state, rb->strcmp(trim_ws(buf), "value") == 0,
+                    "trim_ws strips tabs/newlines");
+
+    self_test_check(state, sanitize_page_size(10) == 10,
+                    "page_size keeps normal value");
+    self_test_check(state, sanitize_page_size(0) == DEFAULT_PAGE_SIZE,
+                    "page_size defaults on zero");
+    self_test_check(state, sanitize_page_size(999) == MAX_PAGE_SIZE,
+                    "page_size clamps high values");
+
+    rb->snprintf(config_text, sizeof(config_text),
+                 "# comment\n"
+                 " server_url :  https://abs.example.test///  \n"
+                 " token :  secret-token  \n"
+                 " library_id: lib-main \n"
+                 " download_dir: /sdcard/audiobookshelf/tests/ \n"
+                 " page_size: 500 \n");
+    self_test_check(state,
+                    parse_config_text(&cfg, config_text,
+                                      error_buf, sizeof(error_buf)) &&
+                    rb->strcmp(cfg.server_url, "https://abs.example.test") == 0 &&
+                    rb->strcmp(cfg.token, "secret-token") == 0 &&
+                    rb->strcmp(cfg.library_id, "lib-main") == 0 &&
+                    rb->strcmp(cfg.download_dir,
+                               "/sdcard/audiobookshelf/tests/") == 0 &&
+                    cfg.page_size == MAX_PAGE_SIZE,
+                    "config parser handles whitespace and normalization");
+
+    rb->strlcpy(config_text,
+                "server_url: http://abs.example.test\n"
+                "token: secret-token\n",
+                sizeof(config_text));
+    self_test_check(state,
+                    !parse_config_text(&cfg, config_text,
+                                       error_buf, sizeof(error_buf)) &&
+                    contains_text(error_buf, "Plain HTTP is not allowed"),
+                    "config rejects plain HTTP");
+
+    rb->strlcpy(config_text,
+                "server_url: https://abs.example.test\n"
+                "token secret-token\n",
+                sizeof(config_text));
+    self_test_check(state,
+                    !parse_config_text(&cfg, config_text,
+                                       error_buf, sizeof(error_buf)) &&
+                    contains_text(error_buf, "Malformed config line"),
+                    "config rejects malformed line");
+
+    rb->strlcpy(config_text,
+                "server_url: https://abs.example.test\n"
+                "unknown_key: value\n"
+                "token: secret-token\n",
+                sizeof(config_text));
+    self_test_check(state,
+                    parse_config_text(&cfg, config_text,
+                                      error_buf, sizeof(error_buf)) &&
+                    rb->strcmp(cfg.server_url, "https://abs.example.test") == 0 &&
+                    rb->strcmp(cfg.token, "secret-token") == 0,
+                    "config ignores unknown keys");
+
+    rb->strlcpy(config_text,
+                "server_url: https://abs.example.test\n",
+                sizeof(config_text));
+    self_test_check(state,
+                    !parse_config_text(&cfg, config_text,
+                                       error_buf, sizeof(error_buf)) &&
+                    contains_text(error_buf, "Missing 'token'"),
+                    "config requires token");
+}
+
+static void self_test_libraries(struct abs_self_test_state *state)
+{
+    char error_buf[ERROR_BUF_SIZE];
+    int i;
+    int len;
+
+    rb->strlcpy(g_lib_response,
+                "{\"libraries\":[{\"id\":\"lib1\",\"name\":\"Audiobooks\"},"
+                "{\"id\":\"lib2\"}]}",
+                sizeof(g_lib_response));
+    self_test_check(state,
+                    parse_libraries((int)rb->strlen(g_lib_response),
+                                    error_buf, sizeof(error_buf)) == 2 &&
+                    rb->strcmp(g_lib_ids[0], "lib1") == 0 &&
+                    rb->strcmp(g_lib_names[0], "Audiobooks") == 0 &&
+                    rb->strcmp(g_lib_names[1], "lib2") == 0,
+                    "parse_libraries parses ids and fallback names");
+
+    rb->strlcpy(g_lib_response, "{\"libraries\":[{\"id\":\"lib1\"}",
+                sizeof(g_lib_response));
+    self_test_check(state,
+                    parse_libraries((int)rb->strlen(g_lib_response),
+                                    error_buf, sizeof(error_buf)) < 0 &&
+                    contains_text(error_buf, "truncated"),
+                    "parse_libraries rejects truncated JSON");
+
+    rb->strlcpy(g_lib_response, "{\"libraries\":{}}", sizeof(g_lib_response));
+    self_test_check(state,
+                    parse_libraries((int)rb->strlen(g_lib_response),
+                                    error_buf, sizeof(error_buf)) < 0 &&
+                    contains_text(error_buf, "no 'libraries' array"),
+                    "parse_libraries rejects missing array");
+
+    len = rb->snprintf(g_lib_response, sizeof(g_lib_response),
+                       "{\"libraries\":[");
+    for (i = 0; i < 1100 && len > 0 && len < (int)sizeof(g_lib_response) - 4; i++)
+        len += rb->snprintf(g_lib_response + len,
+                            sizeof(g_lib_response) - (size_t)len,
+                            "%s{}",
+                            i ? "," : "");
+    rb->snprintf(g_lib_response + len,
+                 sizeof(g_lib_response) - (size_t)len,
+                 "]}");
+    self_test_check(state,
+                    parse_libraries((int)rb->strlen(g_lib_response),
+                                    error_buf, sizeof(error_buf)) < 0 &&
+                    contains_text(error_buf, "more than") &&
+                    contains_text(error_buf, "tokens"),
+                    "parse_libraries rejects oversized token sets");
+}
+
+static void self_test_books(struct abs_self_test_state *state)
+{
+    char error_buf[ERROR_BUF_SIZE];
+    int len;
+    int i;
+
+    rb->strlcpy(g_items_response,
+                "{\"results\":["
+                "{\"id\":\"b1\",\"media\":{\"metadata\":{\"title\":\"Book One\",\"authorName\":\"Author\",\"seriesName\":\"Series\"}}},"
+                "{\"id\":\"b2\",\"title\":\"Standalone\"}],"
+                "\"page\":1,\"limit\":2,\"total\":5}",
+                sizeof(g_items_response));
+    self_test_check(state,
+                    parse_books((int)rb->strlen(g_items_response), 0, 2,
+                                error_buf, sizeof(error_buf)) == 2 &&
+                    g_book_page == 1 && g_book_limit == 2 && g_book_total == 5 &&
+                    g_book_has_next &&
+                    rb->strcmp(g_book_ids[0], "b1") == 0 &&
+                    contains_text(g_book_titles[0], "Book One") &&
+                    contains_text(g_book_titles[0], "Author") &&
+                    rb->strcmp(g_book_ids[1], "b2") == 0,
+                    "parse_books parses metadata and paging");
+
+    rb->strlcpy(g_items_response,
+                "{\"libraryItems\":[{\"id\":\"b3\",\"name\":\"Named\"}],"
+                "\"total\":1}",
+                sizeof(g_items_response));
+    self_test_check(state,
+                    parse_books((int)rb->strlen(g_items_response), 0, 20,
+                                error_buf, sizeof(error_buf)) == 1 &&
+                    rb->strcmp(g_book_ids[0], "b3") == 0 &&
+                    contains_text(g_book_titles[0], "Named"),
+                    "parse_books accepts libraryItems fallback");
+
+    rb->strlcpy(g_items_response, "{\"results\":[{\"id\":\"b1\"}",
+                sizeof(g_items_response));
+    self_test_check(state,
+                    parse_books((int)rb->strlen(g_items_response), 0, 20,
+                                error_buf, sizeof(error_buf)) < 0 &&
+                    contains_text(error_buf, "truncated"),
+                    "parse_books rejects truncated JSON");
+
+    rb->strlcpy(g_items_response, "{\"page\":0}", sizeof(g_items_response));
+    self_test_check(state,
+                    parse_books((int)rb->strlen(g_items_response), 0, 20,
+                                error_buf, sizeof(error_buf)) < 0 &&
+                    contains_text(error_buf, "no 'results' array"),
+                    "parse_books rejects missing results array");
+
+    rb->strlcpy(g_items_response,
+                "{\"results\":[{\"title\":\"Missing Id\"}],\"total\":1}",
+                sizeof(g_items_response));
+    self_test_check(state,
+                    parse_books((int)rb->strlen(g_items_response), 0, 20,
+                                error_buf, sizeof(error_buf)) == 0,
+                    "parse_books skips items missing ids");
+
+    len = rb->snprintf(g_items_response, sizeof(g_items_response),
+                       "{\"results\":[");
+    for (i = 0; i < 350 && len > 0 && len < (int)sizeof(g_items_response) - 64; i++)
+        len += rb->snprintf(g_items_response + len,
+                            sizeof(g_items_response) - (size_t)len,
+                            "%s{\"id\":\"b%d\",\"title\":\"T%d\"}",
+                            i ? "," : "", i, i);
+    rb->snprintf(g_items_response + len,
+                 sizeof(g_items_response) - (size_t)len,
+                 "],\"total\":350}");
+    self_test_check(state,
+                    parse_books((int)rb->strlen(g_items_response), 0, 20,
+                                error_buf, sizeof(error_buf)) < 0 &&
+                    contains_text(error_buf, "more than") &&
+                    contains_text(error_buf, "tokens"),
+                    "parse_books rejects oversized token sets");
+}
+
+static void self_test_book_detail(struct abs_self_test_state *state)
+{
+    char error_buf[ERROR_BUF_SIZE];
+    int len;
+    int i;
+
+    rb->strlcpy(g_detail_response,
+                "{\"media\":{\"metadata\":{\"title\":\"Detail Book\","
+                "\"authorName\":\"Author\",\"seriesName\":\"Series\","
+                "\"narratorName\":\"Narrator\",\"publishedYear\":2024},"
+                "\"duration\":3661,\"audioFiles\":[{\"index\":0},{\"index\":1}]}}",
+                sizeof(g_detail_response));
+    self_test_check(state,
+                    parse_book_detail((int)rb->strlen(g_detail_response),
+                                      "book-1", error_buf, sizeof(error_buf)) &&
+                    rb->strcmp(g_book_detail.item_id, "book-1") == 0 &&
+                    rb->strcmp(g_book_detail.title, "Detail Book") == 0 &&
+                    rb->strcmp(g_book_detail.author, "Author") == 0 &&
+                    g_book_detail.duration_seconds == 3661 &&
+                    g_book_detail.audio_files_known &&
+                    g_book_detail.audio_file_count == 2 &&
+                    g_book_detail.has_audio_files,
+                    "parse_book_detail parses metadata and audio files");
+
+    rb->strlcpy(g_detail_response,
+                "{\"media\":{\"metadata\":{},\"audioFiles\":[]}}",
+                sizeof(g_detail_response));
+    self_test_check(state,
+                    parse_book_detail((int)rb->strlen(g_detail_response),
+                                      "book-2", error_buf, sizeof(error_buf)) &&
+                    rb->strcmp(g_book_detail.title, "(untitled)") == 0 &&
+                    g_book_detail.audio_files_known &&
+                    g_book_detail.audio_file_count == 0 &&
+                    !g_book_detail.has_audio_files,
+                    "parse_book_detail handles missing title and empty audio");
+
+    rb->strlcpy(g_detail_response, "{\"media\":{\"metadata\":{\"title\":\"Broken\"}",
+                sizeof(g_detail_response));
+    self_test_check(state,
+                    !parse_book_detail((int)rb->strlen(g_detail_response),
+                                       "book-3", error_buf, sizeof(error_buf)) &&
+                    contains_text(error_buf, "truncated"),
+                    "parse_book_detail rejects truncated JSON");
+
+    rb->strlcpy(g_detail_response, "[]", sizeof(g_detail_response));
+    self_test_check(state,
+                    !parse_book_detail((int)rb->strlen(g_detail_response),
+                                       "book-4", error_buf, sizeof(error_buf)) &&
+                    contains_text(error_buf, "expected JSON object"),
+                    "parse_book_detail rejects wrong root type");
+
+    len = rb->snprintf(g_detail_response, sizeof(g_detail_response),
+                       "{\"media\":{\"metadata\":{\"title\":\"Huge\"},\"audioFiles\":[");
+    for (i = 0; i < 600 && len > 0 && len < (int)sizeof(g_detail_response) - 32; i++)
+        len += rb->snprintf(g_detail_response + len,
+                            sizeof(g_detail_response) - (size_t)len,
+                            "%s{\"i\":%d}", i ? "," : "", i);
+    rb->snprintf(g_detail_response + len,
+                 sizeof(g_detail_response) - (size_t)len,
+                 "]}}");
+    self_test_check(state,
+                    !parse_book_detail((int)rb->strlen(g_detail_response),
+                                       "book-5", error_buf, sizeof(error_buf)) &&
+                    contains_text(error_buf, "more than") &&
+                    contains_text(error_buf, "tokens"),
+                    "parse_book_detail rejects oversized token sets");
+}
+
+static void self_test_paths_and_redaction(struct abs_self_test_state *state)
+{
+    struct abs_config cfg;
+    char out[BOOK_TITLE_SIZE];
+    char root_buf[DLOAD_DIR_BUF_SIZE];
+    char path_buf[MAX_PATH];
+    char error_buf[ERROR_BUF_SIZE];
+    char redacted[128];
+    int i;
+
+    sanitize_path_component("Book: Title / Part 1", out, sizeof(out));
+    self_test_check(state,
+                    rb->strcmp(out, "Book_Title_Part_1") == 0,
+                    "sanitize_path_component strips separators");
+
+    sanitize_path_component("...", out, sizeof(out));
+    self_test_check(state,
+                    rb->strcmp(out, "untitled") == 0,
+                    "sanitize_path_component falls back to untitled");
+
+    for (i = 0; i < (int)sizeof(out) - 2; i++)
+        out[i] = 'A';
+    out[sizeof(out) - 2] = '\0';
+    sanitize_path_component(out, path_buf, sizeof(path_buf));
+    self_test_check(state,
+                    rb->strlen(path_buf) < sizeof(path_buf) &&
+                    path_buf[0] == 'A',
+                    "sanitize_path_component truncates safely");
+
+    self_test_check(state,
+                    path_has_traversal("/sdcard/../etc/passwd") &&
+                    path_has_traversal("/sdcard/./book") &&
+                    !path_has_traversal("/sdcard/audiobookshelf/book.abs"),
+                    "path_has_traversal flags traversal only");
+
+    self_test_check(state,
+                    path_is_under_base("/sdcard/audiobookshelf/downloads",
+                                       SAFE_DOWNLOAD_BASE) &&
+                    !path_is_under_base("/sdcard/audiobookshelf_evil",
+                                        SAFE_DOWNLOAD_BASE),
+                    "path_is_under_base respects boundaries");
+
+    init_config_defaults(&cfg);
+    rb->strlcpy(cfg.download_dir, "/sdcard/audiobookshelf/downloads/",
+                sizeof(cfg.download_dir));
+    self_test_check(state,
+                    validate_download_root(&cfg, root_buf, sizeof(root_buf),
+                                           error_buf, sizeof(error_buf)) &&
+                    rb->strcmp(root_buf, "/sdcard/audiobookshelf/downloads") == 0,
+                    "validate_download_root trims trailing slash");
+
+    rb->strlcpy(cfg.download_dir, "/sdcard/.rockbox/downloads",
+                sizeof(cfg.download_dir));
+    self_test_check(state,
+                    !validate_download_root(&cfg, root_buf, sizeof(root_buf),
+                                            error_buf, sizeof(error_buf)) &&
+                    contains_text(error_buf, "may not be inside /sdcard/.rockbox"),
+                    "validate_download_root blocks rockbox tree");
+
+    self_test_check(state,
+                    build_download_destination("/sdcard/audiobookshelf/downloads",
+                                               "../Bad Book", "id/42",
+                                               path_buf, sizeof(path_buf),
+                                               error_buf, sizeof(error_buf)) &&
+                    contains_text(path_buf, "/Bad_Book/") &&
+                    contains_text(path_buf, "Bad_Book-id_42.abs") &&
+                    path_is_under_base(path_buf,
+                                       "/sdcard/audiobookshelf/downloads"),
+                    "build_download_destination sanitizes title and id");
+
+    redact_token_text("Authorization: Bearer token-123 token-123",
+                      "token-123", redacted, sizeof(redacted));
+    self_test_check(state,
+                    !contains_text(redacted, "token-123") &&
+                    contains_text(redacted, "[redacted]"),
+                    "redact_token_text removes repeated tokens");
+
+    redact_token_text("safe text", NULL, redacted, sizeof(redacted));
+    self_test_check(state,
+                    rb->strcmp(redacted, "safe text") == 0,
+                    "redact_token_text passes through with NULL token");
+}
+
+static void run_self_tests(void)
+{
+    struct abs_self_test_state state;
+    char text_buf[TEXT_BUF_SIZE];
+
+    rb->memset(&state, 0, sizeof(state));
+
+    self_test_config(&state);
+    self_test_libraries(&state);
+    self_test_books(&state);
+    self_test_book_detail(&state);
+    self_test_paths_and_redaction(&state);
+
+    rb->snprintf(text_buf, sizeof(text_buf),
+                 "Self Tests\n\n"
+                 "Pass: %d\n"
+                 "Fail: %d\n\n"
+                 "%s",
+                 state.pass,
+                 state.fail,
+                 state.fail == 0 ?
+                     "All deterministic helper/parser checks passed."
+                     : state.failures);
+    view_text("Diagnostics: Self Tests", text_buf);
+}
+
 /* ---- top-level menu sections ---------------------------------------------- */
 
 /*
@@ -1525,7 +2051,33 @@ static void populate_fake_detail(const char *item_id)
 
 #define DIAG_MENU_WIFI        0
 #define DIAG_MENU_AUTH        1
-#define DIAG_MENU_BACK        2
+#define DIAG_MENU_SELF_TESTS  2
+#define DIAG_MENU_BACK        3
+
+#define DIAG_FAKE_MENU_INFO        0
+#define DIAG_FAKE_MENU_SELF_TESTS  1
+#define DIAG_FAKE_MENU_BACK        2
+
+static void show_diag_build_info(void)
+{
+    char text_buf[TEXT_BUF_SIZE];
+
+#ifdef AUDIOBOOKSHELF_FAKE_BACKEND
+    rb->snprintf(text_buf, sizeof(text_buf),
+                 "Audiobookshelf Diagnostics\n\n"
+                 "Mode:         FAKE BACKEND\n"
+                 "Fake libs:    %d\n"
+                 "Fake books:   %d\n\n"
+                 "Build:        " __DATE__ " " __TIME__,
+                 FAKE_LIB_COUNT, FAKE_BOOK_COUNT);
+#else
+    rb->snprintf(text_buf, sizeof(text_buf),
+                 "Audiobookshelf Diagnostics\n\n"
+                 "Mode:         LIVE BACKEND\n"
+                 "Build:        " __DATE__ " " __TIME__);
+#endif
+    view_text("Diagnostics", text_buf);
+}
 
 static void show_local_downloads(void)
 {
@@ -1600,18 +2152,29 @@ static void show_diagnostics(const struct abs_config *cfg,
                              const char *header_buf)
 {
 #ifdef AUDIOBOOKSHELF_FAKE_BACKEND
-    char text_buf[TEXT_BUF_SIZE];
+    int menu_sel = DIAG_FAKE_MENU_INFO;
+    bool running = true;
 
     (void)cfg;
     (void)header_buf;
-    rb->snprintf(text_buf, sizeof(text_buf),
-                 "Audiobookshelf Diagnostics\n\n"
-                 "Mode:         FAKE BACKEND\n"
-                 "Fake libs:    %d\n"
-                 "Fake books:   %d\n\n"
-                 "Build:        " __DATE__ " " __TIME__,
-                 FAKE_LIB_COUNT, FAKE_BOOK_COUNT);
-    view_text("Diagnostics", text_buf);
+    while (running) {
+        MENUITEM_STRINGLIST(diag_menu, "Diagnostics", NULL,
+                            "Show Build Info",
+                            "Run Self Tests",
+                            "Back");
+        switch (rb->do_menu(&diag_menu, &menu_sel, NULL, false)) {
+        case DIAG_FAKE_MENU_INFO:
+            show_diag_build_info();
+            break;
+        case DIAG_FAKE_MENU_SELF_TESTS:
+            run_self_tests();
+            break;
+        case DIAG_FAKE_MENU_BACK:
+        default:
+            running = false;
+            break;
+        }
+    }
 #else
     int menu_sel = DIAG_MENU_WIFI;
     bool running = true;
@@ -1620,6 +2183,7 @@ static void show_diagnostics(const struct abs_config *cfg,
         MENUITEM_STRINGLIST(diag_menu, "Diagnostics", NULL,
                             "Test WiFi",
                             "Test Auth",
+                            "Run Self Tests",
                             "Back");
         switch (rb->do_menu(&diag_menu, &menu_sel, NULL, false)) {
         case DIAG_MENU_WIFI:
@@ -1627,6 +2191,9 @@ static void show_diagnostics(const struct abs_config *cfg,
             break;
         case DIAG_MENU_AUTH:
             diag_test_auth(cfg, header_buf);
+            break;
+        case DIAG_MENU_SELF_TESTS:
+            run_self_tests();
             break;
         case DIAG_MENU_BACK:
         default:
@@ -1929,12 +2496,7 @@ enum plugin_status plugin_start(const void *parameter)
 
 #ifdef AUDIOBOOKSHELF_FAKE_BACKEND
     /* Fake mode: config is optional; fill defaults so diagnostics work. */
-    cfg.server_url[0]   = '\0';
-    cfg.token[0]        = '\0';
-    cfg.library_id[0]   = '\0';
-    cfg.page_size       = DEFAULT_PAGE_SIZE;
-    rb->strlcpy(cfg.download_dir, DEFAULT_DOWNLOAD_DIR,
-                sizeof(cfg.download_dir));
+    init_config_defaults(&cfg);
     (void)read_config(&cfg, error_buf, sizeof(error_buf)); /* best-effort */
     header_buf[0] = '\0';
 #else
