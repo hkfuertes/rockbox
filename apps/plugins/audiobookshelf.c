@@ -377,6 +377,78 @@ static void redact_token_text(const char *src,
     }
 }
 
+static const char *android_request_rc_name(int bridge_rc)
+{
+    switch (bridge_rc) {
+    case ANDROID_REQUEST_OK:
+        return "ok";
+    case ANDROID_REQUEST_INVALID_PARAM:
+        return "invalid_param";
+    case ANDROID_REQUEST_JNI_UNAVAILABLE:
+        return "jni_unavailable";
+    case ANDROID_REQUEST_JNI_METHOD_MISSING:
+        return "jni_method_missing";
+    case ANDROID_REQUEST_JNI_EXCEPTION:
+        return "jni_exception";
+    case ANDROID_REQUEST_TRUNCATED:
+        return "truncated";
+    default:
+        return "unknown";
+    }
+}
+
+static bool is_auth_error_status(int http_status)
+{
+    return http_status == 401 || http_status == 403;
+}
+
+static void format_request_failure(const char *title,
+                                   const struct abs_config *cfg,
+                                   const char *wifi_result,
+                                   int http_status,
+                                   int bridge_rc,
+                                   const char *error_text,
+                                   char *text_buf,
+                                   size_t text_len)
+{
+    char redacted_error[ERROR_BUF_SIZE];
+    const char *hint;
+    const char *summary;
+
+    redact_token_text(error_text, cfg->token,
+                      redacted_error, sizeof(redacted_error));
+
+    if (is_auth_error_status(http_status)) {
+        summary = "auth_error";
+        hint = "Hint: token rejected; verify token in " CONFIG_PATH;
+    } else if (bridge_rc < 0 || http_status == 0) {
+        summary = "connection_error";
+        hint = "Hint: no valid HTTP response; check WiFi, server URL, and bridge error";
+    } else {
+        summary = "server_error";
+        hint = "Hint: server responded with an error; check server health/logs";
+    }
+
+    rb->snprintf(text_buf, text_len,
+                 "%s\n\n"
+                 "%s\n\n"
+                 "Server:      %s\n"
+                 "WiFi:        %s\n"
+                 "HTTP status: %d\n"
+                 "Bridge rc:   %d (%s)\n"
+                 "%s\n\n"
+                 "Error:\n%s",
+                 title,
+                 summary,
+                 cfg->server_url,
+                 wifi_result ? wifi_result : "(null)",
+                 http_status,
+                 bridge_rc,
+                 android_request_rc_name(bridge_rc),
+                 hint,
+                 redacted_error[0] ? redacted_error : "(none)");
+}
+
 static const char *config_error_hint =
     "Expected entries in " CONFIG_PATH ":\n"
     "  server_url: https://your.abs.server\n"
@@ -1737,8 +1809,15 @@ static void self_test_config(struct abs_self_test_state *state)
 static void self_test_libraries(struct abs_self_test_state *state)
 {
     char error_buf[ERROR_BUF_SIZE];
+    char text_buf[TEXT_BUF_SIZE];
+    struct abs_config cfg;
     int i;
     int len;
+
+    init_config_defaults(&cfg);
+    rb->strlcpy(cfg.server_url, "https://abs.example.test",
+                sizeof(cfg.server_url));
+    rb->strlcpy(cfg.token, "secret-token", sizeof(cfg.token));
 
     rb->strlcpy(g_lib_response,
                 "{\"libraries\":[{\"id\":\"lib1\",\"name\":\"Audiobooks\"},"
@@ -1783,6 +1862,26 @@ static void self_test_libraries(struct abs_self_test_state *state)
                     contains_text(error_buf, "more than") &&
                     contains_text(error_buf, "tokens"),
                     "parse_libraries rejects oversized token sets");
+
+    format_request_failure("Library fetch failed", &cfg, "wifi_ok",
+                           401, ANDROID_REQUEST_OK,
+                           "server said Unauthorized for secret-token",
+                           text_buf, sizeof(text_buf));
+    self_test_check(state,
+                    contains_text(text_buf, "auth_error") &&
+                    contains_text(text_buf, "verify token") &&
+                    !contains_text(text_buf, "secret-token"),
+                    "request failure maps 401 to auth_error with redaction");
+
+    format_request_failure("Library fetch failed", &cfg, "wifi_down",
+                           0, ANDROID_REQUEST_JNI_EXCEPTION,
+                           "android request bridge failed",
+                           text_buf, sizeof(text_buf));
+    self_test_check(state,
+                    contains_text(text_buf, "connection_error") &&
+                    contains_text(text_buf, "check WiFi") &&
+                    contains_text(text_buf, "jni_exception"),
+                    "request failure maps transport issues to actionable diagnostics");
 }
 
 static void self_test_books(struct abs_self_test_state *state)
@@ -2133,17 +2232,24 @@ static void diag_test_auth(const struct abs_config *cfg,
     redact_token_text(error_buf, cfg->token,
                       redacted_error, sizeof(redacted_error));
 
-    rb->snprintf(text_buf, sizeof(text_buf),
-                 "Auth Test\n\n"
-                 "Server:      %s\n"
-                 "WiFi:        %s\n"
-                 "HTTP status: %d\n"
-                 "Bridge rc:   %d\n"
-                 "Error:       %s",
-                 cfg->server_url,
-                 wifi_result ? wifi_result : "(null)",
-                 http_status, bridge_rc,
-                 redacted_error[0] ? redacted_error : "(none)");
+    if (http_status == 200 && bridge_rc >= 0) {
+        rb->snprintf(text_buf, sizeof(text_buf),
+                     "Auth Test\n\n"
+                     "Server:      %s\n"
+                     "WiFi:        %s\n"
+                     "HTTP status: %d\n"
+                     "Bridge rc:   %d (%s)\n"
+                     "Error:       %s",
+                     cfg->server_url,
+                     wifi_result ? wifi_result : "(null)",
+                     http_status, bridge_rc,
+                     android_request_rc_name(bridge_rc),
+                     redacted_error[0] ? redacted_error : "(none)");
+    } else {
+        format_request_failure("Auth Test", cfg, wifi_result,
+                               http_status, bridge_rc, error_buf,
+                               text_buf, sizeof(text_buf));
+    }
     view_text("Diagnostics: Auth", text_buf);
 }
 #endif /* !AUDIOBOOKSHELF_FAKE_BACKEND */
@@ -2351,18 +2457,11 @@ static enum plugin_status browse_library(struct abs_config *cfg,
 
         rb->android_disconnect_wifi();
 
-        if (http_status != 200) {
-            char redacted_error[ERROR_BUF_SIZE];
-            redact_token_text(error_buf, cfg->token,
-                              redacted_error, sizeof(redacted_error));
-            rb->snprintf(text_buf, sizeof(text_buf),
-                         "Library fetch failed\n\n"
-                         "Server:      %s\n"
-                         "HTTP status: %d\n"
-                         "Bridge rc:   %d\n\n"
-                         "Error:\n%s",
-                         cfg->server_url, http_status, bridge_rc,
-                         redacted_error[0] ? redacted_error : "(none)");
+        if (bridge_rc < 0 || http_status != 200) {
+            format_request_failure("Library fetch failed", cfg,
+                                   "connected during auth validation",
+                                   http_status, bridge_rc, error_buf,
+                                   text_buf, sizeof(text_buf));
             view_text("Audiobookshelf", text_buf);
             return PLUGIN_OK;
         }
@@ -2546,22 +2645,11 @@ enum plugin_status plugin_start(const void *parameter)
                     response_buf, sizeof(response_buf),
                     &http_status, error_buf, sizeof(error_buf));
 
-                if (http_status != 200) {
-                    char redacted_error[ERROR_BUF_SIZE];
+                if (bridge_rc < 0 || http_status != 200) {
                     rb->android_disconnect_wifi();
-                    redact_token_text(error_buf, cfg.token,
-                                      redacted_error, sizeof(redacted_error));
-                    rb->snprintf(text_buf, sizeof(text_buf),
-                                 "Auth failed\n\n"
-                                 "Server:      %s\n\n"
-                                 "WiFi:        %s\n"
-                                 "HTTP status: %d\n"
-                                 "Bridge rc:   %d\n\n"
-                                 "Error:\n%s",
-                                 cfg.server_url,
-                                 wifi_result ? wifi_result : "(null)",
-                                 http_status, bridge_rc,
-                                 redacted_error[0] ? redacted_error : "(none)");
+                    format_request_failure("Auth failed", &cfg, wifi_result,
+                                           http_status, bridge_rc, error_buf,
+                                           text_buf, sizeof(text_buf));
                     view_text("Audiobookshelf", text_buf);
                     auth_ok = false;
                 }
