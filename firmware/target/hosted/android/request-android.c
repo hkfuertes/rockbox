@@ -124,8 +124,11 @@ static int finalize_download_result(const char *status_text,
     if (status_text != NULL)
         *status_out = atoi(status_text);
 
+    /* True JNI exceptions are caught before this function is called.
+     * Non-empty error_text here means a helper process, network, or
+     * filesystem failure reported by the Java layer — not a JNI fault. */
     rc = (error_text != NULL && error_text[0] != '\0') ?
-        ANDROID_REQUEST_JNI_EXCEPTION : ANDROID_REQUEST_OK;
+        ANDROID_REQUEST_HELPER_FAILURE : ANDROID_REQUEST_OK;
 
     if (copy_to_buffer(error_buf, error_len, error_text) == ANDROID_REQUEST_TRUNCATED)
         rc = ANDROID_REQUEST_TRUNCATED;

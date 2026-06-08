@@ -1240,6 +1240,8 @@ static const char *android_request_rc_name(int bridge_rc)
         return "jni_exception";
     case ANDROID_REQUEST_TRUNCATED:
         return "truncated";
+    case ANDROID_REQUEST_HELPER_FAILURE:
+        return "helper_failure";
     default:
         return "unknown";
     }

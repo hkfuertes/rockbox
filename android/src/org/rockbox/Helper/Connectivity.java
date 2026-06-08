@@ -303,7 +303,7 @@ public class Connectivity{
         command.append(shellQuote(GO_CURL_PATH));
         command.append(" --cacert ").append(shellQuote(CA_CERT_PATH));
         command.append(" --connect-timeout ").append(String.valueOf(GO_CURL_CONNECT_TIMEOUT_SECONDS));
-        command.append(" -L -sS");
+        command.append(" -L -sS --fail");
 
         headerLines = safeString(headers).split("\\n");
         for (String headerLine : headerLines) {
@@ -795,6 +795,19 @@ public class Connectivity{
             errorText = "gocurl download failed: " + summarizeHelperFailure(shellResult.stderr, "helper process failed");
             errorText += " (exit " + String.valueOf(shellResult.exitCode) + ")";
             return new String[]{String.valueOf(status), errorText};
+        }
+
+        if (status == 0 && statusText.length() == 0) {
+            if (tempFile.length() > 0) {
+                /* Y1 gocurl may not emit the -w "%{http_code}" stdout line.
+                 * Because the command uses --fail, HTTP 4xx/5xx responses
+                 * already return a non-zero exit code. Only in that case is it
+                 * safe to infer HTTP 200 from exit 0 + non-empty file output. */
+                status = 200;
+            } else {
+                deleteQuietly(tempFile);
+                return new String[]{"0", "gocurl download failed: helper returned no HTTP status"};
+            }
         }
 
         if (status < 200 || status >= 300) {
