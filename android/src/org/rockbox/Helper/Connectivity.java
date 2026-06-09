@@ -12,6 +12,8 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -236,9 +238,14 @@ public class Connectivity{
 
     private static final String GO_CURL_PATH = "/data/data/gocurl";
     private static final String CA_CERT_PATH = "/data/data/cacert.pem";
-    private static final String ROCKBOX_DOWNLOAD_BASE_PATH = "/sdcard/.rockbox";
+    private static final String[] ROCKBOX_DOWNLOAD_BASE_PATHS = {
+        "/sdcard/.rockbox",
+        "/sdcard/audiobookshelf",
+        "/data/data/org.rockbox/cache/audiobookshelf"
+    };
     private static final int GO_CURL_CONNECT_TIMEOUT_SECONDS = 10;
     private static final int GO_CURL_TOTAL_TIMEOUT_SECONDS = 30;
+    private static final int GO_CURL_DOWNLOAD_TOTAL_TIMEOUT_SECONDS = 30 * 60;
     private static final int STREAM_CAPTURE_LIMIT_BYTES = 1024 * 1024;
     private static final long PROCESS_CLEANUP_GRACE_MS = 1000L;
     private static final long STREAM_JOIN_GRACE_MS = 1000L;
@@ -297,7 +304,7 @@ public class Connectivity{
         command.append(shellQuote(GO_CURL_PATH));
         command.append(" --cacert ").append(shellQuote(CA_CERT_PATH));
         command.append(" --connect-timeout ").append(String.valueOf(GO_CURL_CONNECT_TIMEOUT_SECONDS));
-        command.append(" -L -sS");
+        command.append(" -L -sS --fail");
 
         headerLines = safeString(headers).split("\\n");
         for (String headerLine : headerLines) {
@@ -313,18 +320,35 @@ public class Connectivity{
         return command.toString();
     }
 
-    private static String getCanonicalDownloadBasePath() throws IOException {
-        return new File(ROCKBOX_DOWNLOAD_BASE_PATH).getCanonicalPath();
+    private static String[] getCanonicalDownloadBasePaths() throws IOException {
+        String[] canonicalBases = new String[ROCKBOX_DOWNLOAD_BASE_PATHS.length];
+        int i;
+
+        for (i = 0; i < ROCKBOX_DOWNLOAD_BASE_PATHS.length; i++) {
+            canonicalBases[i] = new File(ROCKBOX_DOWNLOAD_BASE_PATHS[i]).getCanonicalPath();
+        }
+
+        return canonicalBases;
     }
 
     private static boolean isSafeDownloadPath(File path) {
+        int i;
+
         try {
             String canonical = path.getCanonicalPath();
-            String canonicalBase = getCanonicalDownloadBasePath();
-            return canonical.equals(canonicalBase) || canonical.startsWith(canonicalBase + "/");
+            String[] canonicalBases = getCanonicalDownloadBasePaths();
+
+            for (i = 0; i < canonicalBases.length; i++) {
+                String canonicalBase = canonicalBases[i];
+                if (canonical.equals(canonicalBase) || canonical.startsWith(canonicalBase + "/")) {
+                    return true;
+                }
+            }
         } catch (IOException e) {
             return false;
         }
+
+        return false;
     }
 
     private static Thread drainStream(final InputStream stream,
@@ -459,23 +483,43 @@ public class Connectivity{
 
     private static String moveCompletedDownloadIntoPlace(File tempFile,
                                                          File canonicalDestination) {
-        int linkRc;
+        FileInputStream input = null;
+        FileOutputStream output = null;
+        byte[] buffer = new byte[8192];
+        int read;
+        boolean createdDestination = false;
 
         if (tempFile == null || !tempFile.exists()) {
             return "filesystem error: temporary download file missing after helper exit";
         }
 
-        linkRc = atomicLinkExclusive(tempFile.getAbsolutePath(),
-                                     canonicalDestination.getAbsolutePath());
-        deleteQuietly(tempFile);
+        try {
+            if (!canonicalDestination.createNewFile()) {
+                deleteQuietly(tempFile);
+                return "filesystem error: destination already exists";
+            }
+            createdDestination = true;
 
-        if (linkRc == 0) {
-            return "";
+            input = new FileInputStream(tempFile);
+            output = new FileOutputStream(canonicalDestination);
+            while ((read = input.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            output.getFD().sync();
+        } catch (IOException e) {
+            closeQuietly(output);
+            closeQuietly(input);
+            deleteQuietly(tempFile);
+            if (createdDestination) {
+                deleteQuietly(canonicalDestination);
+            }
+            return "filesystem error: failed to move completed download into place";
         }
-        if (linkRc == EEXIST) {
-            return "filesystem error: destination already exists";
-        }
-        return "filesystem error: failed to move completed download into place";
+
+        closeQuietly(output);
+        closeQuietly(input);
+        deleteQuietly(tempFile);
+        return "";
     }
 
     private static String summarizeHelperFailure(String detail, String fallback) {
@@ -662,7 +706,7 @@ public class Connectivity{
         return new String[]{String.valueOf(status), responseBody, errorText};
     }
 
-    public static String[] performSynchronousDownload(String url, String headers, String destinationPath) {
+    public static String[] performSynchronousDownload(String url, String headers, String destinationPath, int timeoutSeconds) {
         String safeUrl = safeString(url).trim();
         String safeHeaders = safeString(headers);
         String safeDestination = safeString(destinationPath).trim();
@@ -675,7 +719,8 @@ public class Connectivity{
         String statusText;
         int status = 0;
         String errorText = "";
-        String canonicalBase;
+        String[] canonicalBases;
+        int effectiveTimeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : GO_CURL_DOWNLOAD_TOTAL_TIMEOUT_SECONDS;
 
         if (safeUrl.length() == 0) {
             return new String[]{"0", "invalid parameter: url is required"};
@@ -688,16 +733,18 @@ public class Connectivity{
         try {
             destinationFile = new File(safeDestination);
             canonicalDestination = destinationFile.getCanonicalFile();
-            canonicalBase = getCanonicalDownloadBasePath();
+            canonicalBases = getCanonicalDownloadBasePaths();
         } catch (IOException e) {
             return new String[]{"0", "invalid destination path"};
         }
 
         if (!isSafeDownloadPath(canonicalDestination)) {
-            return new String[]{"0", "invalid destination path: must stay under " + canonicalBase + "/"};
+            return new String[]{"0", "invalid destination path: must stay under /sdcard/.rockbox/, /sdcard/audiobookshelf/, or app cache"};
         }
 
-        if (canonicalDestination.getPath().equals(canonicalBase) || canonicalDestination.isDirectory()) {
+        if (canonicalDestination.isDirectory() ||
+            canonicalDestination.getPath().equals(canonicalBases[0]) ||
+            canonicalDestination.getPath().equals(canonicalBases[1])) {
             return new String[]{"0", "invalid destination path: destination must be a file path"};
         }
 
@@ -723,11 +770,11 @@ public class Connectivity{
 
         command = buildGocurlDownloadCommand(safeUrl, safeHeaders,
                                              tempFile.getAbsolutePath());
-        shellResult = execShellForRequest(command, GO_CURL_TOTAL_TIMEOUT_SECONDS);
+        shellResult = execShellForRequest(command, effectiveTimeoutSeconds);
 
         if (shellResult.timedOut) {
             deleteQuietly(tempFile);
-            return new String[]{"0", "gocurl download timed out after " + String.valueOf(GO_CURL_TOTAL_TIMEOUT_SECONDS) + " seconds"};
+            return new String[]{"0", "gocurl download timed out after " + String.valueOf(effectiveTimeoutSeconds) + " seconds"};
         }
 
         if (shellResult.stdoutTruncated || shellResult.stderrTruncated) {
@@ -750,6 +797,19 @@ public class Connectivity{
             errorText = "gocurl download failed: " + summarizeHelperFailure(shellResult.stderr, "helper process failed");
             errorText += " (exit " + String.valueOf(shellResult.exitCode) + ")";
             return new String[]{String.valueOf(status), errorText};
+        }
+
+        if (status == 0 && statusText.length() == 0) {
+            if (tempFile.length() > 0) {
+                /* Y1 gocurl may not emit the -w "%{http_code}" stdout line.
+                 * Because the command uses --fail, HTTP 4xx/5xx responses
+                 * already return a non-zero exit code. Only in that case is it
+                 * safe to infer HTTP 200 from exit 0 + non-empty file output. */
+                status = 200;
+            } else {
+                deleteQuietly(tempFile);
+                return new String[]{"0", "gocurl download failed: helper returned no HTTP status"};
+            }
         }
 
         if (status < 200 || status >= 300) {

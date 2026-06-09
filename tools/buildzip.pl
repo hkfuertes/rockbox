@@ -429,6 +429,7 @@ sub buildzip {
     glob_mkdir("$temp_dir/rocks");
     glob_mkdir("$temp_dir/rocks/games");
     glob_mkdir("$temp_dir/rocks/apps");
+    glob_mkdir("$temp_dir/rocks/custom");
     glob_mkdir("$temp_dir/rocks/demos");
     glob_mkdir("$temp_dir/rocks/viewers");
 

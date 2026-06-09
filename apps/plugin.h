@@ -199,7 +199,9 @@ enum plugin_tsr_status {
     PLUGIN_TSR_TERMINATE,    /* TSR exits and will not be restarted */
 };
 
-/* Android hosted request bridge return codes */
+/* Android hosted request bridge return codes.
+ * Keep numeric meanings stable for existing plugins/callers; extend only by
+ * appending new values so diagnostics remain ABI-compatible. */
 enum android_request_status {
     ANDROID_REQUEST_OK = 0,
     ANDROID_REQUEST_INVALID_PARAM = -1,
@@ -207,6 +209,8 @@ enum android_request_status {
     ANDROID_REQUEST_JNI_METHOD_MISSING = -3,
     ANDROID_REQUEST_JNI_EXCEPTION = -4,
     ANDROID_REQUEST_TRUNCATED = -5,
+    /* Helper process, network, or filesystem failure (not a JNI exception). */
+    ANDROID_REQUEST_HELPER_FAILURE = -6,
 };
 
 /* NOTE: To support backwards compatibility, only add new functions at
@@ -1032,6 +1036,7 @@ struct plugin_api {
     int (*android_download)(const char *url,
                             const char *headers,
                             const char *destination_path,
+                            int timeout_seconds,
                             int *status_out,
                             char *error_buf,
                             size_t error_len);

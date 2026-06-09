@@ -26,6 +26,7 @@ podcast_downloader.c
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 android_request_probe.c
 android_download_probe.c
+audiobookshelf.c
 #endif
 playing_time.c
 properties.c

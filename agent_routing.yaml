@@ -1,0 +1,23 @@
+version: 1
+routing_file: agent_routing.yaml
+roles:
+  implementers:
+    primary:
+      tool: AskPi
+      model: openai-codex/gpt-5.4
+    fallbacks:
+      - tool: AskClaude
+        model: sonnet
+      - tool: AskPi
+        model: openai-codex/gpt-5.4
+    can_write: true
+  reviewers:
+    primary:
+      tool: AskPi
+      model: openai-codex/gpt-5.5
+    fallbacks:
+      - tool: AskClaude
+        model: opus
+      - tool: AskPi
+        model: openai-codex/gpt-5.5
+    can_write: false

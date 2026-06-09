@@ -1,6 +1,7 @@
 #include "request-android.h"
 
 #include <jni.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -68,6 +69,12 @@ static int get_array_string(jobjectArray array, jsize index,
     return *out_copy != NULL ? ANDROID_REQUEST_OK : ANDROID_REQUEST_JNI_EXCEPTION;
 }
 
+static bool error_indicates_truncation(const char *error_text)
+{
+    return error_text != NULL &&
+           strstr(error_text, "exceeded Java capture limit") != NULL;
+}
+
 static int finalize_request_result(const char *status_text,
                                    const char *response_text,
                                    const char *error_text,
@@ -82,8 +89,11 @@ static int finalize_request_result(const char *status_text,
     if (status_text != NULL)
         *status_out = atoi(status_text);
 
-    rc = (*status_out == 0 && error_text != NULL && error_text[0] != '\0') ?
-        ANDROID_REQUEST_JNI_EXCEPTION : ANDROID_REQUEST_OK;
+    if (*status_out == 0 && error_text != NULL && error_text[0] != '\0')
+        rc = error_indicates_truncation(error_text) ?
+            ANDROID_REQUEST_TRUNCATED : ANDROID_REQUEST_JNI_EXCEPTION;
+    else
+        rc = ANDROID_REQUEST_OK;
 
     if (copy_to_buffer(response_buf, response_len, response_text) == ANDROID_REQUEST_TRUNCATED)
     {
@@ -114,8 +124,11 @@ static int finalize_download_result(const char *status_text,
     if (status_text != NULL)
         *status_out = atoi(status_text);
 
+    /* True JNI exceptions are caught before this function is called.
+     * Non-empty error_text here means a helper process, network, or
+     * filesystem failure reported by the Java layer — not a JNI fault. */
     rc = (error_text != NULL && error_text[0] != '\0') ?
-        ANDROID_REQUEST_JNI_EXCEPTION : ANDROID_REQUEST_OK;
+        ANDROID_REQUEST_HELPER_FAILURE : ANDROID_REQUEST_OK;
 
     if (copy_to_buffer(error_buf, error_len, error_text) == ANDROID_REQUEST_TRUNCATED)
         rc = ANDROID_REQUEST_TRUNCATED;
@@ -268,6 +281,7 @@ cleanup:
 int android_download(const char *url,
                      const char *headers,
                      const char *destination_path,
+                     int timeout_seconds,
                      int *status_out,
                      char *error_buf,
                      size_t error_len)
@@ -277,6 +291,7 @@ int android_download(const char *url,
     jstring headers_j = NULL;
     jstring destination_j = NULL;
     jobjectArray result_array = NULL;
+    jint timeout_seconds_j;
     char *status_text = NULL;
     char *error_text = NULL;
     int rc = ANDROID_REQUEST_OK;
@@ -304,7 +319,7 @@ int android_download(const char *url,
     {
         download_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class,
             "performSynchronousDownload",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)[Ljava/lang/String;");
         if (download_method == NULL)
         {
             if ((*env_ptr)->ExceptionCheck(env_ptr))
@@ -326,8 +341,10 @@ int android_download(const char *url,
         goto cleanup_download;
     }
 
+    timeout_seconds_j = timeout_seconds > 0 ? (jint)timeout_seconds : 0;
     result_array = (jobjectArray)(*env_ptr)->CallObjectMethod(env_ptr,
-        RockboxService_instance, download_method, url_j, headers_j, destination_j);
+        RockboxService_instance, download_method, url_j, headers_j, destination_j,
+        timeout_seconds_j);
     if ((*env_ptr)->ExceptionCheck(env_ptr))
     {
         (*env_ptr)->ExceptionClear(env_ptr);

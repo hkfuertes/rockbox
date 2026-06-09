@@ -15,6 +15,7 @@ int android_request(const char *method,
 int android_download(const char *url,
                      const char *headers,
                      const char *destination_path,
+                     int timeout_seconds,
                      int *status_out,
                      char *error_buf,
                      size_t error_len);

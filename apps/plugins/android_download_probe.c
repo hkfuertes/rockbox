@@ -127,6 +127,29 @@ static const char *safe_text(const char *text)
     return text != NULL && text[0] != '\0' ? text : "(empty)";
 }
 
+static const char *android_request_rc_name(int bridge_rc)
+{
+    switch (bridge_rc)
+    {
+    case ANDROID_REQUEST_OK:
+        return "ok";
+    case ANDROID_REQUEST_INVALID_PARAM:
+        return "invalid_param";
+    case ANDROID_REQUEST_JNI_UNAVAILABLE:
+        return "jni_unavailable";
+    case ANDROID_REQUEST_JNI_METHOD_MISSING:
+        return "jni_method_missing";
+    case ANDROID_REQUEST_JNI_EXCEPTION:
+        return "jni_exception";
+    case ANDROID_REQUEST_TRUNCATED:
+        return "truncated";
+    case ANDROID_REQUEST_HELPER_FAILURE:
+        return "helper_failure";
+    default:
+        return "unknown";
+    }
+}
+
 enum plugin_status plugin_start(const void* parameter)
 {
     char url_buf[URL_BUF_SIZE];
@@ -156,6 +179,7 @@ enum plugin_status plugin_start(const void* parameter)
     rc = rb->android_download(url_buf,
                               headers_buf[0] != '\0' ? headers_buf : NULL,
                               dest_buf,
+                              30 * 60,
                               &status,
                               error_buf,
                               sizeof(error_buf));
@@ -170,7 +194,7 @@ enum plugin_status plugin_start(const void* parameter)
                  "\n"
                  "WiFi connect result:\n%s\n"
                  "\n"
-                 "Bridge rc: %d\n"
+                 "Bridge rc: %d (%s)\n"
                  "HTTP status: %d\n"
                  "\n"
                  "Bridge/filesystem error:\n%s",
@@ -180,6 +204,7 @@ enum plugin_status plugin_start(const void* parameter)
                  headers_buf[0] != '\0' ? "yes" : "no",
                  safe_text(wifi_result),
                  rc,
+                 android_request_rc_name(rc),
                  status,
                  safe_text(error_buf));
 
