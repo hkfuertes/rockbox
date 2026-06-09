@@ -4,6 +4,7 @@
 /output
 /.docker-home
 /issues/
+/tools/audiobookshelf-smoke.sh
 *prd*.md
 *.elf
 *.exe
