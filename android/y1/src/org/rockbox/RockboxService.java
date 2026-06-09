@@ -520,8 +520,8 @@ public class RockboxService extends Service
         return Connectivity.performSynchronousRequest(method, url, headers, body);
     }
 
-    public String[] performSynchronousDownload(String url, String headers, String destinationPath) {
-        return Connectivity.performSynchronousDownload(url, headers, destinationPath);
+    public String[] performSynchronousDownload(String url, String headers, String destinationPath, int timeoutSeconds) {
+        return Connectivity.performSynchronousDownload(url, headers, destinationPath, timeoutSeconds);
     }
 
     public void loadConfig() {

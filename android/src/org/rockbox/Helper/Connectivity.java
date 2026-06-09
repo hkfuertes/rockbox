@@ -245,6 +245,7 @@ public class Connectivity{
     };
     private static final int GO_CURL_CONNECT_TIMEOUT_SECONDS = 10;
     private static final int GO_CURL_TOTAL_TIMEOUT_SECONDS = 30;
+    private static final int GO_CURL_DOWNLOAD_TOTAL_TIMEOUT_SECONDS = 30 * 60;
     private static final int STREAM_CAPTURE_LIMIT_BYTES = 1024 * 1024;
     private static final long PROCESS_CLEANUP_GRACE_MS = 1000L;
     private static final long STREAM_JOIN_GRACE_MS = 1000L;
@@ -705,7 +706,7 @@ public class Connectivity{
         return new String[]{String.valueOf(status), responseBody, errorText};
     }
 
-    public static String[] performSynchronousDownload(String url, String headers, String destinationPath) {
+    public static String[] performSynchronousDownload(String url, String headers, String destinationPath, int timeoutSeconds) {
         String safeUrl = safeString(url).trim();
         String safeHeaders = safeString(headers);
         String safeDestination = safeString(destinationPath).trim();
@@ -719,6 +720,7 @@ public class Connectivity{
         int status = 0;
         String errorText = "";
         String[] canonicalBases;
+        int effectiveTimeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : GO_CURL_DOWNLOAD_TOTAL_TIMEOUT_SECONDS;
 
         if (safeUrl.length() == 0) {
             return new String[]{"0", "invalid parameter: url is required"};
@@ -768,11 +770,11 @@ public class Connectivity{
 
         command = buildGocurlDownloadCommand(safeUrl, safeHeaders,
                                              tempFile.getAbsolutePath());
-        shellResult = execShellForRequest(command, GO_CURL_TOTAL_TIMEOUT_SECONDS);
+        shellResult = execShellForRequest(command, effectiveTimeoutSeconds);
 
         if (shellResult.timedOut) {
             deleteQuietly(tempFile);
-            return new String[]{"0", "gocurl download timed out after " + String.valueOf(GO_CURL_TOTAL_TIMEOUT_SECONDS) + " seconds"};
+            return new String[]{"0", "gocurl download timed out after " + String.valueOf(effectiveTimeoutSeconds) + " seconds"};
         }
 
         if (shellResult.stdoutTruncated || shellResult.stderrTruncated) {

@@ -54,6 +54,7 @@
 #define BOOK_ID_SIZE            128
 #define BOOK_META_SIZE          64
 #define DETAIL_LINE_SIZE        192
+#define BOOK_DESCRIPTION_SIZE   256
 #define MAX_DETAIL_LINES        16
 #define LIST_TITLE_SIZE         96
 #define FILE_EXT_SIZE           16
@@ -143,11 +144,13 @@ struct abs_book_detail {
     char series[BOOK_META_SIZE];
     char narrator[BOOK_META_SIZE];
     char published_year[16];
+    char description[BOOK_DESCRIPTION_SIZE];
     char single_audio_ino[BOOK_ID_SIZE];
     char single_audio_filename[BOOK_TITLE_SIZE];
     char single_audio_ext[FILE_EXT_SIZE];
     char audio_file_ids[MAX_DETAIL_AUDIO_FILES][BOOK_ID_SIZE];
     char audio_file_exts[MAX_DETAIL_AUDIO_FILES][FILE_EXT_SIZE];
+    int audio_file_sizes_mb[MAX_DETAIL_AUDIO_FILES];
     char local_path[MAX_PATH];
     int duration_seconds;
     int audio_file_count;
@@ -216,6 +219,8 @@ static int sanitize_page_size(int page_size)
 {
     if (page_size <= 0)
         return DEFAULT_PAGE_SIZE;
+    if (page_size < DEFAULT_PAGE_SIZE)
+        return DEFAULT_PAGE_SIZE;
     if (page_size > MAX_PAGE_SIZE)
         return MAX_PAGE_SIZE;
     return page_size;
@@ -254,6 +259,30 @@ static int tok_to_int(const char *js, const jsmntok_t *tok)
     return rb->atoi(buf);
 }
 
+static int tok_to_size_mb(const char *js, const jsmntok_t *tok)
+{
+    unsigned long long bytes = 0;
+    int i;
+
+    if (tok->type != JSMN_PRIMITIVE && tok->type != JSMN_STRING)
+        return 0;
+
+    for (i = tok->start; i < tok->end; i++) {
+        char c = js[i];
+        if (c < '0' || c > '9')
+            break;
+        bytes = (bytes * 10) + (unsigned long long)(c - '0');
+        if (bytes > (8ULL * 1024ULL * 1024ULL * 1024ULL))
+            return 8192;
+    }
+
+    if (bytes == 0)
+        return 0;
+
+    return (int)((bytes + (1024ULL * 1024ULL - 1ULL)) /
+                 (1024ULL * 1024ULL));
+}
+
 static bool tok_to_bool(const char *js, const jsmntok_t *tok, bool *value)
 {
     char buf[8];
@@ -272,6 +301,23 @@ static bool tok_to_bool(const char *js, const jsmntok_t *tok, bool *value)
     }
 
     return false;
+}
+
+static int estimate_download_timeout_seconds(int size_mb)
+{
+    int timeout;
+
+    if (size_mb <= 0)
+        return 30 * 60;
+
+    /* Approximate for slow Y1 WiFi / TLS helper overhead: 128 KiB/s + 60s. */
+    timeout = 60 + (size_mb * 8);
+    if (timeout < 5 * 60)
+        timeout = 5 * 60;
+    if (timeout > 2 * 60 * 60)
+        timeout = 2 * 60 * 60;
+
+    return timeout;
 }
 
 static int tok_to_percent(const char *js, const jsmntok_t *tok)
@@ -347,12 +393,9 @@ static void build_book_title(char *dest, size_t dest_len,
 {
     const char *base = title[0] != '\0' ? title : "(untitled)";
 
-    if (author[0] != '\0' && series[0] != '\0') {
-        rb->snprintf(dest, dest_len, "%s - %s / %s", base, author, series);
-    } else if (author[0] != '\0') {
+    (void)series;
+    if (author[0] != '\0') {
         rb->snprintf(dest, dest_len, "%s - %s", base, author);
-    } else if (series[0] != '\0') {
-        rb->snprintf(dest, dest_len, "%s - %s", base, series);
     } else {
         rb->strlcpy(dest, base, dest_len);
     }
@@ -366,14 +409,11 @@ static void build_book_entry(char *dest, size_t dest_len,
                              const char *download_state,
                              const char *progress_state)
 {
-    char base[BOOK_TITLE_SIZE];
+    (void)item_id;
+    (void)download_state;
+    (void)progress_state;
 
-    build_book_title(base, sizeof(base), title, author, series);
-    rb->snprintf(dest, dest_len, "[%s] %s | DL:%s | P:%s",
-                 item_id && item_id[0] ? item_id : "?",
-                 base,
-                 download_state && download_state[0] ? download_state : "--",
-                 progress_state && progress_state[0] ? progress_state : "--");
+    build_book_title(dest, dest_len, title, author, series);
 }
 
 static void format_duration(int seconds, char *buf, size_t buf_len)
@@ -1991,13 +2031,21 @@ static bool download_book(const struct abs_config *cfg,
             wifi_connected = true;
         }
 
-        rb->splash_progress(i + 1, total_files, "Downloading audio files...");
-        bridge_rc = rb->android_download(endpoint,
-                                         header_buf,
-                                         tmp_dest_buf,
-                                         &http_status,
-                                         error_buf,
-                                         sizeof(error_buf));
+        {
+            int timeout_seconds = estimate_download_timeout_seconds(
+                g_book_detail.audio_file_sizes_mb[i]);
+            rb->splash_progress(0, 1,
+                                "Downloading %d/%d... timeout ~%dm",
+                                i + 1, total_files,
+                                (timeout_seconds + 59) / 60);
+            bridge_rc = rb->android_download(endpoint,
+                                             header_buf,
+                                             tmp_dest_buf,
+                                             timeout_seconds,
+                                             &http_status,
+                                             error_buf,
+                                             sizeof(error_buf));
+        }
 
         file_success = bridge_rc >= 0 && http_status >= 200 && http_status < 300 &&
                        rb->file_exists(tmp_dest_buf);
@@ -2501,12 +2549,14 @@ static bool parse_book_detail(int json_len,
     int series_idx = -1;
     int narrator_idx = -1;
     int published_idx = -1;
+    int description_idx = -1;
     int duration_idx = -1;
     int audio_files_idx = -1;
     int array_item_idx;
     int tracked_idx = 0;
     int audio_ino_idx = -1;
     int audio_filename_idx = -1;
+    int audio_size_idx = -1;
     int file_metadata_idx = -1;
     int audio_ext_idx = -1;
     char ext_hint[FILE_EXT_SIZE];
@@ -2574,6 +2624,8 @@ static bool parse_book_detail(int json_len,
         if (published_idx < 0)
             published_idx = find_object_value(g_detail_response, g_tokens, r,
                                               metadata_idx, "publishedDate");
+        description_idx = find_object_value(g_detail_response, g_tokens, r,
+                                            metadata_idx, "description");
     }
 
     if (title_idx >= 0 && g_tokens[title_idx].type == JSMN_STRING)
@@ -2594,6 +2646,10 @@ static bool parse_book_detail(int json_len,
         tok_copy(g_detail_response, &g_tokens[published_idx],
                  g_book_detail.published_year,
                  sizeof(g_book_detail.published_year));
+    if (description_idx >= 0 && g_tokens[description_idx].type == JSMN_STRING)
+        tok_copy(g_detail_response, &g_tokens[description_idx],
+                 g_book_detail.description,
+                 sizeof(g_book_detail.description));
     if (duration_idx >= 0)
         g_book_detail.duration_seconds = tok_to_int(g_detail_response,
                                                     &g_tokens[duration_idx]);
@@ -2625,6 +2681,11 @@ static bool parse_book_detail(int json_len,
                                                   array_item_idx, "fileId");
             audio_filename_idx = find_object_value(g_detail_response, g_tokens, r,
                                                    array_item_idx, "filename");
+            audio_size_idx = find_object_value(g_detail_response, g_tokens, r,
+                                               array_item_idx, "size");
+            if (audio_size_idx < 0)
+                audio_size_idx = find_object_value(g_detail_response, g_tokens, r,
+                                                   array_item_idx, "sizeInBytes");
             file_metadata_idx = find_object_value(g_detail_response, g_tokens, r,
                                                   array_item_idx, "metadata");
             audio_ext_idx = -1;
@@ -2640,6 +2701,16 @@ static bool parse_book_detail(int json_len,
                                                            "filename");
                 audio_ext_idx = find_object_value(g_detail_response, g_tokens, r,
                                                   file_metadata_idx, "ext");
+                if (audio_size_idx < 0)
+                    audio_size_idx = find_object_value(g_detail_response,
+                                                       g_tokens, r,
+                                                       file_metadata_idx,
+                                                       "size");
+                if (audio_size_idx < 0)
+                    audio_size_idx = find_object_value(g_detail_response,
+                                                       g_tokens, r,
+                                                       file_metadata_idx,
+                                                       "sizeInBytes");
             }
 
             if (audio_ino_idx >= 0 && g_tokens[audio_ino_idx].type == JSMN_STRING) {
@@ -2656,6 +2727,9 @@ static bool parse_book_detail(int json_len,
                 tok_copy(g_detail_response, &g_tokens[audio_ext_idx],
                          ext_hint, sizeof(ext_hint));
             }
+            if (audio_size_idx >= 0)
+                g_book_detail.audio_file_sizes_mb[tracked_idx] =
+                    tok_to_size_mb(g_detail_response, &g_tokens[audio_size_idx]);
             (void)normalize_file_extension(
                 filename_buf,
                 ext_hint[0] ? ext_hint : NULL,
@@ -2860,6 +2934,7 @@ static int show_book_detail_menu(void)
     add_detail_line("Series", g_book_detail.series);
     add_detail_line("Narrator", g_book_detail.narrator);
     add_detail_line("Published", g_book_detail.published_year);
+    add_detail_line("Description", g_book_detail.description);
     format_duration(g_book_detail.duration_seconds, duration, sizeof(duration));
     add_detail_line("Duration", duration);
     if (g_book_detail.audio_files_known) {
@@ -3530,7 +3605,7 @@ static void self_test_config(struct abs_self_test_state *state)
     self_test_check(state, rb->strcmp(trim_ws(buf), "value") == 0,
                     "trim_ws strips tabs/newlines");
 
-    self_test_check(state, sanitize_page_size(10) == 10,
+    self_test_check(state, sanitize_page_size(20) == 20,
                     "page_size keeps normal value");
     self_test_check(state, sanitize_page_size(0) == DEFAULT_PAGE_SIZE,
                     "page_size defaults on zero");
@@ -3693,11 +3768,7 @@ static void self_test_books(struct abs_self_test_state *state)
                     g_book_page == 1 && g_book_limit == 2 && g_book_total == 5 &&
                     g_book_has_next &&
                     rb->strcmp(g_book_ids[0], "b1") == 0 &&
-                    contains_text(g_book_titles[0], "[b1]") &&
-                    contains_text(g_book_titles[0], "Book One") &&
-                    contains_text(g_book_titles[0], "Author") &&
-                    contains_text(g_book_titles[0], "DL:yes") &&
-                    contains_text(g_book_titles[0], "P:25%") &&
+                    rb->strcmp(g_book_titles[0], "Book One - Author") == 0 &&
                     rb->strcmp(g_book_ids[1], "b2") == 0,
                     "parse_books parses metadata, status, and paging");
 
@@ -3709,10 +3780,7 @@ static void self_test_books(struct abs_self_test_state *state)
                     parse_books((int)rb->strlen(g_items_response), 0, 20,
                                 error_buf, sizeof(error_buf)) == 1 &&
                     rb->strcmp(g_book_ids[0], "b3") == 0 &&
-                    contains_text(g_book_titles[0], "[b3]") &&
-                    contains_text(g_book_titles[0], "Named") &&
-                    contains_text(g_book_titles[0], "DL:--") &&
-                    contains_text(g_book_titles[0], "P:--"),
+                    rb->strcmp(g_book_titles[0], "Named") == 0,
                     "parse_books accepts libraryItems fallback");
 
     rb->strlcpy(g_items_response, "{\"results\":[{\"id\":\"b1\"}",
@@ -3765,6 +3833,7 @@ static void self_test_book_detail(struct abs_self_test_state *state)
     rb->strlcpy(g_detail_response,
                 "{\"media\":{\"metadata\":{\"title\":\"Detail Book\","
                 "\"authorName\":\"Author\",\"seriesName\":\"Series\","
+                "\"description\":\"A long road.\","
                 "\"narratorName\":\"Narrator\",\"publishedYear\":2024},"
                 "\"duration\":3661,\"audioFiles\":[{\"ino\":\"part-1\",\"filename\":\"01.mp3\"},{\"ino\":\"part-2\",\"filename\":\"02.m4b\"}]}}",
                 g_detail_response_size);
@@ -3774,6 +3843,7 @@ static void self_test_book_detail(struct abs_self_test_state *state)
                     rb->strcmp(g_book_detail.item_id, "book-1") == 0 &&
                     rb->strcmp(g_book_detail.title, "Detail Book") == 0 &&
                     rb->strcmp(g_book_detail.author, "Author") == 0 &&
+                    rb->strcmp(g_book_detail.description, "A long road.") == 0 &&
                     g_book_detail.duration_seconds == 3661 &&
                     g_book_detail.audio_files_known &&
                     g_book_detail.audio_file_count == 2 &&

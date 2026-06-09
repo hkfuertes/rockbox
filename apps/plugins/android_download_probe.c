@@ -179,6 +179,7 @@ enum plugin_status plugin_start(const void* parameter)
     rc = rb->android_download(url_buf,
                               headers_buf[0] != '\0' ? headers_buf : NULL,
                               dest_buf,
+                              30 * 60,
                               &status,
                               error_buf,
                               sizeof(error_buf));

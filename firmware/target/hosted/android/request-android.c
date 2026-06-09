@@ -281,6 +281,7 @@ cleanup:
 int android_download(const char *url,
                      const char *headers,
                      const char *destination_path,
+                     int timeout_seconds,
                      int *status_out,
                      char *error_buf,
                      size_t error_len)
@@ -290,6 +291,7 @@ int android_download(const char *url,
     jstring headers_j = NULL;
     jstring destination_j = NULL;
     jobjectArray result_array = NULL;
+    jint timeout_seconds_j;
     char *status_text = NULL;
     char *error_text = NULL;
     int rc = ANDROID_REQUEST_OK;
@@ -317,7 +319,7 @@ int android_download(const char *url,
     {
         download_method = (*env_ptr)->GetMethodID(env_ptr, RockboxService_class,
             "performSynchronousDownload",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;");
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)[Ljava/lang/String;");
         if (download_method == NULL)
         {
             if ((*env_ptr)->ExceptionCheck(env_ptr))
@@ -339,8 +341,10 @@ int android_download(const char *url,
         goto cleanup_download;
     }
 
+    timeout_seconds_j = timeout_seconds > 0 ? (jint)timeout_seconds : 0;
     result_array = (jobjectArray)(*env_ptr)->CallObjectMethod(env_ptr,
-        RockboxService_instance, download_method, url_j, headers_j, destination_j);
+        RockboxService_instance, download_method, url_j, headers_j, destination_j,
+        timeout_seconds_j);
     if ((*env_ptr)->ExceptionCheck(env_ptr))
     {
         (*env_ptr)->ExceptionClear(env_ptr);
